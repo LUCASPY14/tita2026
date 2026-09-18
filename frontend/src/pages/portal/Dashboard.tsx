@@ -52,13 +52,9 @@ interface RecargaHistorial {
   metodo_pago: string | null
 }
 
-interface CuentaMensual {
-  id_cuenta_mensual: number
+interface ConsumoMes {
   cantidad_almuerzos: number
   monto_total: number
-  monto_pagado: number
-  monto_pendiente: number
-  estado: string
 }
 
 interface TopProducto {
@@ -72,7 +68,7 @@ interface HijoData {
   grado: string | null
   tarjeta: Tarjeta | null
   restricciones: Restriccion[]
-  cuenta_mensual: CuentaMensual | null
+  consumo_mes: ConsumoMes | null
   saldo_almuerzo: number
   top_productos?: TopProducto[]
 }
@@ -266,7 +262,7 @@ function ResumenTab({ hijo, mes }: { hijo: HijoData; mes: { anio: number; mes: n
       )}
 
       {/* Consumo del mes — informativo, el saldo de almuerzo de arriba es lo que se cobra */}
-      {hijo.cuenta_mensual ? (
+      {hijo.consumo_mes ? (
         <div className="bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden">
           <div className="px-4 py-3 bg-slate-50 border-b border-slate-100 flex items-center gap-2">
             <UtensilsCrossed className="w-4 h-4 text-slate-500" />
@@ -277,11 +273,11 @@ function ResumenTab({ hijo, mes }: { hijo: HijoData; mes: { anio: number; mes: n
           <div className="grid grid-cols-2 divide-x divide-slate-100">
             <div className="p-4 text-center">
               <p className="text-sm text-slate-500 mb-1">Almuerzos tomados</p>
-              <p className="text-3xl font-bold text-slate-800 tabular-nums">{hijo.cuenta_mensual.cantidad_almuerzos}</p>
+              <p className="text-3xl font-bold text-slate-800 tabular-nums">{hijo.consumo_mes.cantidad_almuerzos}</p>
             </div>
             <div className="p-4 text-center">
               <p className="text-sm text-slate-500 mb-1">Total del mes</p>
-              <p className="text-2xl font-bold text-emerald-700 tabular-nums">{formatGs(hijo.cuenta_mensual.monto_total)}</p>
+              <p className="text-2xl font-bold text-emerald-700 tabular-nums">{formatGs(hijo.consumo_mes.monto_total)}</p>
             </div>
           </div>
         </div>

@@ -546,6 +546,99 @@ class CuentaAlmuerzoMensualViewSet(viewsets.ModelViewSet):
         })
 
 
+class EstadoCuentaAlmuerzoView(APIView):
+    """
+    GET /api/v1/almuerzos/estado-cuenta/?anio=2026&mes=9 (mes opcional)
+    Reemplaza a CuentaAlmuerzoMensualViewSet como fuente del tab "Cuentas
+    Mensuales" del staff — calculado en vivo, sin tabla intermedia:
+      - cantidad_almuerzos / monto_total: RegistroConsumoAlmuerzo del mes.
+      - monto_pagado: recargas de saldo CONFIRMADAS de ese mismo mes.
+      - saldo_pendiente / estado: SaldoAlmuerzo actual (cuenta corriente, no
+        cortada por mes) — "Pagado" si está al día, "Pendiente" si debe.
+    Una fila por hijo que tuvo consumo en el período — sin mes, una fila por
+    cada mes del año en que comió.
+    """
+    permission_classes = [IsStaffUser]
+
+    def get(self, request):
+        from django.db.models import Count, Sum
+        from django.db.models.functions import ExtractMonth
+        from apps.clientes.models import Hijo
+        from .models import RecargaSaldoAlmuerzo, SaldoAlmuerzo
+
+        anio_raw = request.query_params.get("anio")
+        if not anio_raw:
+            return Response({"error": "Se requiere el parámetro anio."}, status=status.HTTP_400_BAD_REQUEST)
+        anio = int(anio_raw)
+        mes_raw = request.query_params.get("mes")
+        mes = int(mes_raw) if mes_raw else None
+
+        consumos_qs = RegistroConsumoAlmuerzo.objects.filter(
+            fecha_consumo__year=anio,
+            estado=RegistroConsumoAlmuerzo.Estado.REGISTRADO,
+            ya_cobrado=True,
+        )
+        if mes:
+            consumos_qs = consumos_qs.filter(fecha_consumo__month=mes)
+
+        agregados = list(
+            consumos_qs
+            .annotate(mes_c=ExtractMonth("fecha_consumo"))
+            .values("hijo_id", "mes_c")
+            .annotate(cantidad=Count("id_registro_consumo"), monto=Sum("costo_almuerzo"))
+        )
+        hijo_ids = {a["hijo_id"] for a in agregados}
+
+        hijos_map = {
+            h.id_hijo: h
+            for h in Hijo.objects.filter(id_hijo__in=hijo_ids).select_related("grado", "tarjeta")
+        }
+
+        recargas_qs = RecargaSaldoAlmuerzo.objects.filter(
+            hijo_id__in=hijo_ids, estado=RecargaSaldoAlmuerzo.Estado.CONFIRMADA,
+            fecha_carga__year=anio,
+        )
+        if mes:
+            recargas_qs = recargas_qs.filter(fecha_carga__month=mes)
+        recargas_por_hijo_mes = {
+            (r["hijo_id"], r["mes_r"]): r["total"]
+            for r in (
+                recargas_qs.annotate(mes_r=ExtractMonth("fecha_carga"))
+                .values("hijo_id", "mes_r")
+                .annotate(total=Sum("monto_cargado"))
+            )
+        }
+        saldo_por_hijo = dict(
+            SaldoAlmuerzo.objects.filter(hijo_id__in=hijo_ids).values_list("hijo_id", "saldo_actual")
+        )
+
+        filas = []
+        for a in agregados:
+            hijo = hijos_map.get(a["hijo_id"])
+            if not hijo:
+                continue
+            tarjeta = getattr(hijo, "tarjeta", None)
+            saldo_actual = int(saldo_por_hijo.get(hijo.id_hijo, 0) or 0)
+            saldo_pendiente = max(0, -saldo_actual)
+            filas.append({
+                "id": f"{hijo.id_hijo}-{anio}-{a['mes_c']}",
+                "hijo": hijo.id_hijo,
+                "hijo_nombre": hijo.nombre_completo,
+                "hijo_grado": hijo.grado.nombre if hijo.grado else "",
+                "nro_tarjeta": tarjeta.nro_tarjeta if tarjeta else "",
+                "anio": anio,
+                "mes": a["mes_c"],
+                "cantidad_almuerzos": a["cantidad"],
+                "monto_total": int(a["monto"] or 0),
+                "monto_pagado": int(recargas_por_hijo_mes.get((hijo.id_hijo, a["mes_c"]), 0) or 0),
+                "saldo_pendiente": saldo_pendiente,
+                "estado": "PENDIENTE" if saldo_pendiente > 0 else "PAGADO",
+            })
+
+        filas.sort(key=lambda f: (-f["anio"], -f["mes"]))
+        return Response({"count": len(filas), "results": filas})
+
+
 # ==============================================================================
 # PAGO CUENTA ALMUERZO
 # ==============================================================================
@@ -879,12 +972,21 @@ class ReporteAlmuerzosView(APIView):
     """
     GET /api/almuerzos/reportes/?anio=2026&mes=5
     Parámetros opcionales: hijo=<id>, grado=<str>, formato=csv
-    Retorna resumen por hijo: cantidad de almuerzos, monto total, pendiente.
+    Retorna resumen por hijo: cantidad de almuerzos consumidos ese mes
+    (RegistroConsumoAlmuerzo), monto recargado ese mes (RecargaSaldoAlmuerzo)
+    y deuda actual (SaldoAlmuerzo — cuenta corriente, no cortada por mes).
+
+    "Pagado"/"Pendiente" no son un estado por mes: reflejan si HOY el saldo
+    corriente del alumno está al día o en negativo, sin importar cuándo se
+    generó esa deuda.
     """
     permission_classes = [IsStaffUser]
 
     def get(self, request):
         from django.http import HttpResponse
+        from django.db.models import Count, Sum
+        from apps.clientes.models import Hijo
+        from apps.almuerzos.models import RegistroConsumoAlmuerzo, RecargaSaldoAlmuerzo, SaldoAlmuerzo
 
         anio = request.query_params.get("anio")
         mes = request.query_params.get("mes")
@@ -896,33 +998,57 @@ class ReporteAlmuerzosView(APIView):
                 {"error": "Se requieren los parámetros anio y mes."},
                 status=status.HTTP_400_BAD_REQUEST,
             )
+        anio, mes = int(anio), int(mes)
 
         tarjeta_filter = request.query_params.get("tarjeta")
 
-        qs = CuentaAlmuerzoMensual.objects.filter(
-            anio=anio, mes=mes
-        ).select_related("hijo__grado", "hijo__tarjeta")
+        consumo_por_hijo = {
+            row["hijo_id"]: row
+            for row in RegistroConsumoAlmuerzo.objects.filter(
+                fecha_consumo__year=anio, fecha_consumo__month=mes,
+                estado=RegistroConsumoAlmuerzo.Estado.REGISTRADO, ya_cobrado=True,
+            ).values("hijo_id").annotate(
+                cantidad=Count("id_registro_consumo"), monto=Sum("costo_almuerzo"),
+            )
+        }
 
+        qs = Hijo.objects.filter(
+            id_hijo__in=consumo_por_hijo.keys()
+        ).select_related("grado", "tarjeta")
         if hijo_id:
-            qs = qs.filter(hijo_id=hijo_id)
+            qs = qs.filter(id_hijo=hijo_id)
         if grado:
-            qs = qs.filter(hijo__grado__nombre__icontains=grado)
+            qs = qs.filter(grado__nombre__icontains=grado)
         if tarjeta_filter:
-            qs = qs.filter(hijo__tarjeta__nro_tarjeta__icontains=tarjeta_filter)
+            qs = qs.filter(tarjeta__nro_tarjeta__icontains=tarjeta_filter)
+
+        hijo_ids = [h.id_hijo for h in qs]
+        pagado_por_hijo = dict(
+            RecargaSaldoAlmuerzo.objects.filter(
+                hijo_id__in=hijo_ids, estado=RecargaSaldoAlmuerzo.Estado.CONFIRMADA,
+                fecha_carga__year=anio, fecha_carga__month=mes,
+            ).values("hijo_id").annotate(total=Sum("monto_cargado")).values_list("hijo_id", "total")
+        )
+        saldo_por_hijo = dict(
+            SaldoAlmuerzo.objects.filter(hijo_id__in=hijo_ids).values_list("hijo_id", "saldo_actual")
+        )
 
         filas = []
-        for c in qs.order_by("hijo__apellido", "hijo__nombre"):
-            tarjeta = getattr(c.hijo, "tarjeta", None)
+        for hijo in qs.order_by("apellido", "nombre"):
+            c = consumo_por_hijo[hijo.id_hijo]
+            saldo_actual = int(saldo_por_hijo.get(hijo.id_hijo, 0) or 0)
+            monto_pendiente = max(0, -saldo_actual)
+            tarjeta = getattr(hijo, "tarjeta", None)
             filas.append({
-                "hijo_id": c.hijo_id,
-                "hijo": c.hijo.nombre_completo,
-                "grado": c.hijo.grado.nombre if c.hijo.grado else "",
+                "hijo_id": hijo.id_hijo,
+                "hijo": hijo.nombre_completo,
+                "grado": hijo.grado.nombre if hijo.grado else "",
                 "nro_tarjeta": tarjeta.nro_tarjeta if tarjeta else "",
-                "cantidad_almuerzos": c.cantidad_almuerzos,
-                "monto_total": int(c.monto_total),
-                "monto_pagado": int(c.monto_pagado),
-                "monto_pendiente": int(c.monto_total - c.monto_pagado),
-                "estado": c.estado,
+                "cantidad_almuerzos": c["cantidad"],
+                "monto_total": int(c["monto"] or 0),
+                "monto_pagado": int(pagado_por_hijo.get(hijo.id_hijo, 0) or 0),
+                "monto_pendiente": monto_pendiente,
+                "estado": "PENDIENTE" if monto_pendiente > 0 else "PAGADO",
             })
 
         totales = {
@@ -1088,22 +1214,29 @@ class ReporteCobranzaAlmuerzosView(APIView):
         except ValueError:
             return Response({"error": "El parámetro anio debe ser un número."}, status=status.HTTP_400_BAD_REQUEST)
 
-        qs = CuentaAlmuerzoMensual.objects.filter(anio=anio).exclude(estado="ANULADO")
+        from django.db.models.functions import ExtractMonth
 
-        # "Consumido" por mes: sigue viniendo de CuentaAlmuerzoMensual (el
-        # trigger trg_sync_cuenta_almuerzo la mantiene sincronizada con los
-        # registros reales de comedor).
+        # "Consumido" por mes: agregado en vivo desde los registros reales de
+        # comedor (ya no hay una tabla intermedia que mantener sincronizada).
         consumido_por_mes = {
             r["mes"]: {"n_alumnos": r["n_alumnos"], "monto_total": int(r["monto_total"] or 0)}
-            for r in qs.values("mes").annotate(
-                n_alumnos=Count("id_cuenta_mensual"), monto_total=Sum("monto_total"),
+            for r in (
+                RegistroConsumoAlmuerzo.objects.filter(
+                    fecha_consumo__year=anio,
+                    estado=RegistroConsumoAlmuerzo.Estado.REGISTRADO,
+                    ya_cobrado=True,
+                )
+                .annotate(mes=ExtractMonth("fecha_consumo"))
+                .values("mes")
+                .annotate(
+                    n_alumnos=Count("hijo_id", distinct=True),
+                    monto_total=Sum("costo_almuerzo"),
+                )
             )
         }
 
-        # "Cobrado" ya no sale de CuentaAlmuerzoMensual.monto_pagado — desde la
-        # cuenta corriente de almuerzo, lo que entra son recargas de saldo, no
-        # pagos contra un mes puntual.
-        from django.db.models.functions import ExtractMonth
+        # "Cobrado" no sale de un pago contra un mes puntual — desde la
+        # cuenta corriente de almuerzo, lo que entra son recargas de saldo.
         from .models import RecargaSaldoAlmuerzo
         recargas_qs = RecargaSaldoAlmuerzo.objects.filter(
             estado=RecargaSaldoAlmuerzo.Estado.CONFIRMADA,

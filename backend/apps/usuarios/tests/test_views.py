@@ -313,7 +313,7 @@ class TestPortalMiHijo:
         hijo_data = resp.data["hijos"][0]
         assert hijo_data["id_hijo"] == hijo_portal.pk
         assert "tarjeta" in hijo_data
-        assert "cuenta_mensual" in hijo_data
+        assert "consumo_mes" in hijo_data
         assert "saldo_almuerzo" in hijo_data
 
     def test_sin_deuda_saldo_cuenta_corriente_es_cero(self, api_portal, cliente):
@@ -716,11 +716,11 @@ class TestViewSetsSimples:
 @pytest.mark.django_db
 class TestPortalMiHijoConDatos:
 
-    def test_con_tarjeta_y_cuenta_retorna_datos(self, api_portal, hijo_portal, cliente):
+    def test_con_tarjeta_y_cuenta_retorna_datos(self, api_portal, hijo_portal, cliente, usuario_cajero):
         from decimal import Decimal
         from datetime import date
         from apps.core.models import Tarjeta
-        from apps.almuerzos.models import CuentaAlmuerzoMensual
+        from apps.almuerzos.models import RegistroConsumoAlmuerzo
         tarjeta = Tarjeta.objects.create(
             nro_tarjeta="PORTAL001",
             hijo=hijo_portal,
@@ -728,18 +728,18 @@ class TestPortalMiHijoConDatos:
             estado=Tarjeta.Estado.ACTIVA,
         )
         hoy = date.today()
-        CuentaAlmuerzoMensual.objects.create(
-            hijo=hijo_portal, anio=hoy.year, mes=hoy.month,
-            cantidad_almuerzos=3, monto_total=Decimal("45000"), monto_pagado=Decimal("0"),
-            forma_cobro=CuentaAlmuerzoMensual.FormaCobro.EFECTIVO,
-            estado=CuentaAlmuerzoMensual.Estado.PENDIENTE,
-        )
+        for _ in range(3):
+            RegistroConsumoAlmuerzo.objects.create(
+                hijo=hijo_portal, fecha_consumo=hoy, costo_almuerzo=Decimal("15000"),
+                ya_cobrado=True, registrado_por=usuario_cajero,
+            )
         resp = api_portal.get("/api/v1/usuarios/portal/mi-hijo/")
         assert resp.status_code == 200
         hijos = resp.data["hijos"]
         assert len(hijos) == 1
         assert hijos[0]["tarjeta"]["nro_tarjeta"] == "PORTAL001"
-        assert hijos[0]["cuenta_mensual"]["cantidad_almuerzos"] == 3
+        assert hijos[0]["consumo_mes"]["cantidad_almuerzos"] == 3
+        assert hijos[0]["consumo_mes"]["monto_total"] == 45000
 
     def test_saldo_almuerzo_negativo_se_expone(self, api_portal, hijo_portal):
         from decimal import Decimal

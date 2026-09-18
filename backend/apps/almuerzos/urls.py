@@ -5,6 +5,7 @@ from .views import (
     AlergenoViewSet,
     CuentaAlmuerzoMensualViewSet,
     DetalleMenuDiarioViewSet,
+    EstadoCuentaAlmuerzoView,
     MenuDiarioViewSet,
     PagoCuentaAlmuerzoViewSet,
     PlanAlmuerzoViewSet,
@@ -37,6 +38,7 @@ router.register(r"detalle-menu", DetalleMenuDiarioViewSet, basename="detalle-men
 
 urlpatterns = [
     path("", include(router.urls)),
+    path("estado-cuenta/", EstadoCuentaAlmuerzoView.as_view(), name="estado-cuenta-almuerzo"),
     path("reportes/", ReporteAlmuerzosView.as_view(), name="reporte-almuerzos"),
     path("reporte-consumo-grado/", ReporteConsumoGradoView.as_view(), name="reporte-consumo-grado"),
     path("reporte-cobranza/", ReporteCobranzaAlmuerzosView.as_view(), name="reporte-cobranza-almuerzos"),

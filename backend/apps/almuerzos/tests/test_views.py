@@ -149,6 +149,22 @@ def alergeno(db):
 
 
 @pytest.fixture
+def consumos_mes_actual(db, hijo_almuerzo, usuario_cajero):
+    """5 almuerzos REGISTRADO+cobrados del hijo_almuerzo en el mes actual —
+    equivalente vivo al viejo fixture cuenta_mensual, para los reportes que
+    ahora agregan directo de RegistroConsumoAlmuerzo."""
+    from apps.almuerzos.models import RegistroConsumoAlmuerzo
+    hoy = date.today()
+    return [
+        RegistroConsumoAlmuerzo.objects.create(
+            hijo=hijo_almuerzo, fecha_consumo=hoy, costo_almuerzo=Decimal("15000"),
+            ya_cobrado=True, registrado_por=usuario_cajero,
+        )
+        for _ in range(5)
+    ]
+
+
+@pytest.fixture
 def cuenta_mensual(db, hijo_almuerzo):
     from apps.almuerzos.models import CuentaAlmuerzoMensual
     hoy = date.today()
@@ -732,6 +748,117 @@ class TestCuentaMensual:
         assert resp.status_code in (401, 403)
 
 
+# ── EstadoCuentaAlmuerzoView ───────────────────────────────────────────────────
+
+@pytest.mark.django_db
+class TestEstadoCuentaAlmuerzo:
+
+    def test_sin_anio_retorna_400(self, api_admin):
+        resp = api_admin.get("/api/v1/almuerzos/estado-cuenta/")
+        assert resp.status_code == 400
+
+    def test_sin_consumos_retorna_vacio(self, api_admin):
+        resp = api_admin.get("/api/v1/almuerzos/estado-cuenta/", {"anio": 2026})
+        assert resp.status_code == 200
+        assert resp.data == {"count": 0, "results": []}
+
+    def test_con_consumos_arma_fila_por_hijo_y_mes(
+        self, api_admin, consumos_mes_actual, hijo_almuerzo, tarjeta_almuerzo,
+    ):
+        hoy = date.today()
+        resp = api_admin.get("/api/v1/almuerzos/estado-cuenta/", {"anio": hoy.year})
+        assert resp.status_code == 200
+        assert resp.data["count"] == 1
+        fila = resp.data["results"][0]
+        assert fila["hijo"] == hijo_almuerzo.pk
+        assert fila["hijo_nombre"] == hijo_almuerzo.nombre_completo
+        assert fila["nro_tarjeta"] == "ALMZ-VIEW01"
+        assert fila["mes"] == hoy.month
+        assert fila["cantidad_almuerzos"] == 5
+        assert fila["monto_total"] == 75000
+
+    def test_filtro_por_mes_excluye_otros_meses(self, api_admin, hijo_almuerzo, usuario_cajero):
+        from apps.almuerzos.models import RegistroConsumoAlmuerzo
+        RegistroConsumoAlmuerzo.objects.create(
+            hijo=hijo_almuerzo, fecha_consumo=date(2026, 3, 10),
+            costo_almuerzo=Decimal("15000"), ya_cobrado=True, registrado_por=usuario_cajero,
+        )
+        RegistroConsumoAlmuerzo.objects.create(
+            hijo=hijo_almuerzo, fecha_consumo=date(2026, 4, 10),
+            costo_almuerzo=Decimal("15000"), ya_cobrado=True, registrado_por=usuario_cajero,
+        )
+        resp = api_admin.get("/api/v1/almuerzos/estado-cuenta/", {"anio": 2026, "mes": 3})
+        assert resp.status_code == 200
+        assert resp.data["count"] == 1
+        assert resp.data["results"][0]["mes"] == 3
+
+    def test_sin_mes_agrupa_por_cada_mes_con_consumo(self, api_admin, hijo_almuerzo, usuario_cajero):
+        from apps.almuerzos.models import RegistroConsumoAlmuerzo
+        RegistroConsumoAlmuerzo.objects.create(
+            hijo=hijo_almuerzo, fecha_consumo=date(2026, 3, 10),
+            costo_almuerzo=Decimal("15000"), ya_cobrado=True, registrado_por=usuario_cajero,
+        )
+        RegistroConsumoAlmuerzo.objects.create(
+            hijo=hijo_almuerzo, fecha_consumo=date(2026, 4, 10),
+            costo_almuerzo=Decimal("15000"), ya_cobrado=True, registrado_por=usuario_cajero,
+        )
+        resp = api_admin.get("/api/v1/almuerzos/estado-cuenta/", {"anio": 2026})
+        assert resp.status_code == 200
+        assert resp.data["count"] == 2
+        meses = {f["mes"] for f in resp.data["results"]}
+        assert meses == {3, 4}
+
+    def test_repite_sin_cobrar_no_cuenta(self, api_admin, hijo_almuerzo, usuario_cajero):
+        # El 2do registro del día (ya_cobrado=False) no debe sumar al reporte.
+        from apps.almuerzos.models import RegistroConsumoAlmuerzo
+        RegistroConsumoAlmuerzo.objects.create(
+            hijo=hijo_almuerzo, fecha_consumo=date(2026, 3, 10),
+            costo_almuerzo=Decimal("15000"), ya_cobrado=True, registrado_por=usuario_cajero,
+        )
+        RegistroConsumoAlmuerzo.objects.create(
+            hijo=hijo_almuerzo, fecha_consumo=date(2026, 3, 10),
+            costo_almuerzo=Decimal("0"), ya_cobrado=False, registrado_por=usuario_cajero,
+        )
+        resp = api_admin.get("/api/v1/almuerzos/estado-cuenta/", {"anio": 2026, "mes": 3})
+        assert resp.status_code == 200
+        assert resp.data["results"][0]["cantidad_almuerzos"] == 1
+
+    def test_estado_pendiente_y_pagado_segun_saldo(
+        self, api_admin, hijo_almuerzo, usuario_cajero
+    ):
+        from apps.almuerzos.models import RegistroConsumoAlmuerzo, SaldoAlmuerzo
+        RegistroConsumoAlmuerzo.objects.create(
+            hijo=hijo_almuerzo, fecha_consumo=date(2026, 3, 10),
+            costo_almuerzo=Decimal("15000"), ya_cobrado=True, registrado_por=usuario_cajero,
+        )
+        SaldoAlmuerzo.objects.create(hijo=hijo_almuerzo, saldo_actual=Decimal("-15000"))
+        resp = api_admin.get("/api/v1/almuerzos/estado-cuenta/", {"anio": 2026, "mes": 3})
+        assert resp.data["results"][0]["estado"] == "PENDIENTE"
+        assert resp.data["results"][0]["saldo_pendiente"] == 15000
+
+    def test_recarga_del_mes_se_ve_en_monto_pagado(
+        self, api_admin, hijo_almuerzo, usuario_cajero
+    ):
+        from datetime import datetime
+        from django.utils import timezone
+        from apps.almuerzos.models import RegistroConsumoAlmuerzo, RecargaSaldoAlmuerzo
+        RegistroConsumoAlmuerzo.objects.create(
+            hijo=hijo_almuerzo, fecha_consumo=date(2026, 3, 10),
+            costo_almuerzo=Decimal("15000"), ya_cobrado=True, registrado_por=usuario_cajero,
+        )
+        RecargaSaldoAlmuerzo.objects.create(
+            hijo=hijo_almuerzo, monto_cargado=Decimal("15000"),
+            fecha_carga=timezone.make_aware(datetime(2026, 3, 15)),
+            estado=RecargaSaldoAlmuerzo.Estado.CONFIRMADA,
+        )
+        resp = api_admin.get("/api/v1/almuerzos/estado-cuenta/", {"anio": 2026, "mes": 3})
+        assert resp.data["results"][0]["monto_pagado"] == 15000
+
+    def test_requiere_permiso_staff(self, api_cliente_web):
+        resp = api_cliente_web.get("/api/v1/almuerzos/estado-cuenta/", {"anio": 2026})
+        assert resp.status_code == 403
+
+
 # ── PagoCuentaAlmuerzoViewSet ─────────────────────────────────────────────────
 
 @pytest.mark.django_db
@@ -778,7 +905,7 @@ class TestReporteAlmuerzos:
         assert "totales" in resp.data
         assert "filas" in resp.data
 
-    def test_con_cuenta_mensual_muestra_alumno(self, api_admin, cuenta_mensual):
+    def test_con_consumos_muestra_alumno(self, api_admin, consumos_mes_actual):
         hoy = date.today()
         resp = api_admin.get(
             "/api/v1/almuerzos/reportes/",
@@ -786,8 +913,10 @@ class TestReporteAlmuerzos:
         )
         assert resp.status_code == 200
         assert resp.data["totales"]["alumnos"] >= 1
+        assert resp.data["filas"][0]["cantidad_almuerzos"] == 5
+        assert resp.data["filas"][0]["monto_total"] == 75000
 
-    def test_filtro_por_hijo(self, api_admin, cuenta_mensual, hijo_almuerzo):
+    def test_filtro_por_hijo(self, api_admin, consumos_mes_actual, hijo_almuerzo):
         hoy = date.today()
         resp = api_admin.get(
             "/api/v1/almuerzos/reportes/",
@@ -796,7 +925,7 @@ class TestReporteAlmuerzos:
         assert resp.status_code == 200
         assert len(resp.data["filas"]) == 1
 
-    def test_filtro_por_grado(self, api_admin, cuenta_mensual, grado):
+    def test_filtro_por_grado(self, api_admin, consumos_mes_actual, grado):
         hoy = date.today()
         resp = api_admin.get(
             "/api/v1/almuerzos/reportes/",
@@ -804,7 +933,7 @@ class TestReporteAlmuerzos:
         )
         assert resp.status_code == 200
 
-    def test_formato_csv(self, api_admin, cuenta_mensual):
+    def test_formato_csv(self, api_admin, consumos_mes_actual):
         hoy = date.today()
         resp = api_admin.get(
             "/api/v1/almuerzos/reportes/",
@@ -814,7 +943,7 @@ class TestReporteAlmuerzos:
         assert "text/csv" in resp["Content-Type"]
         assert b"REPORTE DE ALMUERZOS" in resp.content
 
-    def test_csv_incluye_alumno(self, api_admin, cuenta_mensual):
+    def test_csv_incluye_alumno(self, api_admin, consumos_mes_actual):
         hoy = date.today()
         resp = api_admin.get(
             "/api/v1/almuerzos/reportes/",
@@ -823,7 +952,7 @@ class TestReporteAlmuerzos:
         assert resp.status_code == 200
         assert b"Pedro" in resp.content
 
-    def test_filtro_por_tarjeta(self, api_admin, cuenta_mensual, tarjeta_almuerzo):
+    def test_filtro_por_tarjeta(self, api_admin, consumos_mes_actual, tarjeta_almuerzo):
         hoy = date.today()
         resp = api_admin.get(
             "/api/v1/almuerzos/reportes/",
@@ -833,7 +962,7 @@ class TestReporteAlmuerzos:
         assert len(resp.data["filas"]) == 1
         assert resp.data["filas"][0]["nro_tarjeta"] == "ALMZ-VIEW01"
 
-    def test_filas_incluyen_nro_tarjeta(self, api_admin, cuenta_mensual, tarjeta_almuerzo):
+    def test_filas_incluyen_nro_tarjeta(self, api_admin, consumos_mes_actual, tarjeta_almuerzo):
         hoy = date.today()
         resp = api_admin.get(
             "/api/v1/almuerzos/reportes/",
@@ -842,6 +971,30 @@ class TestReporteAlmuerzos:
         assert resp.status_code == 200
         assert len(resp.data["filas"]) >= 1
         assert "nro_tarjeta" in resp.data["filas"][0]
+
+    def test_estado_pendiente_cuando_saldo_negativo(self, api_admin, consumos_mes_actual, hijo_almuerzo):
+        from apps.almuerzos.models import SaldoAlmuerzo
+        SaldoAlmuerzo.objects.create(hijo=hijo_almuerzo, saldo_actual=Decimal("-75000"))
+        hoy = date.today()
+        resp = api_admin.get(
+            "/api/v1/almuerzos/reportes/",
+            {"anio": str(hoy.year), "mes": str(hoy.month)},
+        )
+        assert resp.status_code == 200
+        assert resp.data["filas"][0]["estado"] == "PENDIENTE"
+        assert resp.data["filas"][0]["monto_pendiente"] == 75000
+
+    def test_estado_pagado_cuando_saldo_al_dia(self, api_admin, consumos_mes_actual, hijo_almuerzo):
+        from apps.almuerzos.models import SaldoAlmuerzo
+        SaldoAlmuerzo.objects.create(hijo=hijo_almuerzo, saldo_actual=Decimal("0"))
+        hoy = date.today()
+        resp = api_admin.get(
+            "/api/v1/almuerzos/reportes/",
+            {"anio": str(hoy.year), "mes": str(hoy.month)},
+        )
+        assert resp.status_code == 200
+        assert resp.data["filas"][0]["estado"] == "PAGADO"
+        assert resp.data["filas"][0]["monto_pendiente"] == 0
 
     def test_requiere_autenticacion(self, api_client):
         resp = api_client.get("/api/v1/almuerzos/reportes/", {"anio": "2026", "mes": "5"})
@@ -1330,21 +1483,19 @@ class TestReporteCobranzaAlmuerzos:
         assert "resumen" in resp.data
 
     def test_con_cuentas_calcula_totales(
-        self, api_admin, hijo_almuerzo, grado
+        self, api_admin, hijo_almuerzo, grado, usuario_cajero
     ):
-        """monto_anual sale de CuentaAlmuerzoMensual (consumo real), cobrado_anual
+        """monto_anual sale de RegistroConsumoAlmuerzo (consumo real), cobrado_anual
         de RecargaSaldoAlmuerzo (recargas del saldo corriente) — no del mismo modelo."""
         from datetime import datetime
         from django.utils import timezone
-        from apps.almuerzos.models import CuentaAlmuerzoMensual, RecargaSaldoAlmuerzo
-        CuentaAlmuerzoMensual.objects.create(
-            hijo=hijo_almuerzo,
-            anio=2026, mes=6,
-            cantidad_almuerzos=10,
-            monto_total=Decimal("150000"),
-            monto_pagado=Decimal("0"),
-            forma_cobro=CuentaAlmuerzoMensual.FormaCobro.EFECTIVO,
-        )
+        from apps.almuerzos.models import RegistroConsumoAlmuerzo, RecargaSaldoAlmuerzo
+        for _ in range(10):
+            RegistroConsumoAlmuerzo.objects.create(
+                hijo=hijo_almuerzo, fecha_consumo=date(2026, 6, 10),
+                costo_almuerzo=Decimal("15000"), ya_cobrado=True,
+                registrado_por=usuario_cajero,
+            )
         RecargaSaldoAlmuerzo.objects.create(
             hijo=hijo_almuerzo,
             monto_cargado=Decimal("100000"),
@@ -1367,18 +1518,15 @@ class TestReporteCobranzaAlmuerzos:
         assert "attachment" in resp["Content-Disposition"]
 
     def test_formato_csv_con_datos_incluye_filas(
-        self, api_admin, hijo_almuerzo
+        self, api_admin, hijo_almuerzo, usuario_cajero
     ):
-        from apps.almuerzos.models import CuentaAlmuerzoMensual
-        CuentaAlmuerzoMensual.objects.create(
-            hijo=hijo_almuerzo,
-            anio=2026, mes=3,
-            cantidad_almuerzos=8,
-            monto_total=Decimal("120000"),
-            monto_pagado=Decimal("120000"),
-            forma_cobro=CuentaAlmuerzoMensual.FormaCobro.EFECTIVO,
-            estado=CuentaAlmuerzoMensual.Estado.PAGADO,
-        )
+        from apps.almuerzos.models import RegistroConsumoAlmuerzo
+        for _ in range(8):
+            RegistroConsumoAlmuerzo.objects.create(
+                hijo=hijo_almuerzo, fecha_consumo=date(2026, 3, 10),
+                costo_almuerzo=Decimal("15000"), ya_cobrado=True,
+                registrado_por=usuario_cajero,
+            )
         resp = api_admin.get(
             "/api/v1/almuerzos/reporte-cobranza/",
             {"anio": "2026", "formato": "csv"},
@@ -1397,22 +1545,16 @@ class TestReporteCobranzaAlmuerzos:
         assert "attachment" in resp.get("Content-Disposition", "")
         assert resp.get("Content-Disposition", "").endswith(".xlsx\"")
 
-    def test_excel_con_datos_genera_filas(self, api_admin):
+    def test_excel_con_datos_genera_filas(self, api_admin, hijo_almuerzo, usuario_cajero):
         import io
         from decimal import Decimal
         from openpyxl import load_workbook
-        from apps.almuerzos.models import CuentaAlmuerzoMensual
-        from apps.clientes.models import Hijo
-        hijo = Hijo.objects.first()
-        if hijo:
-            CuentaAlmuerzoMensual.objects.create(
-                hijo=hijo,
-                anio=2026,
-                mes=3,
-                monto_total=Decimal("150000"),
-                monto_pagado=Decimal("150000"),
-                estado=CuentaAlmuerzoMensual.Estado.PAGADO,
-            )
+        from apps.almuerzos.models import RegistroConsumoAlmuerzo
+        RegistroConsumoAlmuerzo.objects.create(
+            hijo=hijo_almuerzo, fecha_consumo=date(2026, 3, 10),
+            costo_almuerzo=Decimal("15000"), ya_cobrado=True,
+            registrado_por=usuario_cajero,
+        )
         resp = api_admin.get(
             "/api/v1/almuerzos/reporte-cobranza/",
             {"anio": "2026", "formato": "excel"},

@@ -4,7 +4,7 @@ import toast from 'react-hot-toast'
 import {
   UtensilsCrossed, Plus, Search, Edit2, X,
   CheckCircle, Calendar, Users, BarChart2,
-  PauseCircle, Banknote, RefreshCw, EyeOff, Eye, FileText, Trash2,
+  PauseCircle, Banknote, EyeOff, Eye, FileText, Trash2,
 } from 'lucide-react'
 import api from '../services/api'
 import { useAuthStore } from '../store/authStore'
@@ -61,7 +61,6 @@ export default function Almuerzos() {
   const [filtroCuentaMes, setFiltroCuentaMes] = useState<number | ''>('')
   const [filtroCuentaAnio, setFiltroCuentaAnio] = useState<number | ''>(new Date().getFullYear())
   const [searchCuentas, setSearchCuentas] = useState('')
-  const [generando, setGenerando] = useState(false)
 
   // ── Suscripciones ─────────────────────────────────────────────────
   const [suscripciones, setSuscripciones] = useState<Suscripcion[]>([])
@@ -117,13 +116,14 @@ export default function Almuerzos() {
   }, [loadRegistros, searchRegistros])
 
   // ── Load cuentas ──────────────────────────────────────────────────
+  // Calculado en vivo (estado-cuenta) — sin tabla intermedia que generar.
   const loadCuentas = useCallback(async () => {
+    if (!filtroCuentaAnio) return
     setLoadingCuentas(true)
     try {
-      const params: Record<string, unknown> = { ordering: '-anio,-mes', page_size: 200 }
+      const params: Record<string, unknown> = { anio: filtroCuentaAnio }
       if (filtroCuentaMes) params.mes = filtroCuentaMes
-      if (filtroCuentaAnio) params.anio = filtroCuentaAnio
-      const { data } = await api.get('/almuerzos/cuentas-mensuales/', { params })
+      const { data } = await api.get('/almuerzos/estado-cuenta/', { params })
       setCuentas(data.results ?? [])
     } catch {
       toast.error('Error al cargar cuentas')
@@ -214,31 +214,6 @@ export default function Almuerzos() {
     }
   }, [loadMenu])
 
-  // ── Generar cuentas ───────────────────────────────────────────────
-  const handleGenerarCuentas = useCallback(async () => {
-    if (!filtroCuentaMes) {
-      toast.error('Seleccioná un mes específico para generar las cuentas')
-      return
-    }
-    if (!filtroCuentaAnio) {
-      toast.error('Ingresá el año para generar las cuentas')
-      return
-    }
-    setGenerando(true)
-    try {
-      const body: Record<string, unknown> = {}
-      if (filtroCuentaAnio) body.anio = filtroCuentaAnio
-      if (filtroCuentaMes) body.mes = filtroCuentaMes
-      await api.post('/almuerzos/cuentas-mensuales/generar/', body)
-      toast.success('Cuentas generadas')
-      loadCuentas()
-    } catch (err) {
-      toast.error(extractErrorMessage(err))
-    } finally {
-      setGenerando(false)
-    }
-  }, [filtroCuentaAnio, filtroCuentaMes, loadCuentas])
-
   // ── Exportar PDF ──────────────────────────────────────────────────
   const cuentasFiltradas = useMemo(() => {
     const q = searchCuentas.trim().toLowerCase()
@@ -287,7 +262,7 @@ export default function Almuerzos() {
 
   const stats = useMemo(() => ({
     consumosHoy: registros.filter(r => r.fecha_consumo === hoy).length,
-    cuentasPendientes: cuentas.filter(c => c.estado !== 'PAGADO' && c.estado !== 'ANULADO').length,
+    cuentasPendientes: cuentas.filter(c => c.estado === 'PENDIENTE').length,
     facturadoMes: cuentas.filter(c => c.mes === mesActual && c.anio === anioActual).reduce((s, c) => s + (Number(c.monto_total) || 0), 0),
   }), [registros, cuentas, hoy, mesActual, anioActual])
 
@@ -548,8 +523,8 @@ export default function Almuerzos() {
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
           {[
             { label: 'Consumos Hoy', value: String(stats.consumosHoy), color: 'text-blue-700', bg: 'bg-blue-50', icon: UtensilsCrossed, iconColor: 'text-blue-600' },
-            { label: 'Cuentas Pendientes', value: String(stats.cuentasPendientes), color: 'text-orange-700', bg: 'bg-orange-50', icon: BarChart2, iconColor: 'text-orange-600' },
-            { label: 'Facturado este Mes', value: formatGs(stats.facturadoMes), color: 'text-emerald-700', bg: 'bg-emerald-50', icon: CheckCircle, iconColor: 'text-emerald-600' },
+            { label: 'Alumnos con Deuda', value: String(stats.cuentasPendientes), color: 'text-orange-700', bg: 'bg-orange-50', icon: BarChart2, iconColor: 'text-orange-600' },
+            { label: 'Consumido este Mes', value: formatGs(stats.facturadoMes), color: 'text-emerald-700', bg: 'bg-emerald-50', icon: CheckCircle, iconColor: 'text-emerald-600' },
           ].map(({ label, value, color, bg, icon: Icon, iconColor }) => (
             <div key={label} className="bg-white rounded-2xl border border-slate-100 shadow-sm px-5 py-4 flex items-start gap-4">
               <div className={`w-10 h-10 ${bg} rounded-xl flex items-center justify-center shrink-0`}>
@@ -633,10 +608,6 @@ export default function Almuerzos() {
                 onChange={e => setFiltroCuentaAnio(Number(e.target.value) || '')}
                 className="border border-slate-200 rounded-lg px-2.5 py-1.5 text-sm text-slate-700 bg-white focus:outline-none focus:ring-2 focus:ring-green-500/30 w-24"
               />
-              <Button variant="secondary" size="sm" loading={generando} onClick={handleGenerarCuentas}>
-                <RefreshCw className="w-3.5 h-3.5" />
-                Generar
-              </Button>
               <input
                 placeholder="Buscar alumno, tarjeta, grado..."
                 value={searchCuentas}
@@ -652,7 +623,7 @@ export default function Almuerzos() {
             </div>
           </div>
           <div className="p-1">
-            <Table columns={colsCuentas} dataSource={cuentasFiltradas} rowKey="id_cuenta_mensual" loading={loadingCuentas} pageSize={15} />
+            <Table columns={colsCuentas} dataSource={cuentasFiltradas} rowKey="id" loading={loadingCuentas} pageSize={15} />
           </div>
         </div>
       )}

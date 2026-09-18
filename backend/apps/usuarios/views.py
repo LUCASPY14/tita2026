@@ -619,7 +619,8 @@ class RolViewSet(viewsets.ModelViewSet):
 class PortalMiHijoView(APIView):
     """
     GET /api/usuarios/portal/mi-hijo/
-    Datos del portal para CLIENTE_WEB: hijos con tarjeta, consumos del mes y cuenta mensual.
+    Datos del portal para CLIENTE_WEB: hijos con tarjeta, consumo del mes y
+    saldo de almuerzo.
     """
     permission_classes = [IsAuthenticated]
     throttle_classes = [PortalRateThrottle]
@@ -633,9 +634,9 @@ class PortalMiHijoView(APIView):
             )
 
         from datetime import date
-        from django.db.models import Sum
+        from django.db.models import Count, Sum
         from apps.clientes.models import RestriccionHijo
-        from apps.almuerzos.models import CuentaAlmuerzoMensual, SaldoAlmuerzo
+        from apps.almuerzos.models import RegistroConsumoAlmuerzo, SaldoAlmuerzo
         from apps.ventas.models import DetalleVenta, Venta
 
         hoy = date.today()
@@ -661,23 +662,28 @@ class PortalMiHijoView(APIView):
                 .values("tipo", "severidad", "descripcion", "requiere_autorizacion")
             )
 
-            # Saldo corriente de almuerzo (cuenta corriente, separado de la tarjeta)
+            # Saldo corriente de almuerzo (cuenta corriente, separado de la
+            # tarjeta) — es la única fuente real de deuda/pago.
             saldo_almuerzo = SaldoAlmuerzo.objects.filter(hijo=hijo).first()
 
-            # Cuenta mensual
-            cuenta = CuentaAlmuerzoMensual.objects.filter(
-                hijo=hijo, anio=hoy.year, mes=hoy.month
-            ).first()
-            cuenta_data = None
-            if cuenta:
-                cuenta_data = {
-                    "id_cuenta_mensual": cuenta.id_cuenta_mensual,
-                    "cantidad_almuerzos": cuenta.cantidad_almuerzos,
-                    "monto_total": int(cuenta.monto_total),
-                    "monto_pagado": int(cuenta.monto_pagado),
-                    "monto_pendiente": int(cuenta.monto_total - cuenta.monto_pagado),
-                    "estado": cuenta.estado,
+            # Consumo del mes actual — informativo, calculado en vivo desde
+            # los registros de comedor (ya no hay una tabla intermedia que
+            # mantener sincronizada).
+            consumo_mes_agg = RegistroConsumoAlmuerzo.objects.filter(
+                hijo=hijo,
+                fecha_consumo__year=hoy.year,
+                fecha_consumo__month=hoy.month,
+                estado=RegistroConsumoAlmuerzo.Estado.REGISTRADO,
+                ya_cobrado=True,
+            ).aggregate(cantidad=Count("id_registro_consumo"), monto=Sum("costo_almuerzo"))
+            consumo_mes = (
+                {
+                    "cantidad_almuerzos": consumo_mes_agg["cantidad"],
+                    "monto_total": int(consumo_mes_agg["monto"] or 0),
                 }
+                if consumo_mes_agg["cantidad"]
+                else None
+            )
 
             # Top productos de cantina consumidos este mes
             top_productos = list(
@@ -698,7 +704,7 @@ class PortalMiHijoView(APIView):
                 "grado": hijo.grado_nombre,
                 "tarjeta": tarjeta_data,
                 "restricciones": restricciones,
-                "cuenta_mensual": cuenta_data,
+                "consumo_mes": consumo_mes,
                 "saldo_almuerzo": int(saldo_almuerzo.saldo_actual) if saldo_almuerzo else 0,
                 "top_productos": [
                     {

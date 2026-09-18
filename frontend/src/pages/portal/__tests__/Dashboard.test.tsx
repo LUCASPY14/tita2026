@@ -43,10 +43,7 @@ const HIJO_BASE = {
     total: 0, cobrados: 0,
     ultimos: [] as { fecha_consumo: string; costo_almuerzo: string; ya_cobrado: boolean }[],
   },
-  cuenta_mensual: null as {
-    id_cuenta_mensual: number; cantidad_almuerzos: number; monto_total: number
-    monto_pagado: number; monto_pendiente: number; estado: string
-  } | null,
+  consumo_mes: null as { cantidad_almuerzos: number; monto_total: number } | null,
   saldo_almuerzo: 0,
   top_productos: [] as { producto: string; cantidad: number }[],
 }
@@ -58,10 +55,7 @@ const HIJO_CON_CUENTA = {
     total: 5, cobrados: 3,
     ultimos: [] as { fecha_consumo: string; costo_almuerzo: string; ya_cobrado: boolean }[],
   },
-  cuenta_mensual: {
-    id: 10, cantidad_almuerzos: 5, monto_total: 100_000,
-    monto_pagado: 100_000, monto_pendiente: 0, estado: 'PAGADO',
-  } as { id: number; cantidad_almuerzos: number; monto_total: number; monto_pagado: number; monto_pendiente: number; estado: string } | null,
+  consumo_mes: { cantidad_almuerzos: 5, monto_total: 100_000 } as { cantidad_almuerzos: number; monto_total: number } | null,
 }
 
 const HIJO2 = {

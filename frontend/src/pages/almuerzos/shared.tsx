@@ -110,7 +110,7 @@ export interface RegistroConsumo {
 }
 
 export interface CuentaMensual {
-  id_cuenta_mensual: number
+  id: string
   hijo: number
   hijo_nombre: string
   hijo_grado: string
