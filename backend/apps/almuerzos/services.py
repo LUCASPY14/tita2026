@@ -12,14 +12,13 @@ from rest_framework.exceptions import ValidationError
 
 from .models import (
     PrecioAlmuerzo,
-    SuscripcionAlmuerzo,
     RegistroConsumoAlmuerzo,
     CuentaAlmuerzoMensual,
     SaldoAlmuerzo,
     MovimientoSaldoAlmuerzo,
     RecargaSaldoAlmuerzo,
 )
-from .validators import validar_limite_registros_diarios
+from .validators import resolver_suscripcion_activa, validar_limite_registros_diarios
 
 logger = logging.getLogger(__name__)
 
@@ -53,12 +52,13 @@ class AlmuerzoService:
         nro_tarjeta,
         registrado_por,
         tipo_almuerzo=None,
-        suscripcion=None,
     ) -> RegistroConsumoAlmuerzo:
         """
         Registra un consumo de almuerzo.
 
         Reglas de negocio:
+        - Requiere una suscripción de almuerzo ACTIVA y vigente del hijo
+          (se resuelve automáticamente, no la elige el caller)
         - Maximo 2 registros por dia por alumno
         - Solo el primer registro del dia genera costo
         - El costo se agrega a la cuenta mensual
@@ -78,11 +78,12 @@ class AlmuerzoService:
         if fecha_consumo > date.today():
             raise ValidationError({"error": "No se puede registrar un consumo en fecha futura."})
 
-        # Validar suscripcion activa
-        if suscripcion and suscripcion.estado != SuscripcionAlmuerzo.Estado.ACTIVA:
+        # Suscripción obligatoria — a lo sumo hay una ACTIVA por hijo
+        # (unique_suscripcion_activa_por_hijo), así que no hay ambigüedad.
+        suscripcion = resolver_suscripcion_activa(hijo, fecha_consumo)
+        if not suscripcion:
             raise ValidationError({
-                "error": "La suscripcion no esta activa.",
-                "estado": suscripcion.estado,
+                "error": "El alumno no tiene una suscripción de almuerzo activa."
             })
 
         with transaction.atomic():

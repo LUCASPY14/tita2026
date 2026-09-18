@@ -1,7 +1,7 @@
 """
 Tests para AlmuerzoService.registrar_consumo y get_precio_activo.
-Cubre: validaciones de tarjeta, fecha futura, primer/segundo registro,
-costo en cuenta mensual, límite de crédito mensual.
+Cubre: validaciones de tarjeta, fecha futura, suscripción activa
+obligatoria, primer/segundo registro, costo en cuenta mensual.
 """
 import pytest
 from decimal import Decimal
@@ -75,18 +75,6 @@ def plan_sin_limite(db):
         nombre="Plan Sin Límite",
         activo=True,
         precio_mensual=Decimal("200000"),
-        limite_credito_mensual=None,
-    )
-
-
-@pytest.fixture
-def plan_con_limite(db):
-    from apps.almuerzos.models import PlanAlmuerzo
-    return PlanAlmuerzo.objects.create(
-        nombre="Plan Con Límite",
-        activo=True,
-        precio_mensual=Decimal("200000"),
-        limite_credito_mensual=Decimal("10000"),
     )
 
 
@@ -136,9 +124,9 @@ class TestRegistrarConsumo:
             fecha_consumo=HOY,
             nro_tarjeta=tarjeta_almuerzo,
             registrado_por=usuario_cajero,
-            suscripcion=suscripcion_activa,
         )
 
+        assert registro.suscripcion_id == suscripcion_activa.pk
         assert registro.ya_cobrado is True
         assert registro.costo_almuerzo == Decimal("15000")
         cuenta = CuentaAlmuerzoMensual.objects.get(
@@ -164,7 +152,6 @@ class TestRegistrarConsumo:
                 fecha_consumo=HOY,
                 nro_tarjeta=tarjeta_almuerzo,
                 registrado_por=usuario_cajero,
-                suscripcion=suscripcion_activa,
             )
             frozen.tick(delta=timedelta(seconds=300))
             segundo = AlmuerzoService.registrar_consumo(
@@ -172,7 +159,6 @@ class TestRegistrarConsumo:
                 fecha_consumo=HOY,
                 nro_tarjeta=tarjeta_almuerzo,
                 registrado_por=usuario_cajero,
-                suscripcion=suscripcion_activa,
             )
 
         # No genera costo, así que nunca se acredita a la cuenta ni se marca.
@@ -190,7 +176,6 @@ class TestRegistrarConsumo:
                 fecha_consumo=HOY,
                 nro_tarjeta=tarjeta_almuerzo,
                 registrado_por=usuario_cajero,
-                suscripcion=suscripcion_activa,
             )
             frozen.tick(delta=timedelta(seconds=300))
             segundo = AlmuerzoService.registrar_consumo(
@@ -198,7 +183,6 @@ class TestRegistrarConsumo:
                 fecha_consumo=HOY,
                 nro_tarjeta=tarjeta_almuerzo,
                 registrado_por=usuario_cajero,
-                suscripcion=suscripcion_activa,
             )
 
         assert segundo.ya_cobrado is False
@@ -217,7 +201,6 @@ class TestRegistrarConsumo:
                     fecha_consumo=HOY,
                     nro_tarjeta=tarjeta_almuerzo,
                     registrado_por=usuario_cajero,
-                    suscripcion=suscripcion_activa,
                 )
                 frozen.tick(delta=timedelta(seconds=300))
 
@@ -227,7 +210,6 @@ class TestRegistrarConsumo:
                     fecha_consumo=HOY,
                     nro_tarjeta=tarjeta_almuerzo,
                     registrado_por=usuario_cajero,
-                    suscripcion=suscripcion_activa,
                 )
 
     def test_tarjeta_bloqueada_falla(
@@ -269,7 +251,7 @@ class TestRegistrarConsumo:
             )
 
     def test_sin_precio_configurado_falla(
-        self, hijo_almuerzo, tarjeta_almuerzo, usuario_cajero
+        self, hijo_almuerzo, tarjeta_almuerzo, usuario_cajero, suscripcion_activa
     ):
         from apps.almuerzos.services import AlmuerzoService
 
@@ -281,41 +263,20 @@ class TestRegistrarConsumo:
                 registrado_por=usuario_cajero,
             )
 
-    def test_limite_credito_mensual_ya_no_bloquea(
+    def test_sin_suscripcion_falla(
         self, hijo_almuerzo, tarjeta_almuerzo, usuario_cajero, precio_almuerzo, db
     ):
-        """Almuerzo es cuenta corriente: el límite de crédito del plan ya no
-        bloquea el registro — el saldo simplemente queda negativo."""
-        from apps.almuerzos.models import PlanAlmuerzo, SuscripcionAlmuerzo, SaldoAlmuerzo
         from apps.almuerzos.services import AlmuerzoService
 
-        # Precio = 15000, límite = 10000 → antes hubiera bloqueado en el primer intento
-        plan = PlanAlmuerzo.objects.create(
-            nombre="Plan Ajustado",
-            activo=True,
-            precio_mensual=Decimal("200000"),
-            limite_credito_mensual=Decimal("10000"),
-        )
-        suscripcion = SuscripcionAlmuerzo.objects.create(
-            hijo=hijo_almuerzo,
-            plan=plan,
-            fecha_inicio=HOY,
-            estado=SuscripcionAlmuerzo.Estado.ACTIVA,
-        )
+        with pytest.raises(ValidationError, match="suscripci"):
+            AlmuerzoService.registrar_consumo(
+                hijo=hijo_almuerzo,
+                fecha_consumo=HOY,
+                nro_tarjeta=tarjeta_almuerzo,
+                registrado_por=usuario_cajero,
+            )
 
-        registro = AlmuerzoService.registrar_consumo(
-            hijo=hijo_almuerzo,
-            fecha_consumo=HOY,
-            nro_tarjeta=tarjeta_almuerzo,
-            registrado_por=usuario_cajero,
-            suscripcion=suscripcion,
-        )
-
-        assert registro.ya_cobrado is True
-        saldo = SaldoAlmuerzo.objects.get(hijo=hijo_almuerzo)
-        assert saldo.saldo_actual == Decimal("-15000")
-
-    def test_suscripcion_inactiva_falla(
+    def test_suscripcion_suspendida_falla(
         self, hijo_almuerzo, tarjeta_almuerzo, usuario_cajero, precio_almuerzo, db
     ):
         from apps.almuerzos.models import PlanAlmuerzo, SuscripcionAlmuerzo
@@ -326,7 +287,7 @@ class TestRegistrarConsumo:
             activo=True,
             precio_mensual=Decimal("100000"),
         )
-        suscripcion = SuscripcionAlmuerzo.objects.create(
+        SuscripcionAlmuerzo.objects.create(
             hijo=hijo_almuerzo,
             plan=plan,
             fecha_inicio=HOY,
@@ -339,7 +300,6 @@ class TestRegistrarConsumo:
                 fecha_consumo=HOY,
                 nro_tarjeta=tarjeta_almuerzo,
                 registrado_por=usuario_cajero,
-                suscripcion=suscripcion,
             )
 
     def test_tarjeta_no_pertenece_al_hijo_falla(self, hijo_almuerzo, usuario_cajero, db):
@@ -386,7 +346,6 @@ class TestRegistrarConsumo:
             fecha_consumo=HOY,
             nro_tarjeta=tarjeta_almuerzo,
             registrado_por=usuario_cajero,
-            suscripcion=suscripcion_activa,
             tipo_almuerzo=tipo,
         )
         assert registro.costo_almuerzo == Decimal("12000")
@@ -505,7 +464,7 @@ class TestRevertirSaldoAlmuerzo:
 
         registro = AlmuerzoService.registrar_consumo(
             hijo=hijo_almuerzo, fecha_consumo=HOY, nro_tarjeta=tarjeta_almuerzo,
-            registrado_por=usuario_cajero, suscripcion=suscripcion_activa,
+            registrado_por=usuario_cajero,
         )
         saldo = SaldoAlmuerzo.objects.get(hijo=hijo_almuerzo)
         assert saldo.saldo_actual == Decimal("-15000")

@@ -89,6 +89,33 @@ def verificar_alergenos_venta(hijo, productos: list) -> list[dict]:
     return advertencias
 
 
+def resolver_suscripcion_activa(hijo, fecha_consumo):
+    """
+    Busca la SuscripcionAlmuerzo ACTIVA y vigente del hijo para esa fecha.
+    La suscripción es obligatoria para registrar un ingreso al comedor — el
+    constraint unique_suscripcion_activa_por_hijo garantiza que a lo sumo
+    hay una, así que no hace falta desambiguar entre varias.
+
+    Returns:
+        SuscripcionAlmuerzo | None
+    """
+    from django.db.models import Q
+
+    from .models import SuscripcionAlmuerzo
+
+    return (
+        SuscripcionAlmuerzo.objects
+        .filter(
+            hijo=hijo,
+            estado=SuscripcionAlmuerzo.Estado.ACTIVA,
+            fecha_inicio__lte=fecha_consumo,
+        )
+        .filter(Q(fecha_fin__isnull=True) | Q(fecha_fin__gte=fecha_consumo))
+        .select_related("plan")
+        .first()
+    )
+
+
 SEGUNDOS_MINIMOS_SEGUNDO_REGISTRO = 240
 
 

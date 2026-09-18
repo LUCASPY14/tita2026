@@ -543,7 +543,6 @@ class Command(BaseCommand):
                 AlmuerzoService.registrar_consumo(
                     hijo=susc.hijo, fecha_consumo=fecha_dia,
                     nro_tarjeta=susc.hijo.tarjeta, registrado_por=self.cocina or self.cajero,
-                    suscripcion=susc,
                 )
             except Exception:
                 continue

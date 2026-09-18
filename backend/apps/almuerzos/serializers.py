@@ -68,6 +68,23 @@ class SuscripcionAlmuerzoSerializer(serializers.ModelSerializer):
         fields = "__all__"
         read_only_fields = ["fecha_creacion"]
 
+    def validate(self, data):
+        # unique_suscripcion_activa_por_hijo (a lo sumo una ACTIVA por hijo)
+        # daría un IntegrityError feo (500) sin este chequeo explícito.
+        hijo = data.get("hijo") or getattr(self.instance, "hijo", None)
+        estado = data.get("estado", getattr(self.instance, "estado", SuscripcionAlmuerzo.Estado.ACTIVA))
+        if hijo and estado == SuscripcionAlmuerzo.Estado.ACTIVA:
+            qs = SuscripcionAlmuerzo.objects.filter(
+                hijo=hijo, estado=SuscripcionAlmuerzo.Estado.ACTIVA,
+            )
+            if self.instance:
+                qs = qs.exclude(pk=self.instance.pk)
+            if qs.exists():
+                raise serializers.ValidationError({
+                    "hijo": "Este alumno ya tiene una suscripción activa. Cancelala o suspendela primero."
+                })
+        return data
+
 
 # ==============================================================================
 # REGISTRO CONSUMO ALMUERZO
@@ -96,29 +113,12 @@ class RegistroConsumoAlmuerzoSerializer(serializers.ModelSerializer):
             "marcado_en_cuenta",
             "registrado_por",
             "fecha_creacion",
+            # La suscripción activa se resuelve del lado del servidor
+            # (RegistroConsumoAlmuerzoViewSet.perform_create) — es obligatoria
+            # y a lo sumo hay una por hijo (unique_suscripcion_activa_por_hijo),
+            # así que no tiene sentido que el cliente la elija.
+            "suscripcion",
         ]
-
-    def validate(self, data):
-        hijo = data.get("hijo")
-        suscripcion = data.get("suscripcion")
-        fecha_consumo = data.get("fecha_consumo")
-
-        if suscripcion and hijo and suscripcion.hijo_id != hijo.pk:
-            raise serializers.ValidationError(
-                {"suscripcion": "La suscripción no pertenece al estudiante indicado."}
-            )
-
-        if suscripcion and fecha_consumo:
-            if suscripcion.fecha_inicio > fecha_consumo:
-                raise serializers.ValidationError(
-                    {"suscripcion": "La suscripción no estaba vigente en la fecha de consumo."}
-                )
-            if suscripcion.fecha_fin and suscripcion.fecha_fin < fecha_consumo:
-                raise serializers.ValidationError(
-                    {"suscripcion": "La suscripción ya había vencido en la fecha de consumo."}
-                )
-
-        return data
 
 
 # ==============================================================================

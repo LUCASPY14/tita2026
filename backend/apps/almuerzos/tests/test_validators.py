@@ -1,11 +1,11 @@
 """
 Tests para almuerzos/validators.py.
 Cubre: validar_restricciones_alergenicas, verificar_alergenos_venta,
-validar_limite_registros_diarios (edge cases).
+validar_limite_registros_diarios (edge cases), resolver_suscripcion_activa.
 """
 import pytest
 from decimal import Decimal
-from datetime import date
+from datetime import date, timedelta
 
 
 @pytest.fixture
@@ -253,3 +253,83 @@ class TestValidarLimiteRegistrosDiarios:
         )
         with pytest.raises(ValidationError, match="Limite alcanzado"):
             validar_limite_registros_diarios(hijo, ahora.date())
+
+
+# ── resolver_suscripcion_activa ────────────────────────────────────────────────
+
+@pytest.mark.django_db
+class TestResolverSuscripcionActiva:
+
+    def _hijo_y_plan(self, cliente, nombre, nivel):
+        from apps.clientes.models import Hijo, Grado
+        from apps.almuerzos.models import PlanAlmuerzo
+        grado, _ = Grado.objects.get_or_create(
+            nombre=f"grado-susc-{nivel}", defaults={"nivel": nivel, "orden": nivel, "activo": True}
+        )
+        hijo = Hijo.objects.create(
+            nombre=nombre, apellido="Test",
+            cliente_responsable=cliente, grado=grado, activo=True,
+        )
+        plan = PlanAlmuerzo.objects.create(
+            nombre=f"Plan {nombre}", precio_mensual=Decimal("100000"),
+        )
+        return hijo, plan
+
+    def test_sin_ninguna_suscripcion_retorna_none(self, cliente):
+        from apps.almuerzos.validators import resolver_suscripcion_activa
+        hijo, _ = self._hijo_y_plan(cliente, "SinSusc", 20)
+        assert resolver_suscripcion_activa(hijo, date.today()) is None
+
+    def test_suscripcion_activa_vigente_se_resuelve(self, cliente):
+        from apps.almuerzos.models import SuscripcionAlmuerzo
+        from apps.almuerzos.validators import resolver_suscripcion_activa
+        hijo, plan = self._hijo_y_plan(cliente, "ConSusc", 21)
+        hoy = date.today()
+        sus = SuscripcionAlmuerzo.objects.create(
+            hijo=hijo, plan=plan, fecha_inicio=hoy - timedelta(days=10),
+            estado=SuscripcionAlmuerzo.Estado.ACTIVA,
+        )
+        assert resolver_suscripcion_activa(hijo, hoy) == sus
+
+    def test_suscripcion_suspendida_no_cuenta(self, cliente):
+        from apps.almuerzos.models import SuscripcionAlmuerzo
+        from apps.almuerzos.validators import resolver_suscripcion_activa
+        hijo, plan = self._hijo_y_plan(cliente, "Suspendido", 22)
+        SuscripcionAlmuerzo.objects.create(
+            hijo=hijo, plan=plan, fecha_inicio=date.today() - timedelta(days=10),
+            estado=SuscripcionAlmuerzo.Estado.SUSPENDIDA,
+        )
+        assert resolver_suscripcion_activa(hijo, date.today()) is None
+
+    def test_fecha_inicio_futura_no_cuenta_como_vigente(self, cliente):
+        from apps.almuerzos.models import SuscripcionAlmuerzo
+        from apps.almuerzos.validators import resolver_suscripcion_activa
+        hijo, plan = self._hijo_y_plan(cliente, "FuturoInicio", 23)
+        SuscripcionAlmuerzo.objects.create(
+            hijo=hijo, plan=plan, fecha_inicio=date.today() + timedelta(days=10),
+            estado=SuscripcionAlmuerzo.Estado.ACTIVA,
+        )
+        assert resolver_suscripcion_activa(hijo, date.today()) is None
+
+    def test_suscripcion_vencida_no_cuenta(self, cliente):
+        from apps.almuerzos.models import SuscripcionAlmuerzo
+        from apps.almuerzos.validators import resolver_suscripcion_activa
+        hijo, plan = self._hijo_y_plan(cliente, "Vencido", 24)
+        hoy = date.today()
+        SuscripcionAlmuerzo.objects.create(
+            hijo=hijo, plan=plan, fecha_inicio=hoy - timedelta(days=30),
+            fecha_fin=hoy - timedelta(days=1),
+            estado=SuscripcionAlmuerzo.Estado.ACTIVA,
+        )
+        assert resolver_suscripcion_activa(hijo, hoy) is None
+
+    def test_de_otro_hijo_no_se_confunde(self, cliente):
+        from apps.almuerzos.models import SuscripcionAlmuerzo
+        from apps.almuerzos.validators import resolver_suscripcion_activa
+        hijo, plan = self._hijo_y_plan(cliente, "Propio", 25)
+        otro_hijo, _ = self._hijo_y_plan(cliente, "Ajeno", 26)
+        SuscripcionAlmuerzo.objects.create(
+            hijo=otro_hijo, plan=plan, fecha_inicio=date.today() - timedelta(days=5),
+            estado=SuscripcionAlmuerzo.Estado.ACTIVA,
+        )
+        assert resolver_suscripcion_activa(hijo, date.today()) is None

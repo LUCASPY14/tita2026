@@ -100,7 +100,6 @@ def plan_sin_limite(db):
         nombre="Plan Libre Views",
         activo=True,
         precio_mensual=Decimal("200000"),
-        limite_credito_mensual=None,
         dias_semana_incluidos="LUN,MAR,MIE,JUE,VIE",
     )
 
@@ -112,7 +111,6 @@ def plan_con_limite(db):
         nombre="Plan Limitado Views",
         activo=True,
         precio_mensual=Decimal("100000"),
-        limite_credito_mensual=Decimal("10000"),
         dias_semana_incluidos="LUN,MAR,MIE,JUE,VIE",
     )
 
@@ -306,6 +304,60 @@ class TestSuscripcionAlmuerzoAccesoClienteWeb:
         assert suscripcion_activa.id_suscripcion in ids
 
 
+# ── SuscripcionAlmuerzoViewSet — una sola activa por hijo ─────────────────────
+
+@pytest.mark.django_db
+class TestSuscripcionUnicaActivaPorHijo:
+
+    def test_segunda_suscripcion_activa_da_400_legible(
+        self, api_admin, hijo_almuerzo, suscripcion_activa, plan_con_limite
+    ):
+        # unique_suscripcion_activa_por_hijo daría un IntegrityError (500) sin
+        # la validación explícita del serializer.
+        resp = api_admin.post("/api/v1/almuerzos/suscripciones/", {
+            "hijo": hijo_almuerzo.id_hijo,
+            "plan": plan_con_limite.id_plan_almuerzo,
+            "fecha_inicio": str(date.today()),
+        })
+        assert resp.status_code == 400
+        assert "hijo" in resp.data["field_errors"]
+
+    def test_segunda_suscripcion_no_activa_se_permite(
+        self, api_admin, hijo_almuerzo, suscripcion_activa, plan_con_limite
+    ):
+        resp = api_admin.post("/api/v1/almuerzos/suscripciones/", {
+            "hijo": hijo_almuerzo.id_hijo,
+            "plan": plan_con_limite.id_plan_almuerzo,
+            "fecha_inicio": str(date.today()),
+            "estado": "CANCELADA",
+        })
+        assert resp.status_code == 201
+
+    def test_activar_suscripcion_cuando_ya_hay_otra_activa_falla(
+        self, api_admin, hijo_almuerzo, suscripcion_activa, plan_con_limite
+    ):
+        from apps.almuerzos.models import SuscripcionAlmuerzo
+        otra = SuscripcionAlmuerzo.objects.create(
+            hijo=hijo_almuerzo, plan=plan_con_limite,
+            fecha_inicio=date.today(), estado=SuscripcionAlmuerzo.Estado.CANCELADA,
+        )
+        resp = api_admin.patch(
+            f"/api/v1/almuerzos/suscripciones/{otra.pk}/", {"estado": "ACTIVA"},
+        )
+        assert resp.status_code == 400
+
+    def test_reemplazar_la_propia_suscripcion_activa_no_falla(
+        self, api_admin, suscripcion_activa
+    ):
+        # Editar campos de la MISMA suscripción activa (no crear otra) no
+        # debe chocar consigo misma.
+        resp = api_admin.patch(
+            f"/api/v1/almuerzos/suscripciones/{suscripcion_activa.pk}/",
+            {"estado": "ACTIVA"},
+        )
+        assert resp.status_code == 200
+
+
 # ── PrecioAlmuerzoViewSet — precio_actual ─────────────────────────────────────
 
 @pytest.mark.django_db
@@ -368,7 +420,7 @@ class TestRegistroConsumoDestroy:
 @pytest.mark.django_db
 class TestRegistroConsumoCreate:
 
-    def test_primer_registro_ok(self, api_cajero, hijo_almuerzo, tarjeta_almuerzo, precio_almuerzo):
+    def test_primer_registro_ok(self, api_cajero, hijo_almuerzo, tarjeta_almuerzo, precio_almuerzo, suscripcion_activa):
         resp = api_cajero.post(
             "/api/v1/almuerzos/registros-consumo/",
             {
@@ -383,7 +435,7 @@ class TestRegistroConsumoCreate:
         assert resp.data["costo_almuerzo"] == "15000"
 
     def test_client_request_id_repetido_no_duplica_el_registro(
-        self, api_cajero, hijo_almuerzo, tarjeta_almuerzo, precio_almuerzo,
+        self, api_cajero, hijo_almuerzo, tarjeta_almuerzo, precio_almuerzo, suscripcion_activa,
     ):
         # Simula el reintento de la cola offline del Service Worker: perdió
         # la respuesta del primer POST (no la request) y reenvía el mismo
@@ -404,7 +456,7 @@ class TestRegistroConsumoCreate:
         assert RegistroConsumoAlmuerzo.objects.filter(hijo=hijo_almuerzo).count() == 1
 
     def test_sin_client_request_id_sigue_funcionando_como_antes(
-        self, api_cajero, hijo_almuerzo, tarjeta_almuerzo, precio_almuerzo,
+        self, api_cajero, hijo_almuerzo, tarjeta_almuerzo, precio_almuerzo, suscripcion_activa,
     ):
         # Compatibilidad hacia atrás: el campo es opcional, así que un
         # request sin client_request_id (clientes viejos) crea normalmente.
@@ -417,7 +469,7 @@ class TestRegistroConsumoCreate:
         assert resp.status_code == 201
         assert RegistroConsumoAlmuerzo.objects.get(pk=resp.data["id_registro_consumo"]).client_request_id is None
 
-    def test_sin_precio_usa_tipo_almuerzo(self, api_cajero, hijo_almuerzo, tarjeta_almuerzo, tipo_almuerzo):
+    def test_sin_precio_usa_tipo_almuerzo(self, api_cajero, hijo_almuerzo, tarjeta_almuerzo, tipo_almuerzo, suscripcion_activa):
         # No hay PrecioAlmuerzo activo → usa tipo_almuerzo.precio_unitario
         resp = api_cajero.post(
             "/api/v1/almuerzos/registros-consumo/",
@@ -432,7 +484,7 @@ class TestRegistroConsumoCreate:
         assert resp.status_code == 201
         assert resp.data["costo_almuerzo"] == "12000"
 
-    def test_sin_precio_ni_tipo_falla(self, api_cajero, hijo_almuerzo, tarjeta_almuerzo):
+    def test_sin_precio_ni_tipo_falla(self, api_cajero, hijo_almuerzo, tarjeta_almuerzo, suscripcion_activa):
         # No hay precio ni tipo → error
         resp = api_cajero.post(
             "/api/v1/almuerzos/registros-consumo/",
@@ -446,7 +498,7 @@ class TestRegistroConsumoCreate:
         assert resp.status_code == 400
 
     def test_segundo_registro_costo_cero(self, api_cajero, hijo_almuerzo, tarjeta_almuerzo,
-                                          precio_almuerzo, usuario_cajero):
+                                          precio_almuerzo, usuario_cajero, suscripcion_activa):
         from django.utils import timezone
         from datetime import timedelta
         from apps.almuerzos.models import RegistroConsumoAlmuerzo
@@ -482,7 +534,7 @@ class TestRegistroConsumoCreate:
         assert resp.data["costo_almuerzo"] == "0"
 
     def test_segundo_registro_muy_pronto_bloquea(self, api_cajero, hijo_almuerzo, tarjeta_almuerzo,
-                                                   precio_almuerzo, usuario_cajero):
+                                                   precio_almuerzo, usuario_cajero, suscripcion_activa):
         from django.utils import timezone
         from apps.almuerzos.models import RegistroConsumoAlmuerzo
         hoy = timezone.localtime().date()
@@ -509,7 +561,7 @@ class TestRegistroConsumoCreate:
         assert "muy pronto" in resp.data["detail"]
 
     def test_tercer_registro_retorna_400_con_mensaje_limite(self, api_cajero, hijo_almuerzo, tarjeta_almuerzo,
-                                                              precio_almuerzo, usuario_cajero):
+                                                              precio_almuerzo, usuario_cajero, suscripcion_activa):
         from django.utils import timezone
         from datetime import timedelta
         from apps.almuerzos.models import RegistroConsumoAlmuerzo
@@ -572,57 +624,49 @@ class TestRegistroConsumoCreate:
 
     def test_suscripcion_suspendida_falla(self, api_cajero, hijo_almuerzo, tarjeta_almuerzo,
                                            precio_almuerzo, suscripcion_suspendida):
+        # La suscripción se resuelve del lado del servidor (read-only) — una
+        # suspendida no cuenta como activa, así que no hay ninguna vigente.
         resp = api_cajero.post(
             "/api/v1/almuerzos/registros-consumo/",
             {
                 "hijo": hijo_almuerzo.pk,
                 "fecha_consumo": str(date.today()),
                 "nro_tarjeta": tarjeta_almuerzo.pk,
-                "suscripcion": suscripcion_suspendida.pk,
             },
             format="json",
         )
         assert resp.status_code == 400
+        assert "suscrip" in resp.data["detail"].lower()
 
-    def test_limite_credito_ya_no_bloquea_saldo_queda_negativo(
-        self, api_cajero, hijo_almuerzo, tarjeta_almuerzo, precio_almuerzo, plan_con_limite
-    ):
-        """Almuerzo es cuenta corriente: el límite de crédito del plan ya no
-        bloquea el registro — el saldo simplemente queda negativo."""
-        from apps.almuerzos.models import SuscripcionAlmuerzo, SaldoAlmuerzo
-        hoy = date.today()
-        suscripcion = SuscripcionAlmuerzo.objects.create(
-            hijo=hijo_almuerzo, plan=plan_con_limite,
-            fecha_inicio=hoy, estado=SuscripcionAlmuerzo.Estado.ACTIVA,
-        )
-        resp = api_cajero.post(
-            "/api/v1/almuerzos/registros-consumo/",
-            {
-                "hijo": hijo_almuerzo.pk,
-                "fecha_consumo": str(hoy),
-                "nro_tarjeta": tarjeta_almuerzo.pk,
-                "suscripcion": suscripcion.pk,
-            },
-            format="json",
-        )
-        assert resp.status_code == 201
-        saldo = SaldoAlmuerzo.objects.get(hijo=hijo_almuerzo)
-        assert saldo.saldo_actual == Decimal("-15000")
-
-    def test_con_suscripcion_activa_ok(self, api_cajero, hijo_almuerzo, tarjeta_almuerzo,
-                                        precio_almuerzo, suscripcion_activa):
+    def test_sin_suscripcion_falla(self, api_cajero, hijo_almuerzo, tarjeta_almuerzo, precio_almuerzo):
         resp = api_cajero.post(
             "/api/v1/almuerzos/registros-consumo/",
             {
                 "hijo": hijo_almuerzo.pk,
                 "fecha_consumo": str(date.today()),
                 "nro_tarjeta": tarjeta_almuerzo.pk,
-                "suscripcion": suscripcion_activa.pk,
+            },
+            format="json",
+        )
+        assert resp.status_code == 400
+        assert "suscrip" in resp.data["detail"].lower()
+
+    def test_con_suscripcion_activa_ok(self, api_cajero, hijo_almuerzo, tarjeta_almuerzo,
+                                        precio_almuerzo, suscripcion_activa):
+        # La suscripción se resuelve sola del lado del servidor — no hace
+        # falta (ni se puede: el campo es read-only) mandarla en el body.
+        resp = api_cajero.post(
+            "/api/v1/almuerzos/registros-consumo/",
+            {
+                "hijo": hijo_almuerzo.pk,
+                "fecha_consumo": str(date.today()),
+                "nro_tarjeta": tarjeta_almuerzo.pk,
             },
             format="json",
         )
         assert resp.status_code == 201
         assert resp.data["ya_cobrado"] is True
+        assert resp.data["suscripcion"] == suscripcion_activa.pk
 
 
 # ── CuentaAlmuerzoMensualViewSet ──────────────────────────────────────────────
@@ -834,7 +878,7 @@ class TestRegistroConsumoLineasAdicionales:
         assert resp.status_code == 400
 
     def test_con_restriccion_no_critica_muestra_advertencias(
-        self, api_cajero, hijo_almuerzo, tarjeta_almuerzo, precio_almuerzo
+        self, api_cajero, hijo_almuerzo, tarjeta_almuerzo, precio_almuerzo, suscripcion_activa
     ):
         # RestriccionHijo no crítica → validar_restricciones_alergenicas retorna advertencias
         # hits line 187 (data["advertencias"] = advertencias)
@@ -856,7 +900,7 @@ class TestRegistroConsumoLineasAdicionales:
         assert "advertencias" in resp.data
 
     def test_restriccion_critica_bloquea_con_detalle_estructurado(
-        self, api_cajero, hijo_almuerzo, tarjeta_almuerzo, precio_almuerzo
+        self, api_cajero, hijo_almuerzo, tarjeta_almuerzo, precio_almuerzo, suscripcion_activa
     ):
         # Regresión: el bloqueo por restricción CRITICA debe llegar al frontend
         # con "restricciones" como lista de diccionarios en el nivel superior
@@ -928,7 +972,7 @@ class TestRegistroConsumoAlergenosMenu:
         assert resp.data["advertencias_alergenos"][0]["alergeno"] == "Maní"
 
     def test_menu_con_alergeno_forzar_registra_ok(
-        self, api_cajero, hijo_almuerzo, tarjeta_almuerzo, precio_almuerzo, producto, usuario_admin
+        self, api_cajero, hijo_almuerzo, tarjeta_almuerzo, precio_almuerzo, producto, usuario_admin, suscripcion_activa
     ):
         from apps.clientes.models import RestriccionHijo
         RestriccionHijo.objects.create(
@@ -948,7 +992,7 @@ class TestRegistroConsumoAlergenosMenu:
         assert resp.data["advertencias_alergenos"]
 
     def test_menu_sin_detalle_no_bloquea(
-        self, api_cajero, hijo_almuerzo, tarjeta_almuerzo, precio_almuerzo, usuario_admin
+        self, api_cajero, hijo_almuerzo, tarjeta_almuerzo, precio_almuerzo, usuario_admin, suscripcion_activa
     ):
         # Caso de hoy: un MenuDiario existe pero sin DetalleMenuDiario vinculado
         # (texto libre) — no debe cambiar el comportamiento existente.
@@ -1163,7 +1207,7 @@ class TestRegistroConsumoWhatsappFallback:
     """Líneas 285-286: whatsapp_cliente lanza excepción → se ignora, create igual exitoso."""
 
     def test_create_exitoso_aunque_whatsapp_falle(
-        self, api_cajero, hijo_almuerzo, tarjeta_almuerzo, precio_almuerzo
+        self, api_cajero, hijo_almuerzo, tarjeta_almuerzo, precio_almuerzo, suscripcion_activa
     ):
         from unittest.mock import patch
         with patch(

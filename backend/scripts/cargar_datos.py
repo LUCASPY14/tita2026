@@ -338,11 +338,11 @@ PrecioAlmuerzo.objects.get_or_create(
 
 print("Creando planes de almuerzo...")
 planes_data = [
-    ("Plan Mensual Completo", "Almuerzo completo todos los dias", "SIN_LIMITE", 300000, 20, 350000),
-    ("Plan 10 Almuerzos", "10 almuerzos por mes", "CANTIDAD", 150000, 10, 200000),
-    ("Plan 20 Almuerzos", "20 almuerzos por mes", "CANTIDAD", 280000, 20, 350000),
+    ("Plan Mensual Completo", "Almuerzo completo todos los dias", "SIN_LIMITE", 300000, 20),
+    ("Plan 10 Almuerzos", "10 almuerzos por mes", "CANTIDAD", 150000, 10),
+    ("Plan 20 Almuerzos", "20 almuerzos por mes", "CANTIDAD", 280000, 20),
 ]
-for nombre, desc, tipo, precio, cantidad, limite in planes_data:
+for nombre, desc, tipo, precio, cantidad in planes_data:
     PlanAlmuerzo.objects.get_or_create(
         nombre=nombre,
         defaults={
@@ -350,7 +350,6 @@ for nombre, desc, tipo, precio, cantidad, limite in planes_data:
             "tipo": tipo,
             "precio_mensual": precio,
             "cantidad_almuerzos_mes": cantidad if tipo == "CANTIDAD" else None,
-            "limite_credito_mensual": limite,
             "dias_semana_incluidos": "LUN,MAR,MIE,JUE,VIE",
         }
     )

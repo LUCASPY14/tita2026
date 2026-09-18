@@ -71,6 +71,7 @@ from .serializers import (
 from .filters import RegistroConsumoFilter
 from .services import AlmuerzoService
 from .validators import (
+    resolver_suscripcion_activa,
     validar_limite_registros_diarios,
     validar_restricciones_alergenicas,
     verificar_alergenos_venta,
@@ -178,13 +179,14 @@ class RegistroConsumoAlmuerzoViewSet(viewsets.ModelViewSet):
     ViewSet para registrar consumos de almuerzo.
 
     REGLA DE NEGOCIO:
+    - Requiere una suscripción de almuerzo ACTIVA y vigente del hijo — se
+      resuelve automáticamente (resolver_suscripcion_activa), el cliente no
+      la elige. Sin suscripción activa, no se puede registrar el ingreso.
     - La tarjeta se usa SOLO como identificacion de acceso al comedor.
     - NO se descuenta saldo de la tarjeta.
     - Maximo 2 registros por alumno por dia, pero se factura como 1 ALMUERZO por dia:
         1er registro del dia: ya_cobrado=True  -> se agrega el costo a la cuenta mensual
         2do registro del dia: ya_cobrado=False -> costo=0, solo trazabilidad
-    - Limite de credito mensual: si el plan tiene limite_credito_mensual, se bloquea
-      cuando el monto acumulado en CuentaAlmuerzoMensual alcanza ese tope.
     """
 
     queryset = RegistroConsumoAlmuerzo.objects.select_related(
@@ -350,7 +352,6 @@ class RegistroConsumoAlmuerzoViewSet(viewsets.ModelViewSet):
         fecha_consumo = registro_data.get("fecha_consumo")
         nro_tarjeta = registro_data.get("nro_tarjeta")
         tipo_almuerzo = registro_data.get("tipo_almuerzo")
-        suscripcion = registro_data.get("suscripcion")
         client_request_id = registro_data.get("client_request_id")
 
         # Idempotencia: la cola offline del Service Worker reintenta este
@@ -378,11 +379,14 @@ class RegistroConsumoAlmuerzoViewSet(viewsets.ModelViewSet):
                 "error": f"La tarjeta está {nro_tarjeta.get_estado_display().lower()} y no puede usarse para ingresar."
             })
 
-        # Validar suscripcion si se provee
-        if suscripcion and suscripcion.estado != SuscripcionAlmuerzo.Estado.ACTIVA:
+        # Suscripción obligatoria: se resuelve automáticamente, no la manda
+        # el cliente (el campo es read_only en el serializer — ver comentario
+        # ahí). El constraint unique_suscripcion_activa_por_hijo garantiza que
+        # a lo sumo hay una activa, así que no hay ambigüedad posible.
+        suscripcion = resolver_suscripcion_activa(hijo, fecha_consumo)
+        if not suscripcion:
             raise ValidationError({
-                "error": "La suscripcion no esta activa",
-                "estado_suscripcion": suscripcion.estado,
+                "error": "El alumno no tiene una suscripción de almuerzo activa."
             })
 
         with transaction.atomic():
@@ -425,6 +429,7 @@ class RegistroConsumoAlmuerzoViewSet(viewsets.ModelViewSet):
                 ya_cobrado=es_primer_registro,
                 estado=RegistroConsumoAlmuerzo.Estado.REGISTRADO,
                 registrado_por=self.request.user,
+                suscripcion=suscripcion,
             )
 
             if es_primer_registro:

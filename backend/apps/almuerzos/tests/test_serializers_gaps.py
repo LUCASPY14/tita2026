@@ -1,11 +1,10 @@
 """
 Cobertura de ramas no alcanzadas en almuerzos/serializers.py:
-  - RegistroConsumoAlmuerzoSerializer.validate(): 3 errores de suscripción
   - PagoCuentaAlmuerzoSerializer.validate(): monto ≤ 0, monto > saldo
   - DetalleMenuDiarioSerializer.validate_cantidad(): valor ≤ 0
 """
 import pytest
-from datetime import date, timedelta
+from datetime import date
 from decimal import Decimal
 
 
@@ -29,37 +28,6 @@ def hijo_ser(db, cliente, grado):
 
 
 @pytest.fixture
-def hijo_otro(db, cliente, grado):
-    from apps.clientes.models import Hijo
-    return Hijo.objects.create(
-        nombre="SerTest", apellido="B",
-        cliente_responsable=cliente, grado=grado, activo=True,
-    )
-
-
-@pytest.fixture
-def plan_almuerzo(db):
-    from apps.almuerzos.models import PlanAlmuerzo
-    return PlanAlmuerzo.objects.create(
-        nombre="Plan Serializer Test",
-        precio_mensual=Decimal("120000"),
-    )
-
-
-@pytest.fixture
-def suscripcion(db, hijo_ser, plan_almuerzo):
-    from apps.almuerzos.models import SuscripcionAlmuerzo
-    hoy = date.today()
-    return SuscripcionAlmuerzo.objects.create(
-        hijo=hijo_ser,
-        plan=plan_almuerzo,
-        fecha_inicio=hoy,
-        fecha_fin=hoy + timedelta(days=30),
-        estado=SuscripcionAlmuerzo.Estado.ACTIVA,
-    )
-
-
-@pytest.fixture
 def cuenta_almuerzo(db, hijo_ser):
     from apps.almuerzos.models import CuentaAlmuerzoMensual
     hoy = date.today()
@@ -78,55 +46,11 @@ def cuenta_almuerzo(db, hijo_ser):
 # ==============================================================================
 
 @pytest.mark.django_db
-class TestRegistroConsumoSerializerValidate:
-
-    def test_suscripcion_no_pertenece_a_hijo_falla(self, hijo_ser, hijo_otro, suscripcion):
-        from apps.almuerzos.serializers import RegistroConsumoAlmuerzoSerializer
-        # suscripcion → hijo_ser, pero pasamos hijo_otro → debe fallar
-        ser = RegistroConsumoAlmuerzoSerializer(data={
-            "hijo": hijo_otro.pk,
-            "suscripcion": suscripcion.pk,
-            "fecha_consumo": str(date.today()),
-        })
-        assert not ser.is_valid()
-        assert "suscripcion" in ser.errors
-
-    def test_suscripcion_fecha_inicio_posterior_a_consumo_falla(self, hijo_ser, plan_almuerzo):
-        from apps.almuerzos.models import SuscripcionAlmuerzo
-        from apps.almuerzos.serializers import RegistroConsumoAlmuerzoSerializer
-        hoy = date.today()
-        sus = SuscripcionAlmuerzo.objects.create(
-            hijo=hijo_ser,
-            plan=plan_almuerzo,
-            fecha_inicio=hoy + timedelta(days=10),
-            estado=SuscripcionAlmuerzo.Estado.ACTIVA,
-        )
-        ser = RegistroConsumoAlmuerzoSerializer(data={
-            "hijo": hijo_ser.pk,
-            "suscripcion": sus.pk,
-            "fecha_consumo": str(hoy),
-        })
-        assert not ser.is_valid()
-        assert "suscripcion" in ser.errors
-
-    def test_suscripcion_vencida_en_fecha_consumo_falla(self, hijo_ser, plan_almuerzo):
-        from apps.almuerzos.models import SuscripcionAlmuerzo
-        from apps.almuerzos.serializers import RegistroConsumoAlmuerzoSerializer
-        hoy = date.today()
-        sus = SuscripcionAlmuerzo.objects.create(
-            hijo=hijo_ser,
-            plan=plan_almuerzo,
-            fecha_inicio=hoy - timedelta(days=30),
-            fecha_fin=hoy - timedelta(days=1),
-            estado=SuscripcionAlmuerzo.Estado.ACTIVA,
-        )
-        ser = RegistroConsumoAlmuerzoSerializer(data={
-            "hijo": hijo_ser.pk,
-            "suscripcion": sus.pk,
-            "fecha_consumo": str(hoy),
-        })
-        assert not ser.is_valid()
-        assert "suscripcion" in ser.errors
+# NOTA: RegistroConsumoAlmuerzoSerializer ya no valida "suscripcion" (pasó a
+# ser read_only — se resuelve del lado del servidor vía
+# validators.resolver_suscripcion_activa, no la elige el cliente). La
+# cobertura de "no pertenece al hijo" / "fecha_inicio futura" / "vencida" vive
+# ahora en test_validators.py::TestResolverSuscripcionActiva.
 
 
 # ==============================================================================

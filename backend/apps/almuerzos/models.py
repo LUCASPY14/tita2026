@@ -133,11 +133,6 @@ class PlanAlmuerzo(models.Model):
         blank=True, null=True,
         help_text="Solo para tipo=CANTIDAD: máximo de almuerzos por mes",
     )
-    limite_credito_mensual = models.DecimalField(
-        max_digits=12, decimal_places=0,
-        blank=True, null=True,
-        help_text="Monto máximo acumulable por mes. Vacío = sin límite",
-    )
     dias_semana_incluidos = models.CharField(
         max_length=60,
         help_text="Días de la semana incluidos (ej: LUN,MAR,MIE,JUE,VIE)",
@@ -196,9 +191,9 @@ class SuscripcionAlmuerzo(models.Model):
         verbose_name_plural = "Suscripciones de Almuerzo"
         constraints = [
             UniqueConstraint(
-                fields=["hijo", "plan"],
+                fields=["hijo"],
                 condition=Q(estado="ACTIVA"),
-                name="unique_suscripcion_activa_por_hijo_plan",
+                name="unique_suscripcion_activa_por_hijo",
             )
         ]
 
