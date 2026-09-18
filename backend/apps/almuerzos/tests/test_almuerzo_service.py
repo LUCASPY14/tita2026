@@ -117,7 +117,6 @@ class TestRegistrarConsumo:
         self, hijo_almuerzo, tarjeta_almuerzo, usuario_cajero, precio_almuerzo, suscripcion_activa
     ):
         from apps.almuerzos.services import AlmuerzoService
-        from apps.almuerzos.models import CuentaAlmuerzoMensual
 
         registro = AlmuerzoService.registrar_consumo(
             hijo=hijo_almuerzo,
@@ -129,40 +128,6 @@ class TestRegistrarConsumo:
         assert registro.suscripcion_id == suscripcion_activa.pk
         assert registro.ya_cobrado is True
         assert registro.costo_almuerzo == Decimal("15000")
-        cuenta = CuentaAlmuerzoMensual.objects.get(
-            hijo=hijo_almuerzo, anio=HOY.year, mes=HOY.month
-        )
-        assert cuenta.cantidad_almuerzos == 1
-        assert cuenta.monto_total == Decimal("15000")
-        # Si no se marca, cerrar_cuentas_mes_anterior lo vuelve a sumar al cerrar el mes.
-        assert registro.marcado_en_cuenta is True
-
-    def test_segundo_registro_no_se_marca_en_cuenta(
-        self, hijo_almuerzo, tarjeta_almuerzo, usuario_cajero, precio_almuerzo, suscripcion_activa
-    ):
-        from datetime import timedelta
-        from apps.almuerzos.services import AlmuerzoService
-
-        # La clase congela el reloj en un instante fijo (medianoche) — hay que
-        # avanzarlo explícitamente para simular que pasaron 300s entre el 1er
-        # y el 2do registro, sin restar del "ahora" (cruzaría medianoche).
-        with freeze_time("2026-07-15 08:00:00") as frozen:
-            AlmuerzoService.registrar_consumo(
-                hijo=hijo_almuerzo,
-                fecha_consumo=HOY,
-                nro_tarjeta=tarjeta_almuerzo,
-                registrado_por=usuario_cajero,
-            )
-            frozen.tick(delta=timedelta(seconds=300))
-            segundo = AlmuerzoService.registrar_consumo(
-                hijo=hijo_almuerzo,
-                fecha_consumo=HOY,
-                nro_tarjeta=tarjeta_almuerzo,
-                registrado_por=usuario_cajero,
-            )
-
-        # No genera costo, así que nunca se acredita a la cuenta ni se marca.
-        assert segundo.marcado_en_cuenta is False
 
     def test_segundo_registro_sin_costo(
         self, hijo_almuerzo, tarjeta_almuerzo, usuario_cajero, precio_almuerzo, suscripcion_activa

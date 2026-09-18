@@ -689,32 +689,31 @@ class TestRegistroConsumoCreate:
 
 @pytest.mark.django_db
 class TestCuentaMensual:
+    """CuentaAlmuerzoMensual quedó como archivo histórico de solo lectura:
+    desde que el cobro vive en SaldoAlmuerzo (y se retiró el trigger que
+    sincronizaba estas filas), ya no se crean cuentas nuevas por acá."""
 
-    def test_generar_sin_suscripciones(self, api_admin):
+    def test_generar_ya_no_existe(self, api_admin):
         resp = api_admin.post(
             "/api/v1/almuerzos/cuentas-mensuales/generar/",
             {"anio": 2026, "mes": 5},
             format="json",
         )
-        assert resp.status_code == 200
-        assert resp.data["cuentas_creadas"] == 0
+        assert resp.status_code in (404, 405)
 
-    def test_generar_con_suscripcion_activa(self, api_admin, suscripcion_activa):
+    def test_post_rechazado_solo_lectura(self, api_admin, hijo_almuerzo):
         resp = api_admin.post(
-            "/api/v1/almuerzos/cuentas-mensuales/generar/",
-            {"anio": 2099, "mes": 1},
+            "/api/v1/almuerzos/cuentas-mensuales/",
+            {"hijo": hijo_almuerzo.pk, "anio": 2026, "mes": 5},
             format="json",
         )
-        assert resp.status_code == 200
-        assert resp.data["cuentas_creadas"] >= 1
+        assert resp.status_code == 405
 
-    def test_generar_datos_invalidos(self, api_admin):
-        resp = api_admin.post(
-            "/api/v1/almuerzos/cuentas-mensuales/generar/",
-            {"anio": 2026, "mes": 13},
-            format="json",
+    def test_delete_rechazado_solo_lectura(self, api_admin, cuenta_mensual):
+        resp = api_admin.delete(
+            f"/api/v1/almuerzos/cuentas-mensuales/{cuenta_mensual.pk}/"
         )
-        assert resp.status_code == 400
+        assert resp.status_code == 405
 
     def test_cliente_web_filtra_sus_cuentas(self, api_cliente_web, cuenta_mensual):
         resp = api_cliente_web.get("/api/v1/almuerzos/cuentas-mensuales/")
@@ -739,13 +738,9 @@ class TestCuentaMensual:
         ids = [c["id_cuenta_mensual"] for c in resp.data["results"]]
         assert cuenta_mensual.id_cuenta_mensual not in ids
 
-    def test_solo_admin_puede_generar(self, api_cajero):
-        resp = api_cajero.post(
-            "/api/v1/almuerzos/cuentas-mensuales/generar/",
-            {"anio": 2026, "mes": 6},
-            format="json",
-        )
-        assert resp.status_code in (401, 403)
+    def test_cajero_puede_listar_solo_lectura(self, api_cajero, cuenta_mensual):
+        resp = api_cajero.get("/api/v1/almuerzos/cuentas-mensuales/")
+        assert resp.status_code == 200
 
 
 # ── EstadoCuentaAlmuerzoView ───────────────────────────────────────────────────
@@ -1320,9 +1315,12 @@ class TestRegistroConsumoAnular:
         saldo = SaldoAlmuerzo.objects.get(hijo=hijo_almuerzo)
         assert saldo.saldo_actual == Decimal("5000")
 
-    def test_resincroniza_cuenta_mensual(
+    def test_no_toca_cuenta_mensual_historica(
         self, api_cajero, hijo_almuerzo, tarjeta_almuerzo, usuario_cajero
     ):
+        # CuentaAlmuerzoMensual es archivo histórico de solo lectura (ya no
+        # hay trigger que la sincronice) — anular un registro no debe
+        # modificarla.
         from apps.almuerzos.models import CuentaAlmuerzoMensual
         hoy = date.today()
         cuenta = CuentaAlmuerzoMensual.objects.create(
@@ -1336,10 +1334,8 @@ class TestRegistroConsumoAnular:
 
         assert resp.status_code == 200
         cuenta.refresh_from_db()
-        # El trigger trg_sync_cuenta_almuerzo recalcula desde los registros
-        # REGISTRADO restantes — sin ninguno, la cuenta queda en 0.
-        assert cuenta.monto_total == Decimal("0")
-        assert cuenta.cantidad_almuerzos == 0
+        assert cuenta.monto_total == Decimal("15000")
+        assert cuenta.cantidad_almuerzos == 1
 
     def test_queda_auditado(self, api_cajero, hijo_almuerzo, tarjeta_almuerzo, usuario_cajero):
         from apps.usuarios.models import AuditoriaOperacion

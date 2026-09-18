@@ -243,11 +243,6 @@ class RegistroConsumoAlmuerzo(models.Model):
         db_index=True,
         help_text="El primer registro del día cobra (True), siguientes no (False)",
     )
-    marcado_en_cuenta = models.BooleanField(
-        default=False,
-        db_index=True,
-        help_text="Si se agregó a la cuenta mensual de almuerzo",
-    )
     estado = models.CharField(
         max_length=15, choices=Estado.choices, default=Estado.REGISTRADO
     )

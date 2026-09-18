@@ -110,7 +110,6 @@ class RegistroConsumoAlmuerzoSerializer(serializers.ModelSerializer):
             "costo_almuerzo",
             "ya_cobrado",
             "estado",
-            "marcado_en_cuenta",
             "registrado_por",
             "fecha_creacion",
             # La suscripción activa se resuelve del lado del servidor

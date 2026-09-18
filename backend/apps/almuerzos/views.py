@@ -19,10 +19,8 @@ from rest_framework.filters import OrderingFilter, SearchFilter
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
-from rest_framework import serializers as drf_serializers
-
 from common.permissions import (
-    IsAdmin, IsAdminOrReadOnly, IsCajeroOrAdmin, IsCajeroCobradorOrAdmin,
+    IsAdminOrReadOnly, IsCajeroOrAdmin, IsCajeroCobradorOrAdmin,
     IsStaffOrClienteWeb, IsStaffUser,
 )
 from common.utils.medios_pago import resolver_medio_pago
@@ -241,10 +239,9 @@ class RegistroConsumoAlmuerzoViewSet(viewsets.ModelViewSet):
     def anular(self, request, pk=None):
         """
         Anula un registro de consumo en estado REGISTRADO: revierte el saldo
-        de almuerzo debitado (si estaba cobrado) y resincroniza la cuenta
-        mensual del alumno. `estado` es read-only en el serializer a propósito
-        (un PATCH/PUT genérico no debe poder mover el estado) — esta es la
-        única vía habilitada para anular.
+        de almuerzo debitado (si estaba cobrado). `estado` es read-only en el
+        serializer a propósito (un PATCH/PUT genérico no debe poder mover el
+        estado) — esta es la única vía habilitada para anular.
         """
         registro = self.get_object()
         if registro.estado != RegistroConsumoAlmuerzo.Estado.REGISTRADO:
@@ -256,19 +253,7 @@ class RegistroConsumoAlmuerzoViewSet(viewsets.ModelViewSet):
         with transaction.atomic():
             registro.estado = RegistroConsumoAlmuerzo.Estado.ANULADO
             registro.save(update_fields=["estado"])
-            # El UPDATE de arriba dispara el trigger trg_sync_cuenta_almuerzo,
-            # que recalcula cantidad_almuerzos/monto_total sin este registro
-            # (su estado ya es ANULADO) — acá solo recalculamos el estado
-            # derivado y revertimos el saldo corriente si estaba cobrado.
             if registro.ya_cobrado and registro.costo_almuerzo:
-                cuenta = CuentaAlmuerzoMensual.objects.select_for_update().filter(
-                    hijo=registro.hijo,
-                    anio=registro.fecha_consumo.year,
-                    mes=registro.fecha_consumo.month,
-                ).first()
-                if cuenta:
-                    cuenta.refresh_from_db(fields=["monto_total", "monto_pagado", "estado", "fecha_pago"])
-                    cuenta.actualizar_estado()
                 AlmuerzoService._revertir_saldo_almuerzo(registro)
 
         registrar_auditoria(
@@ -415,12 +400,6 @@ class RegistroConsumoAlmuerzoViewSet(viewsets.ModelViewSet):
                     raise ValidationError({
                         "error": "No hay precio de almuerzo configurado. Configure un precio vigente primero."
                     })
-
-                # Asegurar la cuenta ANTES de crear el registro: el trigger
-                # trg_sync_cuenta_almuerzo (migración 0014) sincroniza
-                # cantidad_almuerzos/monto_total al insertar, pero solo si la
-                # fila de la cuenta ya existe.
-                self._asegurar_cuenta_mensual(hijo, fecha_consumo)
             else:
                 costo_calculado = Decimal("0")
 
@@ -433,46 +412,10 @@ class RegistroConsumoAlmuerzoViewSet(viewsets.ModelViewSet):
             )
 
             if es_primer_registro:
-                self._marcar_acreditado(registro)
                 AlmuerzoService._debitar_saldo_almuerzo(registro)
 
         if es_primer_registro:
             AlmuerzoService._notificar_ingreso_comedor(registro)
-
-    def _asegurar_cuenta_mensual(self, hijo, fecha):
-        """Crea la cuenta mensual del alumno si todavía no existe.
-
-        No suma cantidad_almuerzos/monto_total acá: eso lo hace el trigger
-        trg_sync_cuenta_almuerzo al insertar el RegistroConsumoAlmuerzo.
-        """
-        CuentaAlmuerzoMensual.objects.get_or_create(
-            hijo=hijo,
-            anio=fecha.year,
-            mes=fecha.month,
-            defaults={
-                "cantidad_almuerzos": 0,
-                "monto_total": 0,
-                "monto_pagado": 0,
-                "forma_cobro": CuentaAlmuerzoMensual.FormaCobro.EFECTIVO,
-                "estado": CuentaAlmuerzoMensual.Estado.PENDIENTE,
-            },
-        )
-
-    def _marcar_acreditado(self, registro):
-        """Marca el registro como incorporado y recalcula el estado de la
-        cuenta (el trigger ya sincronizó cantidad_almuerzos/monto_total)."""
-        fecha = registro.fecha_consumo
-        cuenta = CuentaAlmuerzoMensual.objects.select_for_update().get(
-            hijo=registro.hijo, anio=fecha.year, mes=fecha.month,
-        )
-        # Recalcular estado: monto_total cambió, puede haber salido de PAGADO
-        cuenta.refresh_from_db(fields=["monto_total", "monto_pagado", "estado", "fecha_pago"])
-        cuenta.actualizar_estado()
-
-        # Si no se marca, cerrar_cuentas_mes_anterior lo vuelve a sumar al
-        # cerrar el mes (el trigger ya lo contó al crearlo).
-        registro.marcado_en_cuenta = True
-        registro.save(update_fields=["marcado_en_cuenta"])
 
 
 # ==============================================================================
@@ -488,6 +431,14 @@ class CuentaAlmuerzoMensualFilter(django_filters.FilterSet):
 
 
 class CuentaAlmuerzoMensualViewSet(viewsets.ModelViewSet):
+    """
+    Solo lectura: desde que el cobro de almuerzo se consolidó en
+    SaldoAlmuerzo, no se crean más filas de CuentaAlmuerzoMensual (ni el
+    trigger que las sincronizaba sigue instalado) — las que hay quedan como
+    archivo histórico consultable. El tab "Cuentas Mensuales" del staff usa
+    EstadoCuentaAlmuerzoView (calculado en vivo), no este endpoint.
+    """
+    http_method_names = ["get", "head", "options"]
     queryset = CuentaAlmuerzoMensual.objects.select_related("hijo__grado", "hijo__tarjeta").all()
     serializer_class = CuentaAlmuerzoMensualSerializer
     permission_classes = [IsStaffOrClienteWeb]
@@ -501,49 +452,6 @@ class CuentaAlmuerzoMensualViewSet(viewsets.ModelViewSet):
         if hasattr(user, "rol") and user.rol == "CLIENTE_WEB":
             qs = qs.filter(hijo__cliente_responsable=user.cliente)
         return qs
-
-    @action(detail=False, methods=["post"], url_path="generar", permission_classes=[IsAdmin])
-    def generar(self, request):
-        """
-        POST /api/almuerzos/cuentas-mensuales/generar/
-        Body: {anio: 2026, mes: 5}
-        Genera cuentas para todas las suscripciones activas del mes indicado.
-        """
-        class _Serializer(drf_serializers.Serializer):
-            anio = drf_serializers.IntegerField(min_value=2020, max_value=2099)
-            mes = drf_serializers.IntegerField(min_value=1, max_value=12)
-
-        serializer = _Serializer(data=request.data)
-        serializer.is_valid(raise_exception=True)
-        anio = serializer.validated_data["anio"]
-        mes = serializer.validated_data["mes"]
-
-        suscripciones = SuscripcionAlmuerzo.objects.filter(
-            estado=SuscripcionAlmuerzo.Estado.ACTIVA
-        ).select_related("hijo")
-
-        creadas = 0
-        for suscripcion in suscripciones:
-            _, fue_creada = CuentaAlmuerzoMensual.objects.get_or_create(
-                hijo=suscripcion.hijo,
-                anio=anio,
-                mes=mes,
-                defaults={
-                    "cantidad_almuerzos": 0,
-                    "monto_total": 0,
-                    "monto_pagado": 0,
-                    "forma_cobro": CuentaAlmuerzoMensual.FormaCobro.EFECTIVO,
-                    "estado": CuentaAlmuerzoMensual.Estado.PENDIENTE,
-                },
-            )
-            if fue_creada:
-                creadas += 1
-
-        return Response({
-            "cuentas_creadas": creadas,
-            "mes": mes,
-            "anio": anio,
-        })
 
 
 class EstadoCuentaAlmuerzoView(APIView):

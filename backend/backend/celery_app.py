@@ -103,13 +103,9 @@ app.conf.beat_schedule = {
     },
     # "cierre-automatico-cajas" desactivado — el cierre de caja es manual.
     # ── Almuerzos ─────────────────────────────────────────────────
-    "cerrar-cuentas-almuerzos-mes-anterior": {
+    "resumen-mensual-almuerzos": {
         "task": "apps.almuerzos.tasks.cerrar_cuentas_mes_anterior",
-        "schedule": crontab(hour=5, minute=0, day_of_month=1),  # Día 1 de cada mes 05:00 (antes de generar)
-    },
-    "generar-cuentas-almuerzos-mensuales": {
-        "task": "apps.almuerzos.tasks.generar_cuentas_mensuales",
-        "schedule": crontab(hour=6, minute=0, day_of_month=1),  # Día 1 de cada mes 06:00
+        "schedule": crontab(hour=5, minute=0, day_of_month=1),  # Día 1 de cada mes 05:00
     },
     "avisar-deuda-almuerzo": {
         "task": "apps.almuerzos.tasks.avisar_deuda_almuerzo",
@@ -172,7 +168,6 @@ app.conf.timezone = "America/Asuncion"  # Paraguay timezone
 # Tareas críticas que disparan alerta cuando fallan
 _CRITICAL_TASKS = {
     "apps.almuerzos.tasks.cerrar_cuentas_mes_anterior",
-    "apps.almuerzos.tasks.generar_cuentas_mensuales",
 }
 
 

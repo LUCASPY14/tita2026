@@ -168,7 +168,7 @@ class RegistroConsumoAlmuerzoAdmin(admin.ModelAdmin):
             "fields": ("hijo", "suscripcion", "tipo_almuerzo", "fecha_consumo", "hora_registro")
         }),
         ("Costo y Cobro", {
-            "fields": ("costo_almuerzo", "ya_cobrado", "marcado_en_cuenta")
+            "fields": ("costo_almuerzo", "ya_cobrado")
         }),
         ("Estado", {
             "fields": ("estado", "motivo_rechazo")

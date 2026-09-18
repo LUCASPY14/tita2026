@@ -1,13 +1,9 @@
-"""Tests para apps.almuerzos.tasks — cerrar_cuentas_mes_anterior, generar_cuentas_mensuales, avisar_deuda_almuerzo."""
+"""Tests para apps.almuerzos.tasks — cerrar_cuentas_mes_anterior, avisar_deuda_almuerzo."""
 import pytest
 from decimal import Decimal
-from datetime import date, timedelta
+from datetime import date
 from unittest.mock import patch
 from freezegun import freeze_time
-
-# Fecha congelada para TestGenerarCuentasMensuales — la fixture
-# suscripcion_activa_t (nivel de módulo) también la usa, ver ahí por qué.
-_HOY_CONGELADO = date(2026, 7, 15)
 
 
 @pytest.fixture
@@ -30,33 +26,6 @@ def hijo_t(db, cliente, grado_t):
 
 
 @pytest.fixture
-def plan_t(db):
-    from apps.almuerzos.models import PlanAlmuerzo
-    return PlanAlmuerzo.objects.create(
-        nombre="Plan Task",
-        activo=True,
-        precio_mensual=Decimal("200000"),
-        dias_semana_incluidos="LUN,MAR,MIE,JUE,VIE",
-    )
-
-
-@pytest.fixture
-def suscripcion_activa_t(db, hijo_t, plan_t):
-    from apps.almuerzos.models import SuscripcionAlmuerzo
-    # fecha_inicio relativa a _HOY_CONGELADO (no a date.today() real): esta
-    # fixture es de nivel de módulo, no hereda el @freeze_time de la clase
-    # que la consume — si usara date.today() real, con el paso de los meses
-    # "hoy - 30 días" termina cayendo después de _HOY_CONGELADO y la
-    # suscripción queda excluida (fecha_inicio__lte=ultimo_dia falla).
-    return SuscripcionAlmuerzo.objects.create(
-        hijo=hijo_t,
-        plan=plan_t,
-        fecha_inicio=_HOY_CONGELADO - timedelta(days=30),
-        estado=SuscripcionAlmuerzo.Estado.ACTIVA,
-    )
-
-
-@pytest.fixture
 def usuario_portal_t(db, cliente):
     """CLIENTE_WEB vinculado al cliente del conftest."""
     from apps.usuarios.models import Usuario
@@ -69,53 +38,6 @@ def usuario_portal_t(db, cliente):
         cliente=cliente,
     )
     return user
-
-
-# ── generar_cuentas_mensuales ──────────────────────────────────────────────────
-
-@freeze_time(_HOY_CONGELADO.isoformat())
-@pytest.mark.django_db
-class TestGenerarCuentasMensuales:
-
-    def test_sin_suscripciones_retorna_cero(self, db):
-        from apps.almuerzos.tasks import generar_cuentas_mensuales
-        result = generar_cuentas_mensuales()
-        assert result["cuentas_creadas"] == 0
-
-    def test_crea_cuenta_para_suscripcion_activa(self, suscripcion_activa_t):
-        from apps.almuerzos.models import CuentaAlmuerzoMensual
-        from apps.almuerzos.tasks import generar_cuentas_mensuales
-        hoy = date.today()
-        CuentaAlmuerzoMensual.objects.filter(
-            hijo=suscripcion_activa_t.hijo, anio=hoy.year, mes=hoy.month
-        ).delete()
-        result = generar_cuentas_mensuales()
-        assert result["cuentas_creadas"] >= 1
-        assert CuentaAlmuerzoMensual.objects.filter(
-            hijo=suscripcion_activa_t.hijo, anio=hoy.year, mes=hoy.month
-        ).exists()
-
-    def test_no_duplica_cuenta_existente(self, suscripcion_activa_t):
-        from apps.almuerzos.models import CuentaAlmuerzoMensual
-        from apps.almuerzos.tasks import generar_cuentas_mensuales
-        hoy = date.today()
-        CuentaAlmuerzoMensual.objects.get_or_create(
-            hijo=suscripcion_activa_t.hijo, anio=hoy.year, mes=hoy.month,
-            defaults={
-                "cantidad_almuerzos": 0, "monto_total": 0, "monto_pagado": 0,
-                "forma_cobro": CuentaAlmuerzoMensual.FormaCobro.EFECTIVO,
-                "estado": CuentaAlmuerzoMensual.Estado.PENDIENTE,
-            },
-        )
-        result = generar_cuentas_mensuales()
-        assert result["cuentas_creadas"] == 0
-
-    def test_retorna_anio_mes_correcto(self, db):
-        from apps.almuerzos.tasks import generar_cuentas_mensuales
-        hoy = date.today()
-        result = generar_cuentas_mensuales()
-        assert result["mes"] == hoy.month
-        assert result["anio"] == hoy.year
 
 
 # ── avisar_deuda_almuerzo ───────────────────────────────────────────────────
@@ -210,12 +132,13 @@ def _mes_anterior():
 @freeze_time("2026-07-15")
 @pytest.mark.django_db
 class TestCerrarCuentasMesAnterior:
+    """Resumen mensual informativo — ya no cierra ni actualiza ninguna
+    CuentaAlmuerzoMensual, solo agrega RegistroConsumoAlmuerzo y avisa."""
 
-    def test_sin_cuentas_retorna_ceros(self, db):
+    def test_sin_consumos_retorna_cero(self, db):
         from apps.almuerzos.tasks import cerrar_cuentas_mes_anterior
         result = cerrar_cuentas_mes_anterior()
-        assert result["actualizadas"] == 0
-        assert result["anuladas"] == 0
+        assert result["enviados"] == 0
 
     def test_retorna_anio_mes_del_mes_anterior(self, db):
         from apps.almuerzos.tasks import cerrar_cuentas_mes_anterior
@@ -224,183 +147,80 @@ class TestCerrarCuentasMesAnterior:
         assert result["mes"] == mes_ant
         assert result["anio"] == anio_ant
 
-    def test_anula_cuenta_sin_consumos(self, hijo_t):
-        from apps.almuerzos.models import CuentaAlmuerzoMensual
-        from apps.almuerzos.tasks import cerrar_cuentas_mes_anterior
-        anio_ant, mes_ant = _mes_anterior()
-        cuenta = CuentaAlmuerzoMensual.objects.create(
-            hijo=hijo_t, anio=anio_ant, mes=mes_ant,
-            cantidad_almuerzos=0, monto_total=Decimal("0"), monto_pagado=Decimal("0"),
-            forma_cobro=CuentaAlmuerzoMensual.FormaCobro.EFECTIVO,
-            estado=CuentaAlmuerzoMensual.Estado.PENDIENTE,
-        )
-        result = cerrar_cuentas_mes_anterior()
-        cuenta.refresh_from_db()
-        assert cuenta.estado == CuentaAlmuerzoMensual.Estado.ANULADO
-        assert result["anuladas"] == 1
-        assert result["actualizadas"] == 0
-
-    def test_actualiza_cuenta_con_registros_de_consumo(self, hijo_t, usuario_admin):
-        """
-        El task encuentra registros ya_cobrado=True/marcado_en_cuenta=False
-        y los procesa (actualizadas=1). El trigger (migration 0014) sobreescribe
-        cantidad_almuerzos/monto_total al final de la transacción, por lo que
-        el valor definitivo en DB es el del trigger. Se verifica el marcado de
-        los registros y el return del task.
-        """
-        from apps.almuerzos.models import CuentaAlmuerzoMensual, RegistroConsumoAlmuerzo
-        from apps.almuerzos.tasks import cerrar_cuentas_mes_anterior
-        anio_ant, mes_ant = _mes_anterior()
-        fecha_consumo = date(anio_ant, mes_ant, 1)
-        CuentaAlmuerzoMensual.objects.create(
-            hijo=hijo_t, anio=anio_ant, mes=mes_ant,
-            cantidad_almuerzos=0, monto_total=Decimal("0"), monto_pagado=Decimal("0"),
-            forma_cobro=CuentaAlmuerzoMensual.FormaCobro.EFECTIVO,
-            estado=CuentaAlmuerzoMensual.Estado.PENDIENTE,
-        )
-        registro = RegistroConsumoAlmuerzo.objects.create(
-            hijo=hijo_t,
-            fecha_consumo=fecha_consumo,
-            costo_almuerzo=Decimal("15000"),
-            ya_cobrado=True,
-            marcado_en_cuenta=False,
-            estado=RegistroConsumoAlmuerzo.Estado.REGISTRADO,
-            registrado_por=usuario_admin,
-        )
-        result = cerrar_cuentas_mes_anterior()
-        # El task procesó la cuenta (no la anuló porque hay 1 registro nuevo)
-        assert result["actualizadas"] == 1
-        assert result["anuladas"] == 0
-        # El registro quedó marcado como incluido en la cuenta
-        registro.refresh_from_db()
-        assert registro.marcado_en_cuenta is True
-
-    def test_registros_quedan_marcados_en_cuenta(self, hijo_t, usuario_admin):
-        from apps.almuerzos.models import CuentaAlmuerzoMensual, RegistroConsumoAlmuerzo
-        from apps.almuerzos.tasks import cerrar_cuentas_mes_anterior
-        anio_ant, mes_ant = _mes_anterior()
-        fecha_consumo = date(anio_ant, mes_ant, 1)
-        CuentaAlmuerzoMensual.objects.create(
-            hijo=hijo_t, anio=anio_ant, mes=mes_ant,
-            cantidad_almuerzos=0, monto_total=Decimal("0"), monto_pagado=Decimal("0"),
-            forma_cobro=CuentaAlmuerzoMensual.FormaCobro.EFECTIVO,
-            estado=CuentaAlmuerzoMensual.Estado.PENDIENTE,
-        )
-        registro = RegistroConsumoAlmuerzo.objects.create(
-            hijo=hijo_t,
-            fecha_consumo=fecha_consumo,
-            costo_almuerzo=Decimal("15000"),
-            ya_cobrado=True,
-            marcado_en_cuenta=False,
-            estado=RegistroConsumoAlmuerzo.Estado.REGISTRADO,
-            registrado_por=usuario_admin,
-        )
-        cerrar_cuentas_mes_anterior()
-        registro.refresh_from_db()
-        assert registro.marcado_en_cuenta is True
-
-    def test_ignora_cuentas_ya_anuladas(self, hijo_t):
-        from apps.almuerzos.models import CuentaAlmuerzoMensual
-        from apps.almuerzos.tasks import cerrar_cuentas_mes_anterior
-        anio_ant, mes_ant = _mes_anterior()
-        CuentaAlmuerzoMensual.objects.create(
-            hijo=hijo_t, anio=anio_ant, mes=mes_ant,
-            cantidad_almuerzos=0, monto_total=Decimal("0"), monto_pagado=Decimal("0"),
-            forma_cobro=CuentaAlmuerzoMensual.FormaCobro.EFECTIVO,
-            estado=CuentaAlmuerzoMensual.Estado.ANULADO,
-        )
-        result = cerrar_cuentas_mes_anterior()
-        assert result["actualizadas"] == 0
-        assert result["anuladas"] == 0
-
-    def test_no_procesa_registros_ya_marcados(self, hijo_t, usuario_admin):
-        """
-        Solo los registros marcado_en_cuenta=False se incluyen en el cierre.
-        Con 1 registro ya marcado y 1 nuevo, el task cuenta solo el nuevo (actualizadas=1)
-        y no re-procesa el que ya estaba marcado.
-        """
-        from apps.almuerzos.models import CuentaAlmuerzoMensual, RegistroConsumoAlmuerzo
-        from apps.almuerzos.tasks import cerrar_cuentas_mes_anterior
-        anio_ant, mes_ant = _mes_anterior()
-        fecha_consumo = date(anio_ant, mes_ant, 1)
-        CuentaAlmuerzoMensual.objects.create(
-            hijo=hijo_t, anio=anio_ant, mes=mes_ant,
-            cantidad_almuerzos=0, monto_total=Decimal("0"), monto_pagado=Decimal("0"),
-            forma_cobro=CuentaAlmuerzoMensual.FormaCobro.EFECTIVO,
-            estado=CuentaAlmuerzoMensual.Estado.PENDIENTE,
-        )
-        # Registro ya procesado anteriormente — no debe contarse de nuevo
-        RegistroConsumoAlmuerzo.objects.create(
-            hijo=hijo_t,
-            fecha_consumo=fecha_consumo,
-            costo_almuerzo=Decimal("15000"),
-            ya_cobrado=True,
-            marcado_en_cuenta=True,
-            estado=RegistroConsumoAlmuerzo.Estado.REGISTRADO,
-            registrado_por=usuario_admin,
-        )
-        # Registro nuevo — sí debe contarse
-        registro_nuevo = RegistroConsumoAlmuerzo.objects.create(
-            hijo=hijo_t,
-            fecha_consumo=fecha_consumo,
-            costo_almuerzo=Decimal("15000"),
-            ya_cobrado=True,
-            marcado_en_cuenta=False,
-            estado=RegistroConsumoAlmuerzo.Estado.REGISTRADO,
-            registrado_por=usuario_admin,
-        )
-        result = cerrar_cuentas_mes_anterior()
-        # Solo el registro nuevo se contó → actualizadas=1, no anulada
-        assert result["actualizadas"] == 1
-        assert result["anuladas"] == 0
-        registro_nuevo.refresh_from_db()
-        assert registro_nuevo.marcado_en_cuenta is True
-
     @patch("apps.notificaciones.services.whatsapp_cliente")
-    def test_whatsapp_resumen_es_informativo_y_se_envia_aunque_este_pagada(self, mock_wa, hijo_t, usuario_admin):
-        """El resumen de cierre ya no pide pagar un saldo aparte (eso lo cubre
-        SaldoAlmuerzo) — se envía por tener consumo en el mes, esté o no
-        marcada como pagada la cuenta."""
-        from apps.almuerzos.models import CuentaAlmuerzoMensual, RegistroConsumoAlmuerzo
+    def test_envia_whatsapp_por_hijo_con_consumo(self, mock_wa, hijo_t, usuario_admin):
+        from apps.almuerzos.models import RegistroConsumoAlmuerzo
         from apps.almuerzos.tasks import cerrar_cuentas_mes_anterior
         anio_ant, mes_ant = _mes_anterior()
-        fecha_consumo = date(anio_ant, mes_ant, 1)
-        CuentaAlmuerzoMensual.objects.create(
-            hijo=hijo_t, anio=anio_ant, mes=mes_ant,
-            cantidad_almuerzos=0, monto_total=Decimal("0"), monto_pagado=Decimal("15000"),
-            forma_cobro=CuentaAlmuerzoMensual.FormaCobro.EFECTIVO,
-            estado=CuentaAlmuerzoMensual.Estado.PAGADO,
-        )
         RegistroConsumoAlmuerzo.objects.create(
-            hijo=hijo_t,
-            fecha_consumo=fecha_consumo,
-            costo_almuerzo=Decimal("15000"),
-            ya_cobrado=True,
-            marcado_en_cuenta=False,
+            hijo=hijo_t, fecha_consumo=date(anio_ant, mes_ant, 1),
+            costo_almuerzo=Decimal("15000"), ya_cobrado=True,
             estado=RegistroConsumoAlmuerzo.Estado.REGISTRADO,
             registrado_por=usuario_admin,
         )
-        cerrar_cuentas_mes_anterior()
+        result = cerrar_cuentas_mes_anterior()
+        assert result["enviados"] == 1
         mock_wa.assert_called_once()
         mensaje = mock_wa.call_args[0][1]
-        assert "Pendiente" not in mensaje
-        assert "pagar" not in mensaje.lower()
         assert "Resumen de almuerzos" in mensaje
+        assert "15,000" in mensaje
 
-    @patch("apps.notificaciones.services.EmailService.enviar_simple")
-    def test_envia_email_al_admin_tras_cierre(self, mock_email, hijo_t):
-        from apps.almuerzos.models import CuentaAlmuerzoMensual
+    def test_ignora_registros_que_no_cobraron(self, hijo_t, usuario_admin):
+        # El "repite" del mismo día (ya_cobrado=False) no debe contarse.
+        from apps.almuerzos.models import RegistroConsumoAlmuerzo
         from apps.almuerzos.tasks import cerrar_cuentas_mes_anterior
         anio_ant, mes_ant = _mes_anterior()
-        CuentaAlmuerzoMensual.objects.create(
-            hijo=hijo_t, anio=anio_ant, mes=mes_ant,
-            cantidad_almuerzos=0, monto_total=Decimal("0"), monto_pagado=Decimal("0"),
-            forma_cobro=CuentaAlmuerzoMensual.FormaCobro.EFECTIVO,
-            estado=CuentaAlmuerzoMensual.Estado.PENDIENTE,
+        RegistroConsumoAlmuerzo.objects.create(
+            hijo=hijo_t, fecha_consumo=date(anio_ant, mes_ant, 1),
+            costo_almuerzo=Decimal("0"), ya_cobrado=False,
+            estado=RegistroConsumoAlmuerzo.Estado.REGISTRADO,
+            registrado_por=usuario_admin,
+        )
+        result = cerrar_cuentas_mes_anterior()
+        assert result["enviados"] == 0
+
+    def test_ignora_consumos_de_otros_meses(self, hijo_t, usuario_admin):
+        from apps.almuerzos.models import RegistroConsumoAlmuerzo
+        from apps.almuerzos.tasks import cerrar_cuentas_mes_anterior
+        # Mes actual (congelado en 2026-07-15), no el mes anterior
+        RegistroConsumoAlmuerzo.objects.create(
+            hijo=hijo_t, fecha_consumo=date(2026, 7, 10),
+            costo_almuerzo=Decimal("15000"), ya_cobrado=True,
+            estado=RegistroConsumoAlmuerzo.Estado.REGISTRADO,
+            registrado_por=usuario_admin,
+        )
+        result = cerrar_cuentas_mes_anterior()
+        assert result["enviados"] == 0
+
+    def test_suma_todos_los_consumos_del_hijo_en_el_mes(self, hijo_t, usuario_admin):
+        from apps.almuerzos.models import RegistroConsumoAlmuerzo
+        from apps.almuerzos.tasks import cerrar_cuentas_mes_anterior
+        anio_ant, mes_ant = _mes_anterior()
+        for dia in (1, 2, 3):
+            RegistroConsumoAlmuerzo.objects.create(
+                hijo=hijo_t, fecha_consumo=date(anio_ant, mes_ant, dia),
+                costo_almuerzo=Decimal("15000"), ya_cobrado=True,
+                estado=RegistroConsumoAlmuerzo.Estado.REGISTRADO,
+                registrado_por=usuario_admin,
+            )
+        result = cerrar_cuentas_mes_anterior()
+        # 1 sola familia notificada, aunque haya comido 3 veces
+        assert result["enviados"] == 1
+
+    @patch("apps.notificaciones.services.EmailService.enviar_simple")
+    def test_envia_email_al_admin_tras_cierre(self, mock_email, hijo_t, usuario_admin):
+        from apps.almuerzos.models import RegistroConsumoAlmuerzo
+        from apps.almuerzos.tasks import cerrar_cuentas_mes_anterior
+        anio_ant, mes_ant = _mes_anterior()
+        RegistroConsumoAlmuerzo.objects.create(
+            hijo=hijo_t, fecha_consumo=date(anio_ant, mes_ant, 1),
+            costo_almuerzo=Decimal("15000"), ya_cobrado=True,
+            estado=RegistroConsumoAlmuerzo.Estado.REGISTRADO,
+            registrado_por=usuario_admin,
         )
         with patch("django.conf.settings.ADMINS", [("Admin", "admin@test.com")]):
             cerrar_cuentas_mes_anterior()
         mock_email.assert_called_once()
         kwargs = mock_email.call_args[1]
         assert kwargs["destinatario_email"] == "admin@test.com"
-        assert "Cierre mensual" in kwargs["asunto"]
+        assert "Resumen mensual" in kwargs["asunto"]
