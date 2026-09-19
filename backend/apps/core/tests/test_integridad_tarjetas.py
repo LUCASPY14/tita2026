@@ -201,3 +201,57 @@ class TestLibroMayorYCargasInmutables:
         assert resp.data["estado"] == "PENDIENTE"
         tarjeta.refresh_from_db()
         assert tarjeta.saldo_actual == Decimal("1000")
+
+
+@pytest.mark.django_db
+class TestAjusteConSigno:
+    """El ajuste de tarjeta lleva signo, igual que en el trigger de la base: el saldo,
+    el libro mayor y saldo_resultante deben coincidir siempre."""
+
+    def _tarjeta_con_saldo(self, cliente, saldo):
+        from apps.clientes.models import Grado, Hijo
+        from apps.core.models import MovimientoTarjeta, Tarjeta
+        grado, _ = Grado.objects.get_or_create(nombre="G-AJ", defaults={"nivel": 2, "orden": 2})
+        hijo = Hijo.objects.create(nombre="Aj", apellido="Uste", cliente_responsable=cliente, grado=grado, activo=True)
+        t = Tarjeta.objects.create(nro_tarjeta="AJ-1", hijo=hijo)
+        MovimientoTarjeta.objects.create(
+            tarjeta=t, tipo="RECARGA", monto=Decimal(saldo), saldo_anterior=Decimal(0), saldo_resultante=Decimal(saldo),
+        )
+        t.refresh_from_db()
+        return t
+
+    def test_ajuste_positivo_suma_y_negativo_resta(self, cliente):
+        from apps.core.models import MovimientoTarjeta
+        t = self._tarjeta_con_saldo(cliente, 50000)
+        up = MovimientoTarjeta.objects.create(
+            tarjeta=t, tipo="AJUSTE", monto=Decimal("40000"), saldo_anterior=Decimal("50000"), saldo_resultante=Decimal(0),
+        )
+        assert up.saldo_resultante == Decimal("90000")
+        t.refresh_from_db()
+        assert t.saldo_actual == Decimal("90000")
+        down = MovimientoTarjeta.objects.create(
+            tarjeta=t, tipo="AJUSTE", monto=Decimal("-25000"), saldo_anterior=Decimal("90000"), saldo_resultante=Decimal(0),
+        )
+        assert down.saldo_resultante == Decimal("65000")
+        t.refresh_from_db()
+        assert t.saldo_actual == Decimal("65000")
+
+    def test_el_admin_al_ajustar_deja_el_saldo_y_el_libro_coherentes(self, cliente, usuario_admin):
+        from django.contrib import admin as dj_admin
+        from django.test import RequestFactory
+        from apps.core.admin import TarjetaAdmin
+        from apps.core.models import MovimientoTarjeta, Tarjeta
+
+        class _Form:
+            changed_data = ["saldo_actual"]
+
+        t = self._tarjeta_con_saldo(cliente, 50000)
+        request = RequestFactory().post("/admin/core/tarjeta/AJ-1/change/")
+        request.user = usuario_admin
+        t.saldo_actual = Decimal("90000")
+        TarjetaAdmin(Tarjeta, dj_admin.site).save_model(request, t, _Form(), change=True)
+        t.refresh_from_db()
+        ultimo = MovimientoTarjeta.objects.filter(tarjeta=t).order_by("-id_movimiento_tarjeta").first()
+        assert t.saldo_actual == Decimal("90000")
+        assert ultimo.saldo_resultante == Decimal("90000")
+        assert ultimo.monto == Decimal("40000")

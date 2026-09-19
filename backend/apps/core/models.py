@@ -225,7 +225,10 @@ class MovimientoTarjeta(models.Model):
                 )
                 self.saldo_anterior = ultimo.saldo_resultante if ultimo else Decimal("0")
 
-            if self.tipo in (self.Tipo.RECARGA, self.Tipo.REVERSO):
+            # AJUSTE es con signo (monto negativo resta): así lo suman el trigger
+            # fn_sync_saldo_tarjeta y verificar_saldo_tarjeta() de la base, que son
+            # la fuente de verdad del saldo.
+            if self.tipo in (self.Tipo.RECARGA, self.Tipo.REVERSO, self.Tipo.AJUSTE):
                 self.saldo_resultante = self.saldo_anterior + self.monto
             else:
                 self.saldo_resultante = self.saldo_anterior - self.monto

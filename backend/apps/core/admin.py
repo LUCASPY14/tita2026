@@ -57,8 +57,8 @@ class TarjetaAdmin(admin.ModelAdmin):
         """
         Si se edita saldo_actual a mano desde el admin, generar el
         MovimientoTarjeta correspondiente (tipo AJUSTE) — mismo patrón que
-        usa bancard_service.py para reversos: monto negativo = aumenta el
-        saldo (ver MovimientoTarjeta.save()). Sin esto, un cambio manual de
+        usa bancard_service.py para reversos: el ajuste lleva signo (monto
+        positivo suma, negativo resta; ver MovimientoTarjeta.save()). Sin esto, un cambio manual de
         saldo no queda en el historial que ve cajero/portal, solo en el
         historial interno de Django admin.
         """
@@ -71,7 +71,7 @@ class TarjetaAdmin(admin.ModelAdmin):
                 MovimientoTarjeta.objects.create(
                     tarjeta=obj,
                     tipo=MovimientoTarjeta.Tipo.AJUSTE,
-                    monto=-diferencia,
+                    monto=diferencia,
                     saldo_anterior=anterior,
                     saldo_resultante=nuevo,
                     descripcion=f"Ajuste manual desde el admin ({request.user.email})",

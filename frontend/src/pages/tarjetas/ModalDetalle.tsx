@@ -107,7 +107,8 @@ export default function ModalDetalle({ tarjeta, toggling, onToggleEstado, onClos
     {
       title: 'Monto', key: 'monto',
       render: (_, r) => {
-        const isEntry = r.tipo === 'RECARGA' || r.tipo === 'REVERSO'
+        // El ajuste lleva signo: positivo suma (entrada), negativo resta.
+        const isEntry = r.tipo === 'RECARGA' || r.tipo === 'REVERSO' || (r.tipo === 'AJUSTE' && Number(r.monto) > 0)
         return (
           <span className={`tabular-nums font-semibold text-base flex items-center gap-0.5 ${isEntry ? 'text-emerald-700' : 'text-slate-700'}`}>
             {isEntry ? <ArrowUp className="w-3 h-3" /> : <ArrowDown className="w-3 h-3" />}

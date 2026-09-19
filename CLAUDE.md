@@ -172,6 +172,7 @@ Portal de padres (`/portal/*`) accesible desde internet via Bancard para recarga
 | `inventario` | Stock, movimientos, alertas, lotes, vencimientos |
 | `contabilidad` | Caja, cierre de caja, conciliación, facturas |
 | `notificaciones` | Push (WebSocket), email, plantillas |
+| `cierre_cuentas` | Cierre de cuentas de egresados: expediente por alumno/año y resoluciones de saldo (devolución, traspaso, compensación, cobro, traslado a cta. cte., condonación) con autorización por rol y rastro en el libro mayor |
 
 ## Roles de usuario
 

@@ -77,6 +77,7 @@ INSTALLED_APPS = [
     "apps.almuerzos",
     "apps.contabilidad",
     "apps.notificaciones",
+    "apps.cierre_cuentas",
     "channels",
     "django_prometheus",
 ]

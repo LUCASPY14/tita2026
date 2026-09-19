@@ -283,6 +283,11 @@ def dar_baja_alumnos_ultimo_curso():
         cal.save(update_fields=["baja_ultimo_curso_aplicada"])
         dados_de_baja += len(egresados)
 
+        # Cada egresado necesita su expediente para resolver saldos y deudas.
+        from apps.cierre_cuentas.services import CierreCuentaService
+        for h in egresados:
+            CierreCuentaService.abrir(h, cal.anio)
+
         pendientes = []
         for h in egresados:
             cantina, almuerzo = _saldos_del_alumno(h)
@@ -327,6 +332,10 @@ def avisar_cierre_ultimo_curso():
     cal = obtener_calendario(hoy.year)
     if not (cal.fecha_aviso_ultimo_curso <= hoy <= cal.fecha_cierre_lectivo):
         return {"avisados": 0, "motivo": "fuera del período de aviso"}
+    # Desde la fecha de aviso el personal ya puede ver y resolver los saldos.
+    from apps.cierre_cuentas.services import CierreCuentaService
+    CierreCuentaService.abrir_masivo(cal.anio)
+
     if (hoy - cal.fecha_aviso_ultimo_curso).days % _DIAS_ENTRE_AVISOS != 0:
         return {"avisados": 0, "motivo": "no toca aviso hoy"}
 

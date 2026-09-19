@@ -118,6 +118,7 @@ urlpatterns = [
     path('api/v1/contabilidad/', include('apps.contabilidad.urls')),
     path('api/v1/usuarios/', include('apps.usuarios.urls')),
     path('api/v1/notificaciones/', include('apps.notificaciones.urls')),
+    path('api/v1/cierre-cuentas/', include('apps.cierre_cuentas.urls')),
 ]
 
 if settings.DEBUG:
