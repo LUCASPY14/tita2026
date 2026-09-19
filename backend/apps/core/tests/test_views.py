@@ -345,6 +345,40 @@ class TestMedioPagoCacheHit:
         assert any(mp["descripcion"] == "CacheadoTest" for mp in resp.data)
 
 
+# ── TarjetaViewSet.list: saldo de almuerzo sin N+1 ─────────────────────────────
+
+@pytest.mark.django_db
+class TestTarjetaListSaldoAlmuerzo:
+
+    def _crear_alumnos(self, cliente, n, desde=0):
+        from apps.clientes.models import Grado, Hijo
+        from apps.core.models import Tarjeta
+        from apps.almuerzos.models import SaldoAlmuerzo
+        grado, _ = Grado.objects.get_or_create(nombre="G-SA", defaults={"nivel": 4, "orden": 4})
+        for i in range(desde, desde + n):
+            h = Hijo.objects.create(nombre=f"A{i}", apellido="SA", cliente_responsable=cliente, grado=grado, activo=True)
+            Tarjeta.objects.create(nro_tarjeta=f"SA{i:03d}", hijo=h)
+            SaldoAlmuerzo.objects.create(hijo=h, saldo_actual=-1000 * (i + 1))
+
+    def test_lista_incluye_saldo_almuerzo(self, api_cajero, cliente):
+        self._crear_alumnos(cliente, 2)
+        resp = api_cajero.get("/api/v1/core/tarjetas/", {"search": "SA"})
+        assert resp.status_code == 200
+        saldos = {t["nro_tarjeta"]: t["saldo_almuerzo"] for t in resp.data["results"]}
+        assert saldos == {"SA000": -1000, "SA001": -2000}
+
+    def test_saldo_almuerzo_viene_en_el_join_sin_consulta_por_fila(self, api_cajero, cliente):
+        from django.db import connection
+        from django.test.utils import CaptureQueriesContext
+        self._crear_alumnos(cliente, 8)
+        with CaptureQueriesContext(connection) as ctx:
+            resp = api_cajero.get("/api/v1/core/tarjetas/", {"search": "SA"})
+        assert len(resp.data["results"]) == 8
+        saldo_q = [q["sql"] for q in ctx.captured_queries if "almuerzos_saldoalmuerzo" in q["sql"]]
+        assert len(saldo_q) <= 2  # data + count, ambas con JOIN; nunca una por fila
+        assert all("JOIN" in q for q in saldo_q)
+
+
 # ── TarjetaViewSet.bloquear / activar ───────────────────────────────────────────
 
 @pytest.mark.django_db

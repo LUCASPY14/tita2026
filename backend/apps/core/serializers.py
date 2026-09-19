@@ -4,6 +4,7 @@ Serializers para la app core
 
 import logging
 
+from django.core.exceptions import ObjectDoesNotExist
 from rest_framework import serializers
 
 from .models import (
@@ -26,6 +27,7 @@ class TarjetaSerializer(serializers.ModelSerializer):
     hijo_restricciones = serializers.SerializerMethodField()
     hijo_cumple_hoy = serializers.SerializerMethodField()
     saldo_disponible = serializers.DecimalField(max_digits=12, decimal_places=0, read_only=True)
+    saldo_almuerzo = serializers.SerializerMethodField()
 
     # ── Datos del cliente responsable o del cliente directo ───────────────────
     cliente_id = serializers.SerializerMethodField()
@@ -67,6 +69,15 @@ class TarjetaSerializer(serializers.ModelSerializer):
         if obj.hijo_id and obj.hijo.foto_perfil:
             return f"/clientes/hijos/{obj.hijo_id}/foto/"
         return None
+
+    def get_saldo_almuerzo(self, obj):
+        """Saldo corriente de almuerzo del alumno (puede ser negativo). None si no es alumno."""
+        if not obj.hijo_id:
+            return None
+        try:
+            return int(obj.hijo.saldo_almuerzo.saldo_actual)
+        except ObjectDoesNotExist:
+            return 0
 
     def get_hijo_grado(self, obj):
         if obj.hijo_id:

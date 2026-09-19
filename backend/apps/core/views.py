@@ -49,6 +49,7 @@ class TarjetaViewSet(viewsets.ModelViewSet):
     queryset = Tarjeta.objects.select_related(
         "hijo__grado",
         "hijo__cliente_responsable__lista_precio",
+        "hijo__saldo_almuerzo",
         "cliente_directo__lista_precio",
     ).prefetch_related("hijo__restricciones").all()
     serializer_class = TarjetaSerializer

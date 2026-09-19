@@ -121,6 +121,17 @@ export default function Tarjetas() {
       },
     },
     {
+      title: 'Saldo almuerzo', key: 'saldo_almuerzo',
+      render: (_, r) => {
+        if (r.saldo_almuerzo == null) return <span className="text-base text-slate-300">—</span>
+        return (
+          <span className={`tabular-nums font-semibold text-base ${r.saldo_almuerzo < 0 ? 'text-red-600' : 'text-orange-700'}`}>
+            {formatGs(r.saldo_almuerzo)}
+          </span>
+        )
+      },
+    },
+    {
       title: 'Límite', key: 'limite',
       render: (_, r) => (
         <span className="tabular-nums text-base text-slate-500">{formatGs(r.limite_credito)}</span>

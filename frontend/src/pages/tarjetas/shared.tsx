@@ -50,6 +50,7 @@ export interface Tarjeta {
   cliente_ruc: string | null
   saldo_actual: string | number
   saldo_disponible: string | number
+  saldo_almuerzo?: number | null
   limite_credito: string | number
   estado: string
   fecha_vencimiento: string | null

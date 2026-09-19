@@ -262,3 +262,24 @@ class TestTarjetaSerializerHijoFoto:
         s = TarjetaSerializer()
         result = s.get_hijo_foto(self._mock_tarjeta_con_foto())
         assert result == "/clientes/hijos/1/foto/"
+
+
+# ── TarjetaSerializer: saldo de almuerzo ──────────────────────────────────────
+
+class TestTarjetaSerializerSaldoAlmuerzo:
+
+    def test_alumno_sin_saldo_almuerzo_es_cero(self, tarjeta_alumno):
+        assert _serialize(tarjeta_alumno)["saldo_almuerzo"] == 0
+
+    def test_alumno_con_saldo_positivo(self, tarjeta_alumno, hijo):
+        from apps.almuerzos.models import SaldoAlmuerzo
+        SaldoAlmuerzo.objects.create(hijo=hijo, saldo_actual=Decimal("45000"))
+        assert _serialize(tarjeta_alumno)["saldo_almuerzo"] == 45000
+
+    def test_alumno_con_saldo_negativo(self, tarjeta_alumno, hijo):
+        from apps.almuerzos.models import SaldoAlmuerzo
+        SaldoAlmuerzo.objects.create(hijo=hijo, saldo_actual=Decimal("-30000"))
+        assert _serialize(tarjeta_alumno)["saldo_almuerzo"] == -30000
+
+    def test_docente_no_tiene_saldo_almuerzo(self, tarjeta_docente):
+        assert _serialize(tarjeta_docente)["saldo_almuerzo"] is None
