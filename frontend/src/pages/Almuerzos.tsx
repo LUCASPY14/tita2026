@@ -22,7 +22,7 @@ import ModalEditMenu from './almuerzos/ModalEditMenu'
 import ModalConfirmarEliminar from './almuerzos/ModalConfirmarEliminar'
 import ModalConfirmarAnular from './almuerzos/ModalConfirmarAnular'
 import {
-  extractErrorMessage, formatGs, formatFecha, todayISO, MESES,
+  extractErrorMessage, formatGs, formatFecha, MESES,
   ESTADO_REGISTRO_COLOR, ESTADO_CUENTA_COLOR, ESTADO_SUSCRIPCION_COLOR,
   type TabKey, type Hijo, type TipoAlmuerzo, type PlanAlmuerzo, type Suscripcion,
   type MenuDiario, type RegistroConsumo, type CuentaMensual,
@@ -46,6 +46,9 @@ export default function Almuerzos() {
   const [pageRegistros, setPageRegistros] = useState(1)
   const [totalRegistros, setTotalRegistros] = useState(0)
   const searchTimerReg = useRef<ReturnType<typeof setTimeout>>(undefined)
+
+  // Calculado en el backend: no depende de la página ni del buscador del listado.
+  const [consumosHoy, setConsumosHoy] = useState(0)
 
   // ── Modal open states ─────────────────────────────────────────────
   const [consumoOpen, setConsumoOpen] = useState(false)
@@ -123,6 +126,20 @@ export default function Almuerzos() {
     }, 350)
     return () => clearTimeout(searchTimerReg.current)
   }, [searchRegistros, loadRegistros])
+
+  const loadConsumosHoy = useCallback(async () => {
+    try {
+      const { data } = await api.get('/almuerzos/registros-consumo/resumen-hoy/')
+      setConsumosHoy(Number(data.almuerzos_hoy) || 0)
+    } catch {
+      // La tarjeta es informativa: si falla, conserva el último valor.
+    }
+  }, [])
+
+  useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    loadConsumosHoy()
+  }, [loadConsumosHoy, registros])
 
   const handlePageChange = useCallback((page: number) => {
     setPageRegistros(page)
@@ -225,13 +242,14 @@ export default function Almuerzos() {
   // Escuchar registros del Comedor para refrescar en tiempo real
   useEffect(() => {
     const handler = () => {
+      loadConsumosHoy()
       if (tab === 'consumos') loadRegistros(searchRegistros, pageRegistros)
       if (tab === 'cuentas') loadCuentas()
       if (tab === 'saldos') loadSaldos(searchSaldos, soloDeuda, pageSaldos)
     }
     window.addEventListener('comedor:registro', handler)
     return () => window.removeEventListener('comedor:registro', handler)
-  }, [tab, searchRegistros, pageRegistros, loadRegistros, loadCuentas, loadSaldos, searchSaldos, soloDeuda, pageSaldos])
+  }, [tab, searchRegistros, pageRegistros, loadRegistros, loadCuentas, loadConsumosHoy, loadSaldos, searchSaldos, soloDeuda, pageSaldos])
 
 
   const cancelarSusc = useCallback(async (id: number) => {
@@ -308,13 +326,12 @@ export default function Almuerzos() {
   // ── Stats ─────────────────────────────────────────────────────────
   const mesActual = new Date().getMonth() + 1
   const anioActual = new Date().getFullYear()
-  const hoy = todayISO()
-
   const stats = useMemo(() => ({
-    consumosHoy: registros.filter(r => r.fecha_consumo === hoy).length,
-    cuentasPendientes: cuentas.filter(c => c.estado === 'PENDIENTE').length,
+    consumosHoy,
+    // Alumnos distintos con deuda: cada alumno tiene una fila por mes en que comió.
+    cuentasPendientes: new Set(cuentas.filter(c => c.estado === 'PENDIENTE').map(c => c.hijo)).size,
     facturadoMes: cuentas.filter(c => c.mes === mesActual && c.anio === anioActual).reduce((s, c) => s + (Number(c.monto_total) || 0), 0),
-  }), [registros, cuentas, hoy, mesActual, anioActual])
+  }), [consumosHoy, cuentas, mesActual, anioActual])
 
   // ── Columnas ──────────────────────────────────────────────────────
   const colsRegistros: Column<RegistroConsumo>[] = [
@@ -412,11 +429,19 @@ export default function Almuerzos() {
       render: (_, r) => <span className="tabular-nums text-emerald-700">{formatGs(r.monto_pagado)}</span>,
     },
     {
-      title: 'Saldo',
+      title: 'Deuda actual',
+      hint: 'Lo que el alumno debe HOY en total (saldo de almuerzo), no solo lo de este mes. Se repite en todas las filas del mismo alumno: no la sumes.',
       key: 'saldo',
       render: (_, r) => {
-        const n = Number(r.saldo_pendiente) || (Number(r.monto_total) - Number(r.monto_pagado))
-        return <span className={`tabular-nums font-semibold text-sm ${n > 0 ? 'text-red-600' : 'text-slate-400'}`}>{formatGs(n)}</span>
+        const n = Number(r.saldo_pendiente) || 0
+        return (
+          <span
+            title="Deuda total actual del alumno, no la de este mes"
+            className={`tabular-nums font-semibold text-sm ${n > 0 ? 'text-red-600' : 'text-slate-400'}`}
+          >
+            {formatGs(n)}
+          </span>
+        )
       },
     },
     {
@@ -432,7 +457,7 @@ export default function Almuerzos() {
         <Button size="sm" variant="primary" onClick={() => setPagoCuenta({
           hijo: r.hijo,
           hijo_nombre: r.hijo_nombre,
-          monto_sugerido: Number(r.saldo_pendiente) || (Number(r.monto_total) - Number(r.monto_pagado)),
+          monto_sugerido: Number(r.saldo_pendiente) || 0,
           detalle: `${MESES[r.mes]} ${r.anio} — ${r.cantidad_almuerzos} almuerzos, total ${formatGs(r.monto_total)}`,
         })}>
           <Banknote className="w-3.5 h-3.5" />
@@ -707,7 +732,7 @@ export default function Almuerzos() {
             <div>
               <h2 className="text-sm font-semibold text-slate-800">Cuentas Mensuales de Almuerzos</h2>
               <p className="text-xs text-slate-400 mt-0.5">
-                Reporte de consumo — la deuda real y su cobro viven en el saldo de almuerzo del alumno.
+                Consumo por alumno y mes. "Deuda actual" es el saldo total del alumno hoy (se repite en cada mes); el detalle de cobranza está en el tab Saldos.
               </p>
             </div>
             <div className="flex flex-wrap items-center gap-2">

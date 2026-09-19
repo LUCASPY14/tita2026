@@ -3,6 +3,7 @@ Views para la app core
 """
 
 from django.core.cache import cache
+from django.db.models import Q
 
 from rest_framework import viewsets, status
 from rest_framework.views import APIView
@@ -63,6 +64,18 @@ class TarjetaViewSet(viewsets.ModelViewSet):
     ]
     ordering = ["nro_tarjeta"]
 
+    def get_queryset(self):
+        # Un padre del portal solo ve las tarjetas de su propia familia.
+        qs = super().get_queryset()
+        user = self.request.user
+        if user.rol == "CLIENTE_WEB":
+            if not user.cliente_id:
+                return qs.none()
+            return qs.filter(
+                Q(hijo__cliente_responsable_id=user.cliente_id) | Q(cliente_directo_id=user.cliente_id)
+            )
+        return qs
+
     def _cambiar_estado(self, request, pk, desde, hacia, operacion):
         tarjeta = self.get_object()
         if tarjeta.estado != desde:
@@ -100,6 +113,18 @@ class MovimientoTarjetaViewSet(viewsets.ModelViewSet):
     filter_backends = [DjangoFilterBackend, OrderingFilter]
     filterset_fields = ["tarjeta", "tipo"]
     ordering = ["-fecha"]
+
+    def get_queryset(self):
+        qs = super().get_queryset()
+        user = self.request.user
+        if user.rol == "CLIENTE_WEB":
+            if not user.cliente_id:
+                return qs.none()
+            return qs.filter(
+                Q(tarjeta__hijo__cliente_responsable_id=user.cliente_id)
+                | Q(tarjeta__cliente_directo_id=user.cliente_id)
+            )
+        return qs
 
 
 METODOS_CONFIRMACION_INMEDIATA = ("EFECTIVO", "POS DEBITO", "POS CREDITO")

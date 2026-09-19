@@ -446,3 +446,65 @@ class TestTarjetaBloquearActivar:
         auditoria = AuditoriaOperacion.objects.filter(operacion="BLOQUEAR_TARJETA").first()
         assert auditoria is not None
         assert tarjeta_core.nro_tarjeta in auditoria.descripcion
+
+
+# ── Aislamiento entre familias en el portal (tarjetas y movimientos) ─────────
+
+@pytest.mark.django_db
+class TestPortalSoloVeSuFamilia:
+
+    @pytest.fixture
+    def escenario(self, cliente):
+        from rest_framework.test import APIClient
+        from apps.clientes.models import Cliente, Grado, Hijo
+        from apps.core.models import MovimientoTarjeta, Tarjeta
+        from apps.usuarios.models import Usuario
+        grado, _ = Grado.objects.get_or_create(nombre="G-ISO", defaults={"nivel": 2, "orden": 2})
+        propio = Hijo.objects.create(nombre="Propio", apellido="Hijo", cliente_responsable=cliente, grado=grado, activo=True)
+        otro_cli = Cliente.objects.create(
+            nombres="Otro", apellidos="Resp", ruc_ci="7770001",
+            tipo_cliente=cliente.tipo_cliente, lista_precio=cliente.lista_precio,
+            limite_credito=Decimal("1"),
+        )
+        ajeno = Hijo.objects.create(nombre="Ajeno", apellido="Hijo", cliente_responsable=otro_cli, grado=grado, activo=True)
+        t_propia = Tarjeta.objects.create(nro_tarjeta="ISO-P", hijo=propio, saldo_actual=Decimal("1000"))
+        t_ajena = Tarjeta.objects.create(nro_tarjeta="ISO-A", hijo=ajeno, saldo_actual=Decimal("9000"))
+        for t in (t_propia, t_ajena):
+            MovimientoTarjeta.objects.create(
+                tarjeta=t, tipo="RECARGA", monto=Decimal("500"),
+                saldo_anterior=t.saldo_actual, saldo_resultante=t.saldo_actual + 500,
+            )
+        padre = Usuario.objects.create_user(
+            email="iso@test.com", password="x12345678", nombre="P", apellido="P",
+            rol=Usuario.Rol.CLIENTE_WEB, cliente=cliente,
+        )
+        api = APIClient()
+        api.force_authenticate(user=padre)
+        return api
+
+    def test_lista_de_tarjetas_solo_incluye_las_propias(self, escenario):
+        resp = escenario.get("/api/v1/core/tarjetas/")
+        assert [t["nro_tarjeta"] for t in resp.data["results"]] == ["ISO-P"]
+
+    def test_detalle_de_tarjeta_ajena_da_404(self, escenario):
+        assert escenario.get("/api/v1/core/tarjetas/ISO-A/").status_code == 404
+        assert escenario.get("/api/v1/core/tarjetas/ISO-P/").status_code == 200
+
+    def test_movimientos_solo_de_tarjetas_propias(self, escenario):
+        resp = escenario.get("/api/v1/core/movimientos-tarjeta/")
+        assert {m["tarjeta"] for m in resp.data["results"]} == {"ISO-P"}
+
+    def test_padre_sin_cliente_no_ve_nada(self, db):
+        from rest_framework.test import APIClient
+        from apps.usuarios.models import Usuario
+        u = Usuario.objects.create_user(
+            email="sincli@test.com", password="x12345678", nombre="S", apellido="C",
+            rol=Usuario.Rol.CLIENTE_WEB,
+        )
+        api = APIClient()
+        api.force_authenticate(user=u)
+        assert api.get("/api/v1/core/tarjetas/").data["count"] == 0
+
+    def test_staff_sigue_viendo_todas(self, api_cajero, escenario):
+        resp = api_cajero.get("/api/v1/core/tarjetas/", {"search": "ISO"})
+        assert resp.data["count"] == 2

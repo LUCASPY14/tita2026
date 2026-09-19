@@ -10,6 +10,7 @@ from decimal import Decimal
 
 from django.db import models, transaction
 from django.db.models import Count, Sum
+from django.utils import timezone
 
 import csv
 
@@ -198,7 +199,35 @@ class RegistroConsumoAlmuerzoViewSet(viewsets.ModelViewSet):
     def get_permissions(self):
         if self.action in ("create", "update", "partial_update", "destroy", "anular"):
             return [IsCajeroOrAdmin()]
+        if self.action == "resumen_hoy":
+            return [IsStaffUser()]
         return [IsStaffOrClienteWeb()]
+
+    def get_queryset(self):
+        # Un padre del portal solo ve los consumos de sus propios hijos.
+        qs = super().get_queryset()
+        user = self.request.user
+        if user.rol == "CLIENTE_WEB":
+            if not user.cliente_id:
+                return qs.none()
+            return qs.filter(hijo__cliente_responsable_id=user.cliente_id)
+        return qs
+
+    @action(detail=False, methods=["get"], url_path="resumen-hoy")
+    def resumen_hoy(self, request):
+        """GET /registros-consumo/resumen-hoy/ — alumnos que almorzaron hoy.
+
+        Cuenta solo el primer ingreso del día (ya_cobrado) y descarta anulados,
+        así el "repite" de cocina no infla la cifra. No depende de la paginación
+        ni de los filtros del listado.
+        """
+        hoy = timezone.localdate()
+        almuerzos = RegistroConsumoAlmuerzo.objects.filter(
+            fecha_consumo=hoy,
+            estado=RegistroConsumoAlmuerzo.Estado.REGISTRADO,
+            ya_cobrado=True,
+        ).count()
+        return Response({"fecha": hoy.isoformat(), "almuerzos_hoy": almuerzos})
 
     def destroy(self, request, *args, **kwargs):
         if not (request.user and request.user.is_authenticated and request.user.rol == "ADMIN"):

@@ -3,6 +3,8 @@ import { ChevronLeft, ChevronRight, ChevronUp, ChevronDown, ChevronsUpDown, Inbo
 
 export interface Column<T> {
   title: string
+  /** Tooltip nativo del encabezado (aclara qué significa la columna). */
+  hint?: string
   dataIndex?: keyof T
   key: string
   width?: number
@@ -68,6 +70,7 @@ export default function Table<T extends object>({
                   key={col.key}
                   className="px-4 py-3.5 text-base font-semibold text-slate-600 whitespace-nowrap"
                   style={col.width ? { width: col.width } : undefined}
+                  title={col.hint}
                 >
                   {col.sortable ? (
                     <button

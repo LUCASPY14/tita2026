@@ -241,6 +241,33 @@ test.describe('Almuerzos — Cuentas Mensuales', () => {
   test('tarjeta de resumen muestra Alumnos con Deuda', async ({ page }) => {
     await expect(page.getByText('Alumnos con Deuda')).toBeVisible({ timeout: 5000 })
   })
+
+  test('Alumnos con Deuda cuenta alumnos distintos, no filas por mes', async ({ page }) => {
+    // Un mismo alumno con 3 meses de consumo = 3 filas PENDIENTE, pero es 1 solo alumno.
+    const filas = [5, 6, 7].map((mes) => ({ ...CUENTA_MOCK, id: `1-2026-${mes}`, mes }))
+    await page.route(/\/api\/v1\/almuerzos\/estado-cuenta/, (route) =>
+      route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ results: filas, count: 3 }) })
+    )
+    await page.getByRole('button', { name: 'Consumos' }).click()
+    await page.getByRole('button', { name: 'Cuentas Mensuales' }).click()
+    const tarjeta = page.locator('div', { has: page.getByText('Alumnos con Deuda', { exact: true }) }).last()
+    await expect(tarjeta.getByText('1', { exact: true })).toBeVisible({ timeout: 6000 })
+  })
+
+  test('la columna se llama Deuda actual y aclara que no es solo del mes', async ({ page }) => {
+    await page.getByRole('button', { name: 'Cuentas Mensuales' }).click()
+    const th = page.getByRole('columnheader', { name: 'Deuda actual' })
+    await expect(th).toBeVisible({ timeout: 6000 })
+    await expect(th).toHaveAttribute('title', /no solo lo de este mes/)
+  })
+
+  test('Consumos Hoy viene del resumen del backend', async ({ page }) => {
+    await page.route(/\/api\/v1\/almuerzos\/registros-consumo\/resumen-hoy/, (route) =>
+      route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ fecha: '2026-09-18', almuerzos_hoy: 37 }) })
+    )
+    await page.reload()
+    await expect(page.getByText('37', { exact: true })).toBeVisible({ timeout: 6000 })
+  })
 })
 
 // ── Saldos (panel de cobranza) ─────────────────────────────────────────────
