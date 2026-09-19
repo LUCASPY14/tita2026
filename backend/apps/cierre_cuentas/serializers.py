@@ -33,6 +33,10 @@ class CierreCuentaSerializer(serializers.ModelSerializer):
     deuda_pendiente = serializers.SerializerMethodField()
     a_favor_pendiente = serializers.SerializerMethodField()
     resoluciones_pendientes = serializers.SerializerMethodField()
+    cliente_id = serializers.IntegerField(source="hijo.cliente_responsable_id", read_only=True)
+    cliente_permite_cuenta_corriente = serializers.BooleanField(
+        source="hijo.cliente_responsable.permite_cuenta_corriente", read_only=True,
+    )
 
     class Meta:
         model = CierreCuentaAlumno
@@ -74,6 +78,24 @@ class CierreCuentaSerializer(serializers.ModelSerializer):
 
 class CierreCuentaDetalleSerializer(CierreCuentaSerializer):
     resoluciones = ResolucionSaldoSerializer(many=True, read_only=True)
+    hermanos = serializers.SerializerMethodField()
+
+    def get_hermanos(self, obj):
+        """Hermanos activos del mismo responsable: posibles destinos de un traspaso."""
+        hermanos = Hijo.objects.filter(
+            cliente_responsable_id=obj.hijo.cliente_responsable_id, activo=True,
+        ).exclude(pk=obj.hijo_id).select_related("grado", "tarjeta")
+        salida = []
+        for h in hermanos:
+            try:
+                nro = h.tarjeta.nro_tarjeta
+            except ObjectDoesNotExist:
+                nro = ""
+            salida.append({
+                "id_hijo": h.pk, "nombre_completo": h.nombre_completo,
+                "grado": h.grado.nombre if h.grado else "", "nro_tarjeta": nro,
+            })
+        return salida
 
 
 class RegistrarResolucionSerializer(serializers.Serializer):

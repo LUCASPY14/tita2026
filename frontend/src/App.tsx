@@ -20,6 +20,7 @@ const Dashboard         = lazy(() => import('./pages/Dashboard'))
 const Productos         = lazy(() => import('./pages/Productos'))
 const Clientes          = lazy(() => import('./pages/Clientes'))
 const Tarjetas          = lazy(() => import('./pages/Tarjetas'))
+const CierreCuentas     = lazy(() => import('./pages/CierreCuentas'))
 const Caja              = lazy(() => import('./pages/Cajas'))
 const Compras           = lazy(() => import('./pages/Compras'))
 const Almuerzos         = lazy(() => import('./pages/Almuerzos'))
@@ -235,6 +236,11 @@ export default function App() {
               <Route path="/carga-saldo"   element={
                 <PrivateRoute roles={['ADMIN', 'CAJERO', 'COBRADOR']}>
                   <CargaSaldo />
+                </PrivateRoute>
+              } />
+              <Route path="/cierre-cuentas" element={
+                <PrivateRoute roles={['ADMIN', 'SUPERVISOR', 'CAJERO', 'COBRADOR']}>
+                  <CierreCuentas />
                 </PrivateRoute>
               } />
               <Route path="/clientes"      element={

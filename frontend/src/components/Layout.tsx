@@ -28,6 +28,7 @@ import {
   Leaf,
   ShoppingCart,
   HandCoins,
+  GraduationCap,
   Menu,
   Undo2,
   type LucideIcon,
@@ -46,6 +47,7 @@ const COBROS_ROLES   = ['ADMIN', 'SUPERVISOR', 'COBRADOR']
 const COMPRAS_ROLES  = ['ADMIN', 'SUPERVISOR']                  // sin CAJERO
 const TARJETAS       = ['ADMIN', 'CAJERO', 'SUPERVISOR', 'COBRADOR']
 const CLIENTES       = ['ADMIN', 'CAJERO', 'SUPERVISOR', 'COBRADOR']
+const CIERRE_CUENTAS = ['ADMIN', 'SUPERVISOR', 'CAJERO', 'COBRADOR']
 
 interface NavItem {
   path: string
@@ -61,6 +63,7 @@ const navItems: NavItem[] = [
   { path: '/carga-saldo',  labelKey: 'nav.cargaSaldo',   icon: Wallet,          roles: CARGA_ROLES },
   { path: '/tarjetas',     labelKey: 'nav.tarjetas',     icon: CreditCard,      roles: TARJETAS },
   { path: '/clientes',     labelKey: 'nav.clientes',     icon: Users,           roles: CLIENTES },
+  { path: '/cierre-cuentas', labelKey: 'nav.cierreCuentas', icon: GraduationCap,  roles: CIERRE_CUENTAS },
   { path: '/almuerzos',    labelKey: 'nav.almuerzos',    icon: UtensilsCrossed, roles: OPS_ROLES },
   { path: '/comedor',      labelKey: 'nav.comedor',      icon: Utensils,        roles: OPS_ROLES },
   { path: '/menu-diario',  labelKey: 'nav.menuDiario',   icon: ChefHat,         roles: OPS_ROLES },

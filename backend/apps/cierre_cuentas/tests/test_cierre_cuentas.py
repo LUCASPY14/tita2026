@@ -734,3 +734,31 @@ class TestTareas:
         cierre = CierreCuentaAlumno.objects.get(hijo=deudor, anio=2026)
         res, _ = _resolver(cierre, usuario_cajero, Tipo.COBRO, "CANTINA", 30000, metodo_pago="EFECTIVO")
         assert res.estado == Estado.EJECUTADA and _saldos(deudor)[0] == Decimal("0")
+
+
+# ── Datos para las pantallas ─────────────────────────────────────────────────
+
+@pytest.mark.django_db
+class TestDatosParaLaPantalla:
+
+    def test_el_detalle_lista_solo_hermanos_activos_del_mismo_responsable(
+        self, favor, hermano, cliente, grado_normal, usuario_admin,
+    ):
+        from apps.clientes.models import Cliente
+        _alumno(cliente, grado_normal, "Baja", "CI-HB", activo=False)
+        otro_cliente = Cliente.objects.create(
+            nombres="Otro", apellidos="Familia", ruc_ci="3330002",
+            tipo_cliente=cliente.tipo_cliente, lista_precio=cliente.lista_precio,
+        )
+        _alumno(otro_cliente, grado_normal, "Ajeno", "CI-AJ2")
+        cierre, _ = CierreCuentaService.abrir(favor, 2026)
+        r = _api(usuario_admin).get(f"{BASE}/cierres/{cierre.pk}/")
+        assert [h["id_hijo"] for h in r.data["hermanos"]] == [hermano.pk]
+        assert r.data["hermanos"][0]["nro_tarjeta"] == "CI-H"
+
+    def test_informa_el_responsable_y_si_tiene_cuenta_corriente(self, favor, cliente, usuario_cajero):
+        CierreCuentaService.abrir(favor, 2026)
+        r = _api(usuario_cajero).get(f"{BASE}/cierres/")
+        fila = r.data["results"][0]
+        assert fila["cliente_id"] == cliente.pk
+        assert fila["cliente_permite_cuenta_corriente"] is True
