@@ -94,13 +94,13 @@ export default function ModalEditar({ tarjeta, onClose, onSaved }: Props) {
           </div>
 
           <div>
-            <label className={labelClass}>Límite de Crédito (Gs.)</label>
+            <label className={labelClass}>Tope de deuda (Gs.)</label>
             <p className="text-xs text-slate-400 mb-1.5">
-              Campo de referencia: por ahora no limita el cobro. Lo que habilita la deuda es &quot;Permite saldo negativo&quot;.
+              Máximo que puede deber la tarjeta cuando permite saldo negativo. 0 = sin tope.
             </p>
             <input
               type="number"
-              disabled={!puedeConfigurarAlertas}
+              disabled={!puedeConfigurarAlertas || !editForm.permite_saldo_negativo}
               value={editForm.limite_credito}
               onChange={e => setEditForm(f => ({ ...f, limite_credito: e.target.value }))}
               placeholder="0"
@@ -148,8 +148,8 @@ export default function ModalEditar({ tarjeta, onClose, onSaved }: Props) {
               <div className="absolute top-0.5 left-0.5 w-4 h-4 bg-white rounded-full shadow transition-transform peer-checked:translate-x-4" />
             </div>
             <div>
-              <span className="text-sm font-medium text-slate-700">Permite saldo negativo</span>
-              <p className="text-xs text-slate-400">La tarjeta puede quedar en negativo al cobrar en el POS</p>
+              <span className="text-sm font-medium text-slate-700">Permite saldo negativo (sobregiro)</span>
+              <p className="text-xs text-slate-400">Puede comprar aunque no tenga saldo, hasta el tope de deuda</p>
               {!puedeConfigurarAlertas && (
                 <p className="text-xs text-amber-600 mt-1">Solo un administrador o supervisor puede cambiar este dato.</p>
               )}

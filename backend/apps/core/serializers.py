@@ -31,6 +31,8 @@ class TarjetaSerializer(serializers.ModelSerializer):
     hijo_restricciones = serializers.SerializerMethodField()
     hijo_cumple_hoy = serializers.SerializerMethodField()
     saldo_disponible = serializers.DecimalField(max_digits=12, decimal_places=0, read_only=True)
+    sobregiro_sin_tope = serializers.BooleanField(read_only=True)
+    deuda_maxima = serializers.SerializerMethodField()
     saldo_almuerzo = serializers.SerializerMethodField()
 
     # ── Datos del cliente responsable o del cliente directo ───────────────────
@@ -105,6 +107,11 @@ class TarjetaSerializer(serializers.ModelSerializer):
         if obj.hijo_id and obj.hijo.foto_perfil:
             return f"/clientes/hijos/{obj.hijo_id}/foto/"
         return None
+
+    def get_deuda_maxima(self, obj):
+        """Tope de deuda en Gs. (0 = prepago, null = sin tope)."""
+        tope = obj.deuda_maxima
+        return None if tope is None else int(tope)
 
     def get_saldo_almuerzo(self, obj):
         """Saldo corriente de almuerzo del alumno (puede ser negativo). None si no es alumno."""

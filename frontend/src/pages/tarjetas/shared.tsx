@@ -1,3 +1,4 @@
+import { formatDateOnly } from '../../lib/format'
 import type { BadgeColor } from '../../components/ui/Badge'
 
 export function extractErrorMessage(err: unknown): string {
@@ -33,11 +34,19 @@ export function formatFecha(iso: string | null | undefined): string {
   })
 }
 
-export function formatFechaCorta(iso: string | null | undefined): string {
-  if (!iso) return '—'
-  return new Date(iso).toLocaleDateString('es-PY', {
-    day: '2-digit', month: '2-digit', year: 'numeric',
-  })
+// Fecha de calendario (vencimiento): sin conversión de zona horaria.
+export const formatFechaCorta = formatDateOnly
+
+/** Qué puede gastar hoy la tarjeta y por qué (prepago, con tope o sin tope). */
+export function describirDisponible(t: Tarjeta): { valor: string; detalle: string } {
+  const saldo = Number(t.saldo_actual) || 0
+  if (!t.permite_saldo_negativo) {
+    return { valor: formatGs(Math.max(saldo, 0)), detalle: 'Prepago: no puede quedar en negativo' }
+  }
+  const sinTope = t.sobregiro_sin_tope ?? (Number(t.limite_credito) === 0)
+  if (sinTope) return { valor: 'Sin tope', detalle: 'Puede endeudarse sin límite' }
+  const tope = Number(t.deuda_maxima ?? t.limite_credito) || 0
+  return { valor: formatGs(saldo + tope), detalle: `Sobregiro autorizado hasta ${formatGs(tope)}` }
 }
 
 export interface Tarjeta {
@@ -51,6 +60,10 @@ export interface Tarjeta {
   saldo_actual: string | number
   saldo_disponible: string | number
   saldo_almuerzo?: number | null
+  sobregiro_sin_tope?: boolean
+  deuda_maxima?: number | null
+  cliente_saldo_cc?: number
+  cliente_permite_cuenta_corriente?: boolean
   limite_credito: string | number
   estado: string
   fecha_vencimiento: string | null

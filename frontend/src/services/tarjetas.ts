@@ -49,6 +49,9 @@ const tarjetasService = {
   listar: <T = TarjetaBase>(params?: Record<string, unknown>) =>
     api.get<Paginated<T>>('/core/tarjetas/', { params }),
 
+  resumen: () =>
+    api.get<{ tarjetas_con_deuda: number; deuda_total: number }>('/core/tarjetas/resumen/'),
+
   getByNro: <T = TarjetaBase>(nro: string) =>
     api.get<T>(`/core/tarjetas/${nro}/`),
 

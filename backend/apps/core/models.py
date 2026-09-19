@@ -84,8 +84,35 @@ class Tarjeta(models.Model):
         return f"Tarjeta {self.nro_tarjeta} - {titular}"
 
     @property
+    def deuda_maxima(self):
+        """Deuda máxima que puede acumular la tarjeta (en positivo).
+
+        - No permite saldo negativo: 0 (prepago estricto).
+        - Permite saldo negativo con límite > 0: ese límite es el tope.
+        - Permite saldo negativo con límite 0: None = sin tope (misma
+          convención que el límite de la cuenta corriente del cliente).
+        """
+        if not self.permite_saldo_negativo:
+            return Decimal("0")
+        if self.limite_credito == 0:
+            return None
+        return self.limite_credito
+
+    @property
+    def sobregiro_sin_tope(self):
+        return self.permite_saldo_negativo and self.limite_credito == 0
+
+    def puede_pagar(self, monto):
+        """True si cobrar `monto` no deja la deuda por encima del tope."""
+        tope = self.deuda_maxima
+        if tope is None:
+            return True
+        return self.saldo_actual - monto >= -tope
+
+    @property
     def saldo_disponible(self):
-        """Saldo disponible considerando límite de crédito."""
+        """Cuánto puede gastar hoy. Con sobregiro sin tope es solo el saldo
+        (la pantalla debe mostrar "Sin tope", ver sobregiro_sin_tope)."""
         if self.permite_saldo_negativo:
             return self.saldo_actual + self.limite_credito
         return max(self.saldo_actual, Decimal("0"))

@@ -23,6 +23,17 @@ export function formatDate(iso: string | null | undefined): string {
   })
 }
 
+/**
+ * Formats a calendar date ("2026-11-30" → "30/11/2026") WITHOUT timezone
+ * conversion. `new Date("2026-11-30")` is midnight UTC, which in Paraguay
+ * (UTC-3) displays as the previous day — use this for DateField values.
+ */
+export function formatDateOnly(iso: string | null | undefined): string {
+  if (!iso) return '—'
+  const [y, m, d] = iso.slice(0, 10).split('-')
+  return `${d}/${m}/${y}`
+}
+
 /** Formats an ISO date-time string: "2026-06-22T14:30:00Z" → "22/06/2026, 14:30" */
 export function formatDateTime(iso: string | null | undefined): string {
   if (!iso) return '—'

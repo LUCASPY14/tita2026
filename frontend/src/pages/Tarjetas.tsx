@@ -17,6 +17,9 @@ export default function Tarjetas() {
   const [loading, setLoading] = useState(false)
   const [search, setSearch] = useState('')
   const [estadoFilter, setEstadoFilter] = useState('')
+  const [conDeuda, setConDeuda] = useState(false)
+  const conDeudaRef = useRef(false)
+  const [resumen, setResumen] = useState<{ tarjetas_con_deuda: number; deuda_total: number } | null>(null)
   const [page, setPage] = useState(1)
   const [total, setTotal] = useState(0)
   const searchTimer = useRef<ReturnType<typeof setTimeout>>(undefined)
@@ -36,6 +39,8 @@ export default function Tarjetas() {
       const params: Record<string, unknown> = { page: p, page_size: 15 }
       if (q) params.search = q
       if (estado) params.estado = estado
+      if (conDeudaRef.current) params.con_deuda = true
+      tarjetasService.resumen().then(r => setResumen(r.data)).catch(() => setResumen(null))
       const { data } = await tarjetasService.listar<Tarjeta>(params)
       if (requestId !== requestIdRef.current) return
       setTarjetas(data.results ?? [])
@@ -50,12 +55,13 @@ export default function Tarjetas() {
 
   useEffect(() => {
     clearTimeout(searchTimer.current)
+    conDeudaRef.current = conDeuda
     searchTimer.current = setTimeout(() => {
       setPage(1)
       loadTarjetas(search, estadoFilter, 1)
     }, 350)
     return () => clearTimeout(searchTimer.current)
-  }, [search, estadoFilter, loadTarjetas])
+  }, [search, estadoFilter, conDeuda, loadTarjetas])
 
   // ── Actions ──────────────────────────────────────────────────────
 
@@ -132,10 +138,16 @@ export default function Tarjetas() {
       },
     },
     {
-      title: 'Límite', key: 'limite',
-      render: (_, r) => (
-        <span className="tabular-nums text-base text-slate-500">{formatGs(r.limite_credito)}</span>
-      ),
+      title: 'Sobregiro', key: 'limite',
+      render: (_, r) => {
+        if (!r.permite_saldo_negativo) return <span className="text-base text-slate-300">—</span>
+        const sinTope = r.sobregiro_sin_tope ?? (Number(r.limite_credito) === 0)
+        return (
+          <span className="tabular-nums text-base text-amber-700">
+            {sinTope ? 'Sin tope' : `hasta ${formatGs(r.limite_credito)}`}
+          </span>
+        )
+      },
     },
     {
       title: 'Vencimiento', key: 'vto',
@@ -203,6 +215,15 @@ export default function Tarjetas() {
             />
           </div>
         </div>
+        <label className="flex items-center gap-2 text-sm text-slate-600 cursor-pointer select-none pb-2.5">
+          <input
+            type="checkbox"
+            checked={conDeuda}
+            onChange={e => setConDeuda(e.target.checked)}
+            className="w-4 h-4 rounded accent-green-600"
+          />
+          Solo con deuda
+        </label>
         <div>
           <label className={labelClass}>Estado</label>
           <select
@@ -225,7 +246,14 @@ export default function Tarjetas() {
             <CreditCard className="w-4 h-4 text-slate-400" />
             Tarjetas
           </h2>
-          <span className="text-sm text-slate-400">{total} registros</span>
+          <span className="text-sm text-slate-400">
+            {resumen && resumen.tarjetas_con_deuda > 0 && (
+              <span className="text-red-600 font-semibold mr-3">
+                {resumen.tarjetas_con_deuda} con deuda · {formatGs(resumen.deuda_total)}
+              </span>
+            )}
+            {total} registros
+          </span>
         </div>
         <div className="p-1">
           <Table

@@ -113,7 +113,7 @@ export default function PanelAlumno({
                   (saldoDisponible ?? 0) < 5000  ? 'text-red-600' :
                   (saldoDisponible ?? 0) < 15000 ? 'text-yellow-600' : 'text-green-600'
                 }`}>
-                  {gs(tarjeta.saldo_disponible || tarjeta.saldo_actual)}
+                  {gs(tarjeta.saldo_actual)}
                 </p>
               </div>
               {hasItems && saldoTrasCompra !== null && modoPago === 'PREPAGO' && (
@@ -124,9 +124,14 @@ export default function PanelAlumno({
                   </p>
                 </div>
               )}
-              {Number(tarjeta.limite_credito) > 0 && (
-                <p className="text-xs text-slate-400 mt-1.5">
-                  Crédito disponible: <span className="font-bold">{gs(tarjeta.limite_credito)}</span>
+              {tarjeta.permite_saldo_negativo && (
+                <p className="text-xs text-slate-500 mt-1.5">
+                  {Number(tarjeta.limite_credito) > 0 ? (
+                    <>Sobregiro autorizado hasta <span className="font-bold">{gs(tarjeta.limite_credito)}</span>
+                      {' · '}puede gastar <span className="font-bold">{gs(Number(tarjeta.saldo_actual) + Number(tarjeta.limite_credito))}</span></>
+                  ) : (
+                    <>Sobregiro autorizado <span className="font-bold">sin tope</span></>
+                  )}
                 </p>
               )}
             </div>

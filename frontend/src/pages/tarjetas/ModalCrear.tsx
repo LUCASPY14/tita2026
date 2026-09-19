@@ -213,13 +213,13 @@ export default function ModalCrear({ open, onClose, onSaved }: Props) {
 
         <div className="grid grid-cols-2 gap-4">
           <div>
-            <label className={labelClass}>Límite de Crédito (Gs.)</label>
+            <label className={labelClass}>Tope de deuda (Gs.)</label>
             <input
               type="number"
-              disabled={!puedeAutorizar}
+              placeholder="0 = sin tope"
+              disabled={!puedeAutorizar || !form.permite_saldo_negativo}
               value={form.limite_credito}
               onChange={e => setForm(f => ({ ...f, limite_credito: e.target.value }))}
-              placeholder="0"
               min={0}
               step={1000}
               className={inputClass}
@@ -261,7 +261,7 @@ export default function ModalCrear({ open, onClose, onSaved }: Props) {
             <div className="w-9 h-5 bg-slate-200 rounded-full peer-checked:bg-green-500 transition-colors" />
             <div className="absolute top-0.5 left-0.5 w-4 h-4 bg-white rounded-full shadow transition-transform peer-checked:translate-x-4" />
           </div>
-          <span className="text-sm text-slate-700">Permite saldo negativo</span>
+          <span className="text-sm text-slate-700">Permite saldo negativo (sobregiro; el tope de deuda 0 = sin tope)</span>
         </label>
         {!puedeAutorizar && (
           <p className="text-xs text-amber-600">

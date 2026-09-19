@@ -128,7 +128,7 @@ export function abrirRecibo(carga: UltimaCarga) {
 <div class="row"><span class="label">Método:</span><span>${metodoLabel}</span></div>
 <div class="big">Gs. ${carga.monto.toLocaleString('es-PY')}</div>
 <div class="divider"></div>
-<div class="row"><span class="label">Nuevo saldo tarjeta:</span><span>Gs. ${Number(carga.tarjeta.saldo_disponible).toLocaleString('es-PY')}</span></div>
+<div class="row"><span class="label">Nuevo saldo tarjeta:</span><span>Gs. ${Number(carga.tarjeta.saldo_actual).toLocaleString('es-PY')}</span></div>
 <div class="footer">Gracias por su pago.<br/>Conserve este comprobante.</div>
 <script>window.onload = function(){ window.print(); }</script>
 </body>

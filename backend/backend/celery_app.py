@@ -115,6 +115,10 @@ app.conf.beat_schedule = {
         "task": "apps.almuerzos.tasks.alertar_saldo_almuerzo_negativo",
         "schedule": crontab(hour=9, minute=45),   # Todos los días 09:45
     },
+    "alertar-saldo-tarjeta-negativo": {
+        "task": "apps.core.tasks.alertar_saldo_tarjeta_negativo",
+        "schedule": crontab(hour=9, minute=50),   # Todos los días 09:50
+    },
     # ── Usuarios / Auditoría ──────────────────────────────────────────
     "limpiar-audit-logs": {
         "task": "apps.usuarios.tasks.limpiar_audit_logs",

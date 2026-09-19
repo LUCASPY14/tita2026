@@ -457,8 +457,8 @@ export default function CargaSaldo() {
               <div className={`mt-4 pt-4 border-t border-emerald-200 grid gap-3 ${tarjeta.hijo ? 'grid-cols-3' : 'grid-cols-2'}`}>
                 <div>
                   <p className="text-slate-500 text-xs font-semibold uppercase tracking-wide">Saldo tarjeta</p>
-                  <p className={`text-2xl font-black tabular-nums mt-0.5 ${Number(tarjeta.saldo_disponible) < 0 ? 'text-red-600' : 'text-emerald-700'}`}>
-                    {formatGs(tarjeta.saldo_disponible)}
+                  <p className={`text-2xl font-black tabular-nums mt-0.5 ${Number(tarjeta.saldo_actual) < 0 ? 'text-red-600' : 'text-emerald-700'}`}>
+                    {formatGs(tarjeta.saldo_actual)}
                   </p>
                 </div>
                 <div>

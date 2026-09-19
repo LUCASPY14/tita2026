@@ -213,11 +213,23 @@ class VentaService:
 
             # Validar saldo de tarjeta con objeto bloqueado
             if tipo == "CONTADO" and tarjeta_bloqueada:
-                if tarjeta_bloqueada.saldo_actual < monto_total and not tarjeta_bloqueada.permite_saldo_negativo:
+                if not tarjeta_bloqueada.puede_pagar(monto_total):
+                    if not tarjeta_bloqueada.permite_saldo_negativo:
+                        raise ValidationError({
+                            "error": "Saldo insuficiente en la tarjeta.",
+                            "saldo_actual": str(tarjeta_bloqueada.saldo_actual),
+                            "monto_venta": str(monto_total),
+                        })
+                    # Sobregiro autorizado con tope: la venta completa se rechaza.
                     raise ValidationError({
-                        "error": "Saldo insuficiente en la tarjeta.",
+                        "error": (
+                            "La compra supera el sobregiro autorizado de la tarjeta "
+                            f"(tope de deuda Gs. {tarjeta_bloqueada.limite_credito:,.0f}). "
+                            "Pedí a un supervisor que lo amplíe."
+                        ),
                         "saldo_actual": str(tarjeta_bloqueada.saldo_actual),
                         "monto_venta": str(monto_total),
+                        "limite_credito": str(tarjeta_bloqueada.limite_credito),
                     })
 
             # 2. Crear Venta

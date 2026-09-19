@@ -68,7 +68,21 @@ class TarjetaViewSet(viewsets.ModelViewSet):
         # Una tarjeta con saldo no se elimina desde la API salvo por un administrador.
         if self.action == "destroy":
             return [IsAdmin()]
+        if self.action == "resumen":
+            return [IsStaffUser()]
         return super().get_permissions()
+
+    @action(detail=False, methods=["get"], url_path="resumen")
+    def resumen(self, request):
+        """GET /core/tarjetas/resumen/ — deuda de cantina acumulada en tarjetas."""
+        from django.db.models import Count, Sum
+        agregado = Tarjeta.objects.filter(saldo_actual__lt=0).aggregate(
+            total=Sum("saldo_actual"), n=Count("pk"),
+        )
+        return Response({
+            "tarjetas_con_deuda": agregado["n"],
+            "deuda_total": int(-(agregado["total"] or 0)),
+        })
 
     def _auditar_sensibles(self, antes, tarjeta, operacion):
         cambios = [
@@ -106,6 +120,8 @@ class TarjetaViewSet(viewsets.ModelViewSet):
             return qs.filter(
                 Q(hijo__cliente_responsable_id=user.cliente_id) | Q(cliente_directo_id=user.cliente_id)
             )
+        if self.request.query_params.get("con_deuda") in ("1", "true", "True"):
+            qs = qs.filter(saldo_actual__lt=0)
         return qs
 
     def _cambiar_estado(self, request, pk, desde, hacia, operacion):

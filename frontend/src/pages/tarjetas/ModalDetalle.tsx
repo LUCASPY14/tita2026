@@ -10,7 +10,7 @@ import Modal from '../../components/ui/Modal'
 import {
   extractErrorMessage, formatGs, formatFecha, formatFechaCorta,
   type Tarjeta, type MovimientoTarjeta, type CargaSaldo,
-  ESTADO_COLOR, TIPO_MOV_LABEL, TIPO_MOV_COLOR, ESTADO_CARGA_COLOR,
+  ESTADO_COLOR, TIPO_MOV_LABEL, TIPO_MOV_COLOR, ESTADO_CARGA_COLOR, describirDisponible,
 } from './shared'
 
 interface Props {
@@ -171,6 +171,10 @@ export default function ModalDetalle({ tarjeta, toggling, onToggleEstado, onClos
 
   if (!tarjeta) return null
 
+  const disponible = describirDisponible(tarjeta)
+  const saldoAlmuerzo = tarjeta.saldo_almuerzo ?? null
+  const saldoCC = Number(tarjeta.cliente_saldo_cc) || 0
+
   return (
     <>
       <Modal
@@ -182,14 +186,36 @@ export default function ModalDetalle({ tarjeta, toggling, onToggleEstado, onClos
       >
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-5">
           {[
-            { label: 'Saldo Actual', value: formatGs(tarjeta.saldo_actual), warn: Number(tarjeta.saldo_actual) < 0 },
-            { label: 'Saldo Disponible', value: formatGs(tarjeta.saldo_disponible) },
-            { label: 'Límite Crédito', value: formatGs(tarjeta.limite_credito) },
-            { label: 'Vencimiento', value: formatFechaCorta(tarjeta.fecha_vencimiento) },
-          ].map(({ label, value, warn }) => (
+            {
+              label: 'Saldo cantina',
+              value: formatGs(tarjeta.saldo_actual),
+              detalle: 'Saldo de la tarjeta',
+              warn: Number(tarjeta.saldo_actual) < 0,
+            },
+            {
+              label: 'Puede gastar hoy',
+              value: disponible.valor,
+              detalle: disponible.detalle,
+              warn: false,
+            },
+            {
+              label: 'Saldo almuerzo',
+              value: saldoAlmuerzo == null ? '—' : formatGs(saldoAlmuerzo),
+              detalle: saldoAlmuerzo == null ? 'No aplica (sin alumno)' : saldoAlmuerzo < 0 ? 'Debe' : 'Al día',
+              warn: (saldoAlmuerzo ?? 0) < 0,
+            },
+            {
+              label: 'Cuenta corriente familiar',
+              value: formatGs(saldoCC),
+              detalle: tarjeta.cliente_permite_cuenta_corriente === false && saldoCC === 0
+                ? 'No habilitada' : saldoCC > 0 ? 'Deuda con la cantina' : 'Sin deuda',
+              warn: saldoCC > 0,
+            },
+          ].map(({ label, value, detalle, warn }) => (
             <div key={label} className="bg-slate-50 rounded-xl px-3 py-3">
-              <p className="text-sm font-semibold text-slate-500 uppercase tracking-wide">{label}</p>
+              <p className="text-xs font-semibold text-slate-500 uppercase tracking-wide">{label}</p>
               <p className={`text-base font-bold mt-0.5 tabular-nums ${warn ? 'text-red-600' : 'text-slate-800'}`}>{value}</p>
+              <p className="text-xs text-slate-400 mt-0.5">{detalle}</p>
             </div>
           ))}
         </div>
@@ -198,6 +224,9 @@ export default function ModalDetalle({ tarjeta, toggling, onToggleEstado, onClos
           <div className="flex items-center gap-2">
             <Badge color={ESTADO_COLOR[tarjeta.estado] ?? 'default'}>{tarjeta.estado}</Badge>
             {tarjeta.permite_saldo_negativo && <Badge color="yellow">Permite saldo negativo</Badge>}
+            {tarjeta.fecha_vencimiento && (
+              <Badge color="default">Vence {formatFechaCorta(tarjeta.fecha_vencimiento)}</Badge>
+            )}
             <span className="text-sm text-slate-400">Cliente: {tarjeta.cliente_nombre}</span>
           </div>
           <div className="flex gap-2">

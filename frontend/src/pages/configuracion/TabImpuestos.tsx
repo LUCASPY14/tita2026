@@ -7,6 +7,7 @@ import Button from '../../components/ui/Button'
 import Table, { type Column } from '../../components/ui/Table'
 import Modal from '../../components/ui/Modal'
 import { extractErrorMessage, inputClass, labelClass, toggleSwitch, type Impuesto, type DeleteTarget } from './helpers'
+import { formatDateOnly } from '../../lib/format'
 
 export default function TabImpuestos({ onDelete }: { onDelete: (t: DeleteTarget) => void }) {
   const [items, setItems] = useState<Impuesto[]>([])
@@ -56,8 +57,8 @@ export default function TabImpuestos({ onDelete }: { onDelete: (t: DeleteTarget)
   const columns: Column<Impuesto>[] = [
     { title: 'Nombre', key: 'nombre', render: (_, r) => <span className="text-sm font-medium text-slate-800">{r.nombre}</span> },
     { title: 'Porcentaje', key: 'pct', width: 110, render: (_, r) => <span className="tabular-nums text-sm font-semibold text-slate-700">{Number(r.porcentaje) || 0}%</span> },
-    { title: 'Desde', key: 'desde', width: 120, render: (_, r) => <span className="text-xs text-slate-500">{r.vigente_desde ? new Date(r.vigente_desde).toLocaleDateString('es-PY') : '—'}</span> },
-    { title: 'Hasta', key: 'hasta', width: 120, render: (_, r) => <span className="text-xs text-slate-500">{r.vigente_hasta ? new Date(r.vigente_hasta).toLocaleDateString('es-PY') : '—'}</span> },
+    { title: 'Desde', key: 'desde', width: 120, render: (_, r) => <span className="text-xs text-slate-500">{formatDateOnly(r.vigente_desde)}</span> },
+    { title: 'Hasta', key: 'hasta', width: 120, render: (_, r) => <span className="text-xs text-slate-500">{formatDateOnly(r.vigente_hasta)}</span> },
     { title: 'Estado', key: 'activo', width: 90, render: (_, r) => <Badge color={r.activo ? 'green' : 'default'}>{r.activo ? 'Activo' : 'Inactivo'}</Badge> },
     {
       title: '', key: 'acc', width: 100,
