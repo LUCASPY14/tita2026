@@ -9,6 +9,7 @@ logger = logging.getLogger(__name__)
 from decimal import Decimal
 
 from django.db import models, transaction
+from django.db.models import Count, Sum
 
 import csv
 
@@ -583,15 +584,18 @@ class SaldoAlmuerzoViewSet(viewsets.ReadOnlyModelViewSet):
     """Saldo corriente de almuerzo por hijo. Solo lectura — se modifica vía
     RecargaSaldoAlmuerzoViewSet y RegistroConsumoAlmuerzoViewSet."""
 
-    queryset = SaldoAlmuerzo.objects.select_related("hijo__grado", "hijo__cliente_responsable").all()
+    queryset = SaldoAlmuerzo.objects.select_related(
+        "hijo__grado", "hijo__cliente_responsable", "hijo__tarjeta",
+    ).all()
     serializer_class = SaldoAlmuerzoSerializer
     permission_classes = [IsStaffOrClienteWeb]
-    filter_backends = [DjangoFilterBackend, OrderingFilter]
+    filter_backends = [DjangoFilterBackend, SearchFilter, OrderingFilter]
     filterset_fields = ["hijo"]
+    search_fields = ["hijo__nombre", "hijo__apellido", "hijo__tarjeta__nro_tarjeta"]
     ordering_fields = ["saldo_actual", "fecha_actualizacion"]
     ordering = ["-fecha_actualizacion"]
 
-    def get_queryset(self):
+    def _scoped_queryset(self):
         qs = super().get_queryset()
         user = self.request.user
         if user.rol == "CLIENTE_WEB":
@@ -599,6 +603,26 @@ class SaldoAlmuerzoViewSet(viewsets.ReadOnlyModelViewSet):
                 return qs.none()
             return qs.filter(hijo__cliente_responsable=user.cliente)
         return qs
+
+    def get_queryset(self):
+        qs = self._scoped_queryset()
+        if self.request.query_params.get("con_deuda") in ("1", "true", "True"):
+            qs = qs.filter(saldo_actual__lt=0)
+        return qs
+
+    @action(detail=False, methods=["get"], url_path="resumen")
+    def resumen(self, request):
+        """GET /api/v1/almuerzos/saldos/resumen/ — totales de deuda y saldo a favor
+        sobre todos los alumnos (no solo la página del listado)."""
+        qs = self._scoped_queryset()
+        deuda = qs.filter(saldo_actual__lt=0).aggregate(total=Sum("saldo_actual"), n=Count("pk"))
+        a_favor = qs.filter(saldo_actual__gt=0).aggregate(total=Sum("saldo_actual"), n=Count("pk"))
+        return Response({
+            "deuda_total": int(-(deuda["total"] or 0)),
+            "alumnos_con_deuda": deuda["n"],
+            "saldo_a_favor_total": int(a_favor["total"] or 0),
+            "alumnos_con_saldo_a_favor": a_favor["n"],
+        })
 
     @action(detail=True, methods=["get"], url_path="movimientos")
     def movimientos(self, request, pk=None):

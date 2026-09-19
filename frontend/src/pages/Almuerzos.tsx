@@ -4,7 +4,7 @@ import toast from 'react-hot-toast'
 import {
   UtensilsCrossed, Plus, Search, Edit2, X,
   CheckCircle, Calendar, Users, BarChart2,
-  PauseCircle, Banknote, EyeOff, Eye, FileText, Trash2,
+  PauseCircle, Banknote, EyeOff, Eye, FileText, Trash2, Wallet,
 } from 'lucide-react'
 import api from '../services/api'
 import { useAuthStore } from '../store/authStore'
@@ -25,6 +25,7 @@ import {
   ESTADO_REGISTRO_COLOR, ESTADO_CUENTA_COLOR, ESTADO_SUSCRIPCION_COLOR,
   type TabKey, type Hijo, type TipoAlmuerzo, type PlanAlmuerzo, type Suscripcion,
   type MenuDiario, type RegistroConsumo, type CuentaMensual,
+  type SaldoAlmuerzoItem, type ResumenSaldos, type CargaAlmuerzoTarget,
 } from './almuerzos/shared'
 
 export default function Almuerzos() {
@@ -49,7 +50,7 @@ export default function Almuerzos() {
   const [consumoOpen, setConsumoOpen] = useState(false)
   const [suscModalOpen, setSuscModalOpen] = useState(false)
   const [menuModalOpen, setMenuModalOpen] = useState(false)
-  const [pagoCuenta, setPagoCuenta] = useState<CuentaMensual | null>(null)
+  const [pagoCuenta, setPagoCuenta] = useState<CargaAlmuerzoTarget | null>(null)
   const [editingSusc, setEditingSusc] = useState<Suscripcion | null>(null)
   const [editingMenu, setEditingMenu] = useState<MenuDiario | null>(null)
   const [deleteConsumoId, setDeleteConsumoId] = useState<number | null>(null)
@@ -61,6 +62,16 @@ export default function Almuerzos() {
   const [filtroCuentaMes, setFiltroCuentaMes] = useState<number | ''>('')
   const [filtroCuentaAnio, setFiltroCuentaAnio] = useState<number | ''>(new Date().getFullYear())
   const [searchCuentas, setSearchCuentas] = useState('')
+
+  // ── Saldos (panel de cobranza) ────────────────────────────────────
+  const [saldos, setSaldos] = useState<SaldoAlmuerzoItem[]>([])
+  const [loadingSaldos, setLoadingSaldos] = useState(false)
+  const [searchSaldos, setSearchSaldos] = useState('')
+  const [soloDeuda, setSoloDeuda] = useState(true)
+  const [pageSaldos, setPageSaldos] = useState(1)
+  const [totalSaldos, setTotalSaldos] = useState(0)
+  const [resumenSaldos, setResumenSaldos] = useState<ResumenSaldos | null>(null)
+  const searchTimerSaldos = useRef<ReturnType<typeof setTimeout>>(undefined)
 
   // ── Suscripciones ─────────────────────────────────────────────────
   const [suscripciones, setSuscripciones] = useState<Suscripcion[]>([])
@@ -137,6 +148,37 @@ export default function Almuerzos() {
     if (tab === 'cuentas') loadCuentas()
   }, [tab, loadCuentas])
 
+  // ── Load saldos ───────────────────────────────────────────────────
+  const loadSaldos = useCallback(async (q: string, deuda: boolean, p: number) => {
+    setLoadingSaldos(true)
+    try {
+      const params: Record<string, unknown> = { page: p, page_size: 15, ordering: 'saldo_actual' }
+      if (q) params.search = q
+      if (deuda) params.con_deuda = true
+      const [{ data }, { data: resumen }] = await Promise.all([
+        api.get('/almuerzos/saldos/', { params }),
+        api.get('/almuerzos/saldos/resumen/'),
+      ])
+      setSaldos(data.results ?? [])
+      setTotalSaldos(data.count ?? 0)
+      setResumenSaldos(resumen)
+    } catch {
+      toast.error('Error al cargar saldos de almuerzo')
+    } finally {
+      setLoadingSaldos(false)
+    }
+  }, [])
+
+  useEffect(() => {
+    if (tab !== 'saldos') return
+    clearTimeout(searchTimerSaldos.current)
+    searchTimerSaldos.current = setTimeout(() => {
+      setPageSaldos(1)
+      loadSaldos(searchSaldos, soloDeuda, 1)
+    }, 350)
+    return () => clearTimeout(searchTimerSaldos.current)
+  }, [tab, searchSaldos, soloDeuda, loadSaldos])
+
   // ── Load suscripciones ────────────────────────────────────────────
   const loadSuscripciones = useCallback(async () => {
     setLoadingSusc(true)
@@ -178,10 +220,11 @@ export default function Almuerzos() {
     const handler = () => {
       if (tab === 'consumos') loadRegistros(searchRegistros, pageRegistros)
       if (tab === 'cuentas') loadCuentas()
+      if (tab === 'saldos') loadSaldos(searchSaldos, soloDeuda, pageSaldos)
     }
     window.addEventListener('comedor:registro', handler)
     return () => window.removeEventListener('comedor:registro', handler)
-  }, [tab, searchRegistros, pageRegistros, loadRegistros, loadCuentas])
+  }, [tab, searchRegistros, pageRegistros, loadRegistros, loadCuentas, loadSaldos, searchSaldos, soloDeuda, pageSaldos])
 
 
   const cancelarSusc = useCallback(async (id: number) => {
@@ -379,11 +422,78 @@ export default function Almuerzos() {
       key: 'acc',
       width: 130,
       render: (_, r) => (
-        <Button size="sm" variant="primary" onClick={() => setPagoCuenta(r)}>
+        <Button size="sm" variant="primary" onClick={() => setPagoCuenta({
+          hijo: r.hijo,
+          hijo_nombre: r.hijo_nombre,
+          monto_sugerido: Number(r.saldo_pendiente) || (Number(r.monto_total) - Number(r.monto_pagado)),
+          detalle: `${MESES[r.mes]} ${r.anio} — ${r.cantidad_almuerzos} almuerzos, total ${formatGs(r.monto_total)}`,
+        })}>
           <Banknote className="w-3.5 h-3.5" />
           Cargar saldo
         </Button>
       ),
+    },
+  ]
+
+  const colsSaldos: Column<SaldoAlmuerzoItem>[] = [
+    {
+      title: 'Estudiante',
+      key: 'hijo',
+      render: (_, r) => (
+        <div>
+          <p className="text-sm font-medium text-slate-800">{r.hijo_nombre}</p>
+          {r.hijo_grado && <p className="text-xs text-slate-400">{r.hijo_grado}</p>}
+        </div>
+      ),
+    },
+    {
+      title: 'Tarjeta',
+      key: 'tarjeta',
+      render: (_, r) => <span className="font-mono text-xs text-slate-500">{r.nro_tarjeta || '—'}</span>,
+    },
+    {
+      title: 'Saldo',
+      key: 'saldo',
+      render: (_, r) => {
+        const n = Number(r.saldo_actual) || 0
+        return (
+          <span className={`tabular-nums font-semibold text-sm ${n < 0 ? 'text-red-600' : n > 0 ? 'text-emerald-700' : 'text-slate-400'}`}>
+            {formatGs(n)}
+          </span>
+        )
+      },
+    },
+    {
+      title: 'Estado',
+      key: 'estado',
+      render: (_, r) => {
+        const n = Number(r.saldo_actual) || 0
+        return <Badge color={n < 0 ? 'red' : 'green'}>{n < 0 ? 'Pendiente' : 'Al día'}</Badge>
+      },
+    },
+    {
+      title: 'Últ. movimiento',
+      key: 'fecha',
+      render: (_, r) => <span className="text-sm text-slate-500">{formatFecha(r.fecha_actualizacion.slice(0, 10))}</span>,
+    },
+    {
+      title: '',
+      key: 'acc',
+      width: 130,
+      render: (_, r) => {
+        const n = Number(r.saldo_actual) || 0
+        return (
+          <Button size="sm" variant="primary" onClick={() => setPagoCuenta({
+            hijo: r.hijo,
+            hijo_nombre: r.hijo_nombre,
+            monto_sugerido: n < 0 ? -n : 0,
+            detalle: n < 0 ? `Deuda actual: ${formatGs(-n)}` : `Saldo actual: ${formatGs(n)}`,
+          })}>
+            <Banknote className="w-3.5 h-3.5" />
+            Cargar saldo
+          </Button>
+        )
+      },
     },
   ]
 
@@ -485,6 +595,7 @@ export default function Almuerzos() {
   const TABS: { key: TabKey; label: string; icon: typeof UtensilsCrossed }[] = [
     { key: 'consumos',      label: 'Consumos',          icon: UtensilsCrossed },
     { key: 'cuentas',       label: 'Cuentas Mensuales', icon: BarChart2 },
+    { key: 'saldos',        label: 'Saldos',            icon: Wallet },
     { key: 'suscripciones', label: 'Suscripciones',     icon: Users },
     { key: 'menu',          label: 'Menú',              icon: Calendar },
   ]
@@ -628,6 +739,68 @@ export default function Almuerzos() {
         </div>
       )}
 
+      {/* ── Saldos tab (panel de cobranza) ───────────────────────── */}
+      {tab === 'saldos' && (
+        <>
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+            {[
+              { label: 'Deuda Total', value: formatGs(resumenSaldos?.deuda_total ?? 0), color: 'text-red-700', bg: 'bg-red-50', icon: Wallet, iconColor: 'text-red-600' },
+              { label: 'Alumnos con Deuda', value: String(resumenSaldos?.alumnos_con_deuda ?? 0), color: 'text-orange-700', bg: 'bg-orange-50', icon: Users, iconColor: 'text-orange-600' },
+              { label: 'Saldo a Favor', value: formatGs(resumenSaldos?.saldo_a_favor_total ?? 0), color: 'text-emerald-700', bg: 'bg-emerald-50', icon: CheckCircle, iconColor: 'text-emerald-600' },
+            ].map(({ label, value, color, bg, icon: Icon, iconColor }) => (
+              <div key={label} className="bg-white rounded-2xl border border-slate-100 shadow-sm px-5 py-4 flex items-start gap-4">
+                <div className={`w-10 h-10 ${bg} rounded-xl flex items-center justify-center shrink-0`}>
+                  <Icon className={`w-5 h-5 ${iconColor}`} />
+                </div>
+                <div>
+                  <p className="text-sm font-semibold text-slate-500 uppercase tracking-wide">{label}</p>
+                  <p className={`text-xl font-bold mt-0.5 tabular-nums ${color}`}>{value}</p>
+                </div>
+              </div>
+            ))}
+          </div>
+          <div className="bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden">
+            <div className="px-6 py-4 border-b border-slate-100 flex flex-wrap items-center justify-between gap-3">
+              <div>
+                <h2 className="text-sm font-semibold text-slate-800">Saldos de Almuerzo por Alumno</h2>
+                <p className="text-xs text-slate-400 mt-0.5">
+                  Cuenta corriente real: cada almuerzo descuenta, cada recarga suma. Negativo = deuda a cobrar.
+                </p>
+              </div>
+              <div className="flex flex-wrap items-center gap-3">
+                <label className="flex items-center gap-2 text-sm text-slate-600 cursor-pointer select-none">
+                  <input
+                    type="checkbox"
+                    checked={soloDeuda}
+                    onChange={e => setSoloDeuda(e.target.checked)}
+                    className="w-4 h-4 rounded accent-green-600"
+                  />
+                  Solo con deuda
+                </label>
+                <input
+                  placeholder="Buscar alumno o tarjeta..."
+                  value={searchSaldos}
+                  onChange={e => setSearchSaldos(e.target.value)}
+                  className="border border-slate-200 rounded-lg px-2.5 py-1.5 text-sm text-slate-700 bg-white focus:outline-none focus:ring-2 focus:ring-green-500/30 w-56"
+                />
+              </div>
+            </div>
+            <div className="p-1">
+              <Table
+                columns={colsSaldos}
+                dataSource={saldos}
+                rowKey="id_saldo_almuerzo"
+                loading={loadingSaldos}
+                pageSize={15}
+                page={pageSaldos}
+                onPageChange={p => { setPageSaldos(p); loadSaldos(searchSaldos, soloDeuda, p) }}
+                total={totalSaldos}
+              />
+            </div>
+          </div>
+        </>
+      )}
+
       {/* ── Suscripciones tab ─────────────────────────────────────── */}
       {tab === 'suscripciones' && (
         <div className="bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden">
@@ -670,7 +843,10 @@ export default function Almuerzos() {
       <ModalPagoCuenta
         cuenta={pagoCuenta}
         onClose={() => setPagoCuenta(null)}
-        onSaved={loadCuentas}
+        onSaved={() => {
+          if (tab === 'cuentas') loadCuentas()
+          if (tab === 'saldos') loadSaldos(searchSaldos, soloDeuda, pageSaldos)
+        }}
       />
       <ModalEditSusc
         susc={editingSusc}

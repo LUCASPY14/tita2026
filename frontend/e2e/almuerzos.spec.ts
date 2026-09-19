@@ -124,7 +124,7 @@ test.describe('Almuerzos', () => {
 // ── Mocks adicionales ──────────────────────────────────────────────────────
 
 const CUENTA_MOCK = {
-  id_cuenta_mensual: 1,
+  id: '1-2026-5',
   hijo: 1,
   hijo_nombre: 'Sofía Torres',
   anio: 2026,
@@ -134,6 +134,23 @@ const CUENTA_MOCK = {
   monto_pagado: '0',
   saldo_pendiente: '45000',
   estado: 'PENDIENTE',
+}
+
+const SALDO_MOCK = {
+  id_saldo_almuerzo: 1,
+  hijo: 1,
+  hijo_nombre: 'Sofía Torres',
+  hijo_grado: '2° B',
+  nro_tarjeta: '99887766',
+  saldo_actual: '-45000',
+  fecha_actualizacion: '2026-05-20T10:00:00Z',
+}
+
+const RESUMEN_SALDOS_MOCK = {
+  deuda_total: 45000,
+  alumnos_con_deuda: 1,
+  saldo_a_favor_total: 0,
+  alumnos_con_saldo_a_favor: 0,
 }
 
 const SUSCRIPCION_MOCK = {
@@ -187,7 +204,7 @@ async function loginAndSetupAlmuerzos(page: Page) {
 test.describe('Almuerzos — Cuentas Mensuales', () => {
   test.beforeEach(async ({ page }) => {
     await loginAndSetupAlmuerzos(page)
-    await page.route(/\/api\/v1\/almuerzos\/cuentas-mensuales/, (route) =>
+    await page.route(/\/api\/v1\/almuerzos\/estado-cuenta/, (route) =>
       route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ results: [CUENTA_MOCK], count: 1 }) })
     )
     await page.goto('/almuerzos')
@@ -204,35 +221,46 @@ test.describe('Almuerzos — Cuentas Mensuales', () => {
     await expect(page.getByText('PENDIENTE').first()).toBeVisible({ timeout: 6000 })
   })
 
-  test('muestra el botón Generar para crear cuentas del mes', async ({ page }) => {
+  test('ya no hay botón Generar (las cuentas se calculan en vivo)', async ({ page }) => {
     await page.getByRole('button', { name: 'Cuentas Mensuales' }).click()
-    await expect(page.getByRole('button', { name: /Generar/i })).toBeVisible({ timeout: 5000 })
+    await expect(page.getByText('Sofía Torres').first()).toBeVisible({ timeout: 6000 })
+    await expect(page.getByRole('button', { name: /Generar/i })).toHaveCount(0)
   })
 
-  test('botón Generar llama al endpoint correcto', async ({ page }) => {
-    let generarCalled = false
-    await page.route(/\/api\/v1\/almuerzos\/cuentas-mensuales\/generar/, (route) => {
-      generarCalled = true
-      return route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ cuentas_creadas: 1 }) })
-    })
-    await page.getByRole('button', { name: 'Cuentas Mensuales' }).click()
+  test('tarjeta de resumen muestra Alumnos con Deuda', async ({ page }) => {
+    await expect(page.getByText('Alumnos con Deuda')).toBeVisible({ timeout: 5000 })
+  })
+})
 
-    // handleGenerarCuentas valida que filtroCuentaMes y filtroCuentaAnio estén definidos
-    // antes de llamar al endpoint — hay que seleccionarlos primero
-    const selectMes = page.locator('select').first()
-    await selectMes.selectOption({ index: 1 })        // Enero (cualquier mes ≠ '')
-    const inputAnio = page.getByPlaceholder('Año')
-    await inputAnio.fill('2026')
+// ── Saldos (panel de cobranza) ─────────────────────────────────────────────
 
-    await page.getByRole('button', { name: /Generar/i }).click()
-    await expect(async () => {
-      expect(generarCalled).toBe(true)
-    }).toPass({ timeout: 5000 })
-    await expect(page.getByText('Algo salió mal')).not.toBeVisible()
+test.describe('Almuerzos — Saldos', () => {
+  test.beforeEach(async ({ page }) => {
+    await loginAndSetupAlmuerzos(page)
+    await page.route(/\/api\/v1\/almuerzos\/saldos\/resumen/, (route) =>
+      route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(RESUMEN_SALDOS_MOCK) })
+    )
+    await page.route(/\/api\/v1\/almuerzos\/saldos\/(\?|$)/, (route) =>
+      route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ results: [SALDO_MOCK], count: 1 }) })
+    )
+    await page.goto('/almuerzos')
+    await page.getByRole('button', { name: 'Saldos' }).click()
   })
 
-  test('tarjeta de resumen muestra Cuentas Pendientes', async ({ page }) => {
-    await expect(page.getByText('Cuentas Pendientes')).toBeVisible({ timeout: 5000 })
+  test('muestra el alumno con su deuda y el estado Pendiente', async ({ page }) => {
+    await expect(page.getByText('Sofía Torres').first()).toBeVisible({ timeout: 6000 })
+    await expect(page.getByText('Pendiente').first()).toBeVisible()
+  })
+
+  test('muestra la deuda total del resumen', async ({ page }) => {
+    await expect(page.getByText('Deuda Total')).toBeVisible({ timeout: 5000 })
+    await expect(page.getByText('45.000').first()).toBeVisible()
+  })
+
+  test('el botón Cargar saldo abre el modal con el monto de la deuda', async ({ page }) => {
+    await page.getByRole('button', { name: /Cargar saldo/i }).first().click()
+    await expect(page.getByText('Cargar Saldo de Almuerzo')).toBeVisible({ timeout: 5000 })
+    await expect(page.locator('input[type="number"]').first()).toHaveValue('45000')
   })
 })
 

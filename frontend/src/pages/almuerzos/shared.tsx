@@ -124,6 +124,33 @@ export interface CuentaMensual {
   estado: string
 }
 
+export interface SaldoAlmuerzoItem {
+  id_saldo_almuerzo: number
+  hijo: number
+  hijo_nombre: string
+  hijo_grado: string | null
+  nro_tarjeta: string
+  saldo_actual: string | number
+  fecha_actualizacion: string
+}
+
+export interface ResumenSaldos {
+  deuda_total: number
+  alumnos_con_deuda: number
+  saldo_a_favor_total: number
+  alumnos_con_saldo_a_favor: number
+}
+
+/** Alumno al que se le va a cargar saldo de almuerzo (desde cualquier tab). */
+export interface CargaAlmuerzoTarget {
+  hijo: number
+  hijo_nombre: string
+  /** Monto sugerido (deuda actual). 0 si no hay deuda. */
+  monto_sugerido: number
+  /** Línea informativa bajo el nombre. */
+  detalle: string
+}
+
 // ─── Constants ───────────────────────────────────────────────────────────────
 export const ESTADO_REGISTRO_COLOR: Record<string, BadgeColor> = {
   REGISTRADO: 'green',
@@ -144,4 +171,4 @@ export const ESTADO_SUSCRIPCION_COLOR: Record<string, BadgeColor> = {
   SUSPENDIDA: 'orange',
 }
 
-export type TabKey = 'consumos' | 'cuentas' | 'suscripciones' | 'menu'
+export type TabKey = 'consumos' | 'cuentas' | 'saldos' | 'suscripciones' | 'menu'

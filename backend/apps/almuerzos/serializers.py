@@ -176,6 +176,11 @@ class PagoCuentaAlmuerzoSerializer(serializers.ModelSerializer):
 class SaldoAlmuerzoSerializer(serializers.ModelSerializer):
     hijo_nombre = serializers.CharField(source="hijo.nombre_completo", read_only=True)
     hijo_grado = serializers.CharField(source="hijo.grado.nombre", read_only=True, default=None)
+    nro_tarjeta = serializers.SerializerMethodField()
+
+    def get_nro_tarjeta(self, obj):
+        tarjeta = getattr(obj.hijo, "tarjeta", None)
+        return tarjeta.nro_tarjeta if tarjeta else ""
 
     class Meta:
         model = SaldoAlmuerzo

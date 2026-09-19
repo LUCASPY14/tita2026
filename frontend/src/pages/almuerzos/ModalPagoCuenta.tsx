@@ -3,10 +3,10 @@ import toast from 'react-hot-toast'
 import api from '../../services/api'
 import Modal from '../../components/ui/Modal'
 import { METODOS_PAGO } from '../../constants/mediosPago'
-import { extractErrorMessage, formatGs, MESES, type CuentaMensual } from './shared'
+import { extractErrorMessage, formatGs, type CargaAlmuerzoTarget } from './shared'
 
 interface Props {
-  cuenta: CuentaMensual | null
+  cuenta: CargaAlmuerzoTarget | null
   onClose: () => void
   onSaved: () => void
 }
@@ -19,8 +19,7 @@ export default function ModalPagoCuenta({ cuenta, onClose, onSaved }: Props) {
   if (cuenta !== prevCuenta) {
     setPrevCuenta(cuenta)
     if (cuenta) {
-      const pendiente = Number(cuenta.saldo_pendiente) || (Number(cuenta.monto_total) - Number(cuenta.monto_pagado))
-      setForm({ monto: String(pendiente > 0 ? pendiente : ''), medio_pago: 'EFECTIVO', referencia: '', emitirFactura: false, nroFactura: '' })
+      setForm({ monto: String(cuenta.monto_sugerido > 0 ? cuenta.monto_sugerido : ''), medio_pago: 'EFECTIVO', referencia: '', emitirFactura: false, nroFactura: '' })
     }
   }
 
@@ -74,11 +73,10 @@ export default function ModalPagoCuenta({ cuenta, onClose, onSaved }: Props) {
           <div className="bg-slate-50 rounded-xl p-4">
             <p className="text-sm font-semibold text-slate-800">{cuenta.hijo_nombre}</p>
             <p className="text-xs text-slate-500 mt-1">
-              {MESES[cuenta.mes]} {cuenta.anio} — {cuenta.cantidad_almuerzos} almuerzos, total {formatGs(cuenta.monto_total)}
+              {cuenta.detalle}
             </p>
             <p className="text-xs text-slate-400 mt-2">
-              Esto carga saldo de almuerzo del alumno (mismo saldo que se descuenta en el comedor) —
-              no es un pago específico de este mes.
+              Esto carga saldo de almuerzo del alumno (el mismo saldo que se descuenta en el comedor).
             </p>
           </div>
           <div>

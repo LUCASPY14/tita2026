@@ -339,3 +339,84 @@ class TestRecargaSaldoAlmuerzoConfirmar:
         assert resp.status_code == 200
         recarga.refresh_from_db()
         assert recarga.factura is not None
+
+
+# ── SaldoAlmuerzoViewSet: panel de cobranza (búsqueda, con_deuda, resumen) ───
+
+@pytest.fixture
+def saldos_variados(db, cliente, grado):
+    """3 alumnos: deudor, deudor grande, y uno con saldo a favor."""
+    from apps.almuerzos.models import SaldoAlmuerzo
+    from apps.clientes.models import Hijo
+    from apps.core.models import Tarjeta
+    datos = [("Ana", "Deuda", "-10000"), ("Beto", "Debe", "-40000"), ("Caro", "Favor", "25000")]
+    hijos = []
+    for nombre, apellido, saldo in datos:
+        h = Hijo.objects.create(
+            nombre=nombre, apellido=apellido, cliente_responsable=cliente, grado=grado, activo=True,
+        )
+        Tarjeta.objects.create(nro_tarjeta=f"PC-{nombre}", hijo=h)
+        SaldoAlmuerzo.objects.create(hijo=h, saldo_actual=Decimal(saldo))
+        hijos.append(h)
+    return hijos
+
+
+@pytest.mark.django_db
+class TestSaldoAlmuerzoPanelCobranza:
+
+    def test_con_deuda_filtra_solo_negativos(self, api_admin, saldos_variados):
+        resp = api_admin.get("/api/v1/almuerzos/saldos/", {"con_deuda": "true"})
+        assert resp.status_code == 200
+        assert resp.data["count"] == 2
+        assert all(Decimal(r["saldo_actual"]) < 0 for r in resp.data["results"])
+
+    def test_orden_por_saldo_pone_al_mayor_deudor_primero(self, api_admin, saldos_variados):
+        resp = api_admin.get("/api/v1/almuerzos/saldos/", {"ordering": "saldo_actual"})
+        assert resp.data["results"][0]["hijo_nombre"].startswith("Beto")
+
+    def test_busqueda_por_nombre_y_por_tarjeta(self, api_admin, saldos_variados):
+        r1 = api_admin.get("/api/v1/almuerzos/saldos/", {"search": "Caro"})
+        assert r1.data["count"] == 1
+        r2 = api_admin.get("/api/v1/almuerzos/saldos/", {"search": "PC-Ana"})
+        assert r2.data["count"] == 1
+        assert r2.data["results"][0]["nro_tarjeta"] == "PC-Ana"
+
+    def test_resumen_totales_sobre_todos_los_alumnos(self, api_admin, saldos_variados):
+        resp = api_admin.get("/api/v1/almuerzos/saldos/resumen/")
+        assert resp.status_code == 200
+        assert resp.data == {
+            "deuda_total": 50000,
+            "alumnos_con_deuda": 2,
+            "saldo_a_favor_total": 25000,
+            "alumnos_con_saldo_a_favor": 1,
+        }
+
+    def test_resumen_vacio(self, api_admin):
+        resp = api_admin.get("/api/v1/almuerzos/saldos/resumen/")
+        assert resp.data["deuda_total"] == 0
+        assert resp.data["alumnos_con_deuda"] == 0
+
+    def test_resumen_de_padre_solo_cuenta_sus_hijos(self, api_padre, saldos_variados, db):
+        from apps.almuerzos.models import SaldoAlmuerzo
+        from apps.clientes.models import Cliente, Hijo
+        otro = Cliente.objects.create(
+            nombres="Otro", apellidos="Resumen", ruc_ci="5550001",
+            tipo_cliente=saldos_variados[0].cliente_responsable.tipo_cliente,
+            lista_precio=saldos_variados[0].cliente_responsable.lista_precio,
+            limite_credito=Decimal("999999"),
+        )
+        h = Hijo.objects.create(
+            nombre="Ajeno", apellido="R", cliente_responsable=otro,
+            grado=saldos_variados[0].grado, activo=True,
+        )
+        SaldoAlmuerzo.objects.create(hijo=h, saldo_actual=Decimal("-777000"))
+        resp = api_padre.get("/api/v1/almuerzos/saldos/resumen/")
+        assert resp.data["deuda_total"] == 50000  # no incluye el -777000 ajeno
+
+    def test_sin_n_mas_uno_en_listado(self, api_admin, saldos_variados):
+        from django.db import connection
+        from django.test.utils import CaptureQueriesContext
+        with CaptureQueriesContext(connection) as ctx:
+            resp = api_admin.get("/api/v1/almuerzos/saldos/")
+        assert resp.data["count"] == 3
+        assert len(ctx.captured_queries) <= 6
