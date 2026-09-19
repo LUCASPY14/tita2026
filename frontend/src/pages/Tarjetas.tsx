@@ -157,7 +157,14 @@ export default function Tarjetas() {
     },
     {
       title: 'Estado', key: 'estado',
-      render: (_, r) => <Badge color={ESTADO_COLOR[r.estado] ?? 'default'}>{r.estado}</Badge>,
+      render: (_, r) => (
+        <div className="flex items-center gap-1.5 flex-wrap">
+          <Badge color={ESTADO_COLOR[r.estado] ?? 'default'}>{r.estado}</Badge>
+          {r.vigencia && !r.vigencia.operativa && (
+            <span title={r.vigencia.motivo ?? undefined}><Badge color="red">No opera</Badge></span>
+          )}
+        </div>
+      ),
     },
     {
       title: '', key: 'acciones', width: 160,

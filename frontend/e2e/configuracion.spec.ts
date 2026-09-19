@@ -62,3 +62,37 @@ test.describe('Configuración', () => {
     await expect(page.getByText(/RUC|Razón Social|Nombre de Fantasía/i).first()).toBeVisible()
   })
 })
+
+test.describe('Configuración — Año lectivo', () => {
+  test('muestra el año en curso con los valores por defecto y permite configurarlo', async ({ page }) => {
+    await loginAs(page, ADMIN)
+    await page.goto('/configuracion')
+    await page.getByRole('button', { name: /Año lectivo/ }).click()
+    const anio = new Date().getFullYear()
+    await expect(page.getByText(`01/10/${anio}`)).toBeVisible({ timeout: 6000 })
+    await expect(page.getByText(`31/12/${anio}`)).toBeVisible()
+    await expect(page.getByText('Por defecto')).toBeVisible()
+    await expect(page.getByText(/Cursos normales:/)).toBeVisible()
+  })
+
+  test('guardar el calendario llama al endpoint con las fechas', async ({ page }) => {
+    await loginAs(page, ADMIN)
+    let body: Record<string, unknown> | null = null
+    await page.route(/\/api\/v1\/clientes\/calendarios-lectivos\/$/, (route) => {
+      if (route.request().method() === 'POST') {
+        body = route.request().postDataJSON()
+        return route.fulfill({ status: 201, contentType: 'application/json', body: JSON.stringify({ id_calendario: 1, ...body }) })
+      }
+      return route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ results: [], count: 0 }) })
+    })
+    await page.goto('/configuracion')
+    await page.getByRole('button', { name: /Año lectivo/ }).click()
+    await page.getByRole('button', { name: /Configurar$/ }).first().click()
+    await page.getByRole('button', { name: 'Guardar' }).click()
+    await expect(async () => { expect(body).not.toBeNull() }).toPass({ timeout: 5000 })
+    expect(body).toMatchObject({
+      fecha_aviso_ultimo_curso: `${new Date().getFullYear()}-10-01`,
+      fecha_cierre_lectivo: `${new Date().getFullYear()}-12-31`,
+    })
+  })
+})

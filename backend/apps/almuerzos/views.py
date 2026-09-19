@@ -686,6 +686,11 @@ class RecargaSaldoAlmuerzoViewSet(viewsets.ModelViewSet):
         data = serializer.validated_data
         metodo = data.get("metodo_pago", "")
 
+        from apps.clientes.vigencia import motivo_no_recarga_hijo
+        motivo = motivo_no_recarga_hijo(data["hijo"])
+        if motivo:
+            raise ValidationError({"error": motivo})
+
         if metodo in METODOS_CONFIRMACION_INMEDIATA:
             monto_cargado = data["monto_cargado"]
             if monto_cargado < MONTO_MIN_CARGA_CAJA:

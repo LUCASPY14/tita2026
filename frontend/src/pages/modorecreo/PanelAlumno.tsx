@@ -103,6 +103,19 @@ export default function PanelAlumno({
               </div>
             )}
 
+            {tarjeta.vigencia && (!tarjeta.vigencia.operativa || tarjeta.vigencia.aviso) && (
+              <div
+                role="status"
+                className={`rounded-xl px-3 py-2 text-xs font-semibold border ${
+                  tarjeta.vigencia.operativa
+                    ? 'bg-amber-50 text-amber-800 border-amber-200'
+                    : 'bg-red-50 text-red-700 border-red-300'
+                }`}
+              >
+                {tarjeta.vigencia.motivo ?? tarjeta.vigencia.aviso}
+              </div>
+            )}
+
             <div className={`rounded-2xl p-4 border-2 ${
               (saldoDisponible ?? 0) < 5000  ? 'bg-red-50 border-red-300' :
               (saldoDisponible ?? 0) < 15000 ? 'bg-yellow-50 border-yellow-300' : 'bg-green-50 border-green-300'

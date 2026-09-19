@@ -17,6 +17,7 @@ from .models import (
     MovimientoSaldoAlmuerzo,
     RecargaSaldoAlmuerzo,
 )
+from apps.clientes.vigencia import exigir_hijo_operativo
 from .validators import resolver_suscripcion_activa, validar_limite_registros_diarios
 
 logger = logging.getLogger(__name__)
@@ -72,6 +73,9 @@ class AlmuerzoService:
             raise ValidationError({
                 "error": f"La tarjeta está {nro_tarjeta.get_estado_display().lower()} y no puede usarse."
             })
+
+        # Alumno dado de baja o con el año lectivo cerrado (último curso)
+        exigir_hijo_operativo(hijo)
 
         # No permitir consumos en fecha futura
         if fecha_consumo > date.today():

@@ -5,7 +5,7 @@ import {
   Settings, Tag, ListOrdered, CreditCard, Users,
   GraduationCap, Building2, History,
   UtensilsCrossed, Calendar, Ruler, AlertTriangle, Percent, Trash2, DollarSign,
-  MessageCircle, UserX, Bell, Wallet, MapPin,
+  MessageCircle, UserX, Bell, Wallet, MapPin, CalendarClock,
 } from 'lucide-react'
 import api from '../services/api'
 import Modal from '../components/ui/Modal'
@@ -28,12 +28,13 @@ import TabImpuestos from './configuracion/TabImpuestos'
 import TabWhatsApp from './configuracion/TabWhatsApp'
 import TabPurgaAlumnos from './configuracion/TabPurgaAlumnos'
 import TabNotificaciones from './configuracion/TabNotificaciones'
+import TabAnioLectivo from './configuracion/TabAnioLectivo'
 
 type TabKey =
   | 'categorias' | 'tipos_cliente' | 'listas_precio' | 'medios_pago' | 'cajas'
   | 'grados' | 'datos_empresa' | 'historial_precios' | 'ubicaciones'
   | 'tipos_almuerzo' | 'planes_almuerzo' | 'precios_almuerzo' | 'unidades_medida' | 'alergenos' | 'impuestos'
-  | 'whatsapp' | 'purga_alumnos' | 'notificaciones'
+  | 'whatsapp' | 'purga_alumnos' | 'notificaciones' | 'anio_lectivo'
 
 const TABS: { key: TabKey; labelKey: string; icon: typeof Settings }[] = [
   { key: 'categorias',        labelKey: 'settings.categories',  icon: Tag },
@@ -54,6 +55,7 @@ const TABS: { key: TabKey; labelKey: string; icon: typeof Settings }[] = [
   { key: 'whatsapp',          labelKey: 'settings.whatsapp',    icon: MessageCircle },
   { key: 'purga_alumnos',     labelKey: 'settings.purgaAlumnos',icon: UserX },
   { key: 'notificaciones',    labelKey: 'settings.notifications',icon: Bell },
+  { key: 'anio_lectivo',      labelKey: 'settings.schoolYear',  icon: CalendarClock },
 ]
 
 export default function Configuracion() {
@@ -124,6 +126,7 @@ export default function Configuracion() {
         {tab === 'whatsapp'          && <TabWhatsApp />}
         {tab === 'purga_alumnos'     && <TabPurgaAlumnos />}
         {tab === 'notificaciones'    && <TabNotificaciones />}
+        {tab === 'anio_lectivo'      && <TabAnioLectivo />}
       </div>
 
       <Modal

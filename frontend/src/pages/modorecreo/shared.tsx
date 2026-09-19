@@ -105,7 +105,15 @@ export interface RestriccionHijo {
   id_restriccion: number; tipo: string; descripcion: string | null
   severidad: 'BAJA' | 'MEDIA' | 'ALTA' | 'CRITICA'; requiere_autorizacion: boolean
 }
+export interface VigenciaTarjeta {
+  operativa: boolean
+  puede_recargar: boolean
+  motivo: string | null
+  aviso: string | null
+  fecha_cierre: string | null
+}
 export interface Tarjeta {
+  vigencia?: VigenciaTarjeta
   nro_tarjeta: string; hijo_nombre: string | null; hijo_foto: string | null
   hijo_grado: string | null; hijo_restricciones: RestriccionHijo[]
   saldo_actual: string; saldo_disponible: string; estado: string

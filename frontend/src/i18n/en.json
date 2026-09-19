@@ -110,7 +110,8 @@
     "taxes":       "Taxes",
     "whatsapp":    "WhatsApp",
     "purgaAlumnos":"Student Data Purge",
-    "notifications":"Notifications"
+    "notifications":"Notifications",
+    "schoolYear":  "School year"
   },
 
   "errors": {

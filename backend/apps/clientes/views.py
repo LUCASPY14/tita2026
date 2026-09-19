@@ -35,6 +35,7 @@ from .models import (
     CuentaCorrienteCliente,
     Departamento,
     Grado,
+    CalendarioLectivo,
     HistorialGrado,
     Hijo,
     Pais,
@@ -49,6 +50,7 @@ from .serializers import (
     CuentaCorrienteClienteSerializer,
     DepartamentoSerializer,
     GradoSerializer,
+    CalendarioLectivoSerializer,
     HistorialGradoSerializer,
     HijoSerializer,
     PaisSerializer,
@@ -400,6 +402,41 @@ class GradoViewSet(viewsets.ModelViewSet):
     queryset = Grado.objects.all()
     serializer_class = GradoSerializer
     permission_classes = [IsAdminOrReadOnly]
+
+
+class CalendarioLectivoViewSet(viewsets.ModelViewSet):
+    """Fechas del año lectivo. Solo ADMIN escribe; el staff lee. No se borra: la
+    fila lleva la marca de que ya se dio de baja al último curso."""
+
+    http_method_names = ["get", "post", "put", "patch", "head", "options"]
+    queryset = CalendarioLectivo.objects.all()
+    serializer_class = CalendarioLectivoSerializer
+    permission_classes = [IsAdminOrReadOnly]
+
+    def perform_create(self, serializer):
+        cal = serializer.save()
+        registrar_auditoria(
+            request=self.request, operacion="CREAR_CALENDARIO_LECTIVO", tabla="clientes_calendariolectivo",
+            id_registro=cal.pk,
+            descripcion=f"Año {cal.anio}: aviso {cal.fecha_aviso_ultimo_curso}, cierre {cal.fecha_cierre_lectivo}",
+        )
+
+    def perform_update(self, serializer):
+        cal = serializer.save()
+        registrar_auditoria(
+            request=self.request, operacion="EDITAR_CALENDARIO_LECTIVO", tabla="clientes_calendariolectivo",
+            id_registro=cal.pk,
+            descripcion=f"Año {cal.anio}: aviso {cal.fecha_aviso_ultimo_curso}, cierre {cal.fecha_cierre_lectivo}",
+        )
+
+    @action(detail=False, methods=["get"], url_path="actual", permission_classes=[IsStaffUser])
+    def actual(self, request):
+        """Calendario del año en curso (la fila o los valores por defecto)."""
+        from .vigencia import obtener_calendario
+        cal = obtener_calendario(timezone.localdate().year)
+        data = CalendarioLectivoSerializer(cal).data
+        data["configurado"] = cal.pk is not None
+        return Response(data)
 
 
 class HistorialGradoViewSet(viewsets.ReadOnlyModelViewSet):

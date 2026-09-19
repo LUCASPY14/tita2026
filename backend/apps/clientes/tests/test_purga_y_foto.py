@@ -243,6 +243,7 @@ class TestAprobarPurga:
 class TestDarBajaAlumnosUltimoCurso:
 
     def test_da_de_baja_solo_alumnos_del_ultimo_curso(self, cliente):
+        from freezegun import freeze_time
         from apps.clientes.tasks import dar_baja_alumnos_ultimo_curso
 
         ultimo = Grado.objects.create(nombre="6to baja", nivel=6, orden=6, es_ultimo=True)
@@ -254,7 +255,9 @@ class TestDarBajaAlumnosUltimoCurso:
             nombre="No", apellido="Ega", cliente_responsable=cliente, grado=otro, activo=True,
         )
 
-        resultado = dar_baja_alumnos_ultimo_curso()
+        # La baja ocurre al pasar el cierre del año lectivo (31/12 por defecto).
+        with freeze_time("2027-01-02 12:00:00"):
+            resultado = dar_baja_alumnos_ultimo_curso()
 
         egresado.refresh_from_db()
         no_egresado.refresh_from_db()

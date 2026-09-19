@@ -113,7 +113,8 @@
     "taxes":       "Impuestos",
     "whatsapp":    "WhatsApp",
     "purgaAlumnos":"Purga de Alumnos",
-    "notifications":"Notificaciones"
+    "notifications":"Notificaciones",
+    "schoolYear":  "Año lectivo"
   },
 
   "errors": {

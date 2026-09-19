@@ -12,6 +12,7 @@ logger = logging.getLogger(__name__)
 from rest_framework.exceptions import ValidationError
 
 from apps.clientes.models import CuentaCorrienteCliente
+from apps.clientes.vigencia import exigir_tarjeta_operativa
 from apps.inventario.models import Stock, MovimientoStock
 from apps.core.models import Tarjeta, MovimientoTarjeta
 from .models import Venta, DetalleVenta, PagoVenta, AplicacionPago, NotaCredito, DetalleNotaCredito
@@ -106,6 +107,7 @@ class VentaService:
                 tarjeta_bloqueada = Tarjeta.objects.select_for_update().get(pk=tarjeta.pk)
                 if tarjeta_bloqueada.estado != Tarjeta.Estado.ACTIVA:
                     raise ValidationError({"error": "La tarjeta no está activa."})
+                exigir_tarjeta_operativa(tarjeta_bloqueada)
 
             # Bloquear cuenta corriente si es a credito
             saldo_anterior_cc = Decimal("0")

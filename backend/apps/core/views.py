@@ -200,6 +200,12 @@ class CargaSaldoViewSet(viewsets.ModelViewSet):
         data = serializer.validated_data
         metodo = data.get("metodo_pago", "")
 
+        from apps.clientes.vigencia import motivo_no_recarga_tarjeta
+        from rest_framework.exceptions import ValidationError as _VE
+        motivo = motivo_no_recarga_tarjeta(data["tarjeta"])
+        if motivo:
+            raise _VE({"error": motivo})
+
         if metodo in METODOS_CONFIRMACION_INMEDIATA:
             monto_cargado = data["monto_cargado"]
             if monto_cargado < MONTO_MIN_CARGA_CAJA:

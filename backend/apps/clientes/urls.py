@@ -9,6 +9,7 @@ from .views import (
     CuentaCorrienteClienteViewSet,
     DepartamentoViewSet,
     GradoViewSet,
+    CalendarioLectivoViewSet,
     HistorialGradoViewSet,
     HijoViewSet,
     PaisViewSet,
@@ -24,6 +25,7 @@ router.register(r"tipos-cliente", TipoClienteViewSet, basename="tipos-cliente")
 router.register(r"hijos", HijoViewSet, basename="hijos")
 router.register(r"grados", GradoViewSet, basename="grados")
 router.register(r"historial-grados", HistorialGradoViewSet, basename="historial-grados")
+router.register(r"calendarios-lectivos", CalendarioLectivoViewSet, basename="calendarios-lectivos")
 router.register(r"restricciones", RestriccionHijoViewSet, basename="restricciones")
 router.register(r"autorizaciones-saldo", AutorizacionSaldoNegativoViewSet, basename="autorizaciones-saldo")
 router.register(r"paises", PaisViewSet, basename="paises")

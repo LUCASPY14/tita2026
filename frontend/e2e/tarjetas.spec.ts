@@ -216,3 +216,53 @@ test.describe('Tarjetas — deuda de cantina', () => {
     await expect(page.getByText(/2 con deuda/)).toBeVisible({ timeout: 6000 })
   })
 })
+
+// ── Fase 2: vigencia (baja, cierre del último curso, vencimiento) ────────────
+
+test.describe('Tarjetas — vigencia', () => {
+  test('alumno dado de baja: la ficha explica por qué no opera', async ({ page }) => {
+    await abrirFicha(page, {
+      ...TARJETA_FICHA,
+      vigencia: {
+        operativa: false, puede_recargar: false, fecha_cierre: null, aviso: null,
+        motivo: 'El alumno está dado de baja. Su saldo se resuelve en el cierre de cuentas.',
+      },
+    })
+    await expect(page.getByRole('status')).toContainText('dado de baja', { timeout: 6000 })
+  })
+
+  test('último curso desde la fecha de aviso: la ficha avisa del cierre pero sigue operando', async ({ page }) => {
+    await abrirFicha(page, {
+      ...TARJETA_FICHA,
+      vigencia: {
+        operativa: true, puede_recargar: true, fecha_cierre: '2026-12-31', motivo: null,
+        aviso: 'Último curso: la tarjeta opera hasta el 31/12/2026. Resolvé saldos y deudas antes del cierre de cuentas.',
+      },
+    })
+    await expect(page.getByRole('status')).toContainText('opera hasta el 31/12/2026', { timeout: 6000 })
+  })
+
+  test('la lista marca "No opera" en las tarjetas que no pueden usarse', async ({ page }) => {
+    await loginAs(page, ADMIN)
+    await page.route(/\/api\/v1\/core\/tarjetas/, (route) =>
+      route.fulfill({
+        status: 200, contentType: 'application/json',
+        body: JSON.stringify({
+          results: [{ ...TARJETA_FICHA, vigencia: { operativa: false, puede_recargar: true, motivo: 'Tarjeta vencida el 30/11/2026.', aviso: null, fecha_cierre: null } }],
+          count: 1,
+        }),
+      })
+    )
+    await page.goto('/tarjetas')
+    await expect(page.getByText('No opera')).toBeVisible({ timeout: 6000 })
+  })
+
+  test('una tarjeta vigente no muestra avisos', async ({ page }) => {
+    await abrirFicha(page, {
+      ...TARJETA_FICHA,
+      vigencia: { operativa: true, puede_recargar: true, motivo: null, aviso: null, fecha_cierre: null },
+    })
+    await expect(page.getByText('Saldo cantina')).toBeVisible({ timeout: 6000 })
+    await expect(page.getByRole('status')).toHaveCount(0)
+  })
+})

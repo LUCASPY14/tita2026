@@ -12,6 +12,7 @@ from .models import (
     CuentaCorrienteCliente,
     Departamento,
     Grado,
+    CalendarioLectivo,
     HistorialGrado,
     Hijo,
     Pais,
@@ -142,6 +143,26 @@ class GradoSerializer(serializers.ModelSerializer):
         model = Grado
         fields = "__all__"
         read_only_fields = ["fecha_creacion"]
+
+
+class CalendarioLectivoSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = CalendarioLectivo
+        fields = "__all__"
+        read_only_fields = ["baja_ultimo_curso_aplicada", "fecha_creacion"]
+
+    def validate(self, attrs):
+        anio = attrs.get("anio", getattr(self.instance, "anio", None))
+        aviso = attrs.get("fecha_aviso_ultimo_curso", getattr(self.instance, "fecha_aviso_ultimo_curso", None))
+        cierre = attrs.get("fecha_cierre_lectivo", getattr(self.instance, "fecha_cierre_lectivo", None))
+        if aviso and cierre and aviso >= cierre:
+            raise serializers.ValidationError(
+                {"fecha_aviso_ultimo_curso": "La fecha de aviso debe ser anterior al cierre del año lectivo."}
+            )
+        for campo, valor in (("fecha_aviso_ultimo_curso", aviso), ("fecha_cierre_lectivo", cierre)):
+            if valor and anio and valor.year != anio:
+                raise serializers.ValidationError({campo: f"Debe estar dentro del año {anio}."})
+        return attrs
 
 
 class HistorialGradoSerializer(serializers.ModelSerializer):

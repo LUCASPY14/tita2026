@@ -158,7 +158,13 @@ app.conf.beat_schedule = {
     },
     "dar-baja-alumnos-ultimo-curso": {
         "task": "apps.clientes.tasks.dar_baja_alumnos_ultimo_curso",
-        "schedule": crontab(hour=5, minute=0, day_of_month=20, month_of_year=12),  # 20 dic 05:00
+        # Diaria: actúa solo cuando pasa el cierre del año lectivo configurado (por defecto 31/12)
+        "schedule": crontab(hour=5, minute=0),
+    },
+    "avisar-cierre-ultimo-curso": {
+        "task": "apps.clientes.tasks.avisar_cierre_ultimo_curso",
+        # Diaria: envía solo una vez por semana entre la fecha de aviso (01/10) y el cierre
+        "schedule": crontab(hour=8, minute=10),
     },
     "marcar-alumnos-pendientes-purga": {
         "task": "apps.clientes.tasks.marcar_alumnos_pendientes_purga",

@@ -89,6 +89,10 @@ def bancard_iniciar(request):
             {"detail": f"La tarjeta está {tarjeta.estado.lower()}. No se puede recargar."},
             status=status.HTTP_400_BAD_REQUEST,
         )
+    from apps.clientes.vigencia import motivo_no_recarga_tarjeta
+    _motivo = motivo_no_recarga_tarjeta(tarjeta)
+    if _motivo:
+        return Response({"detail": _motivo}, status=status.HTTP_400_BAD_REQUEST)
 
     # ── Verificar que las claves Bancard están configuradas ──────────────────
     if not bancard_service._public_key() or not bancard_service._private_key():
@@ -200,6 +204,11 @@ def bancard_iniciar_almuerzo(request):
         hijo = Hijo.objects.get(pk=hijo_id, cliente_responsable=cliente)
     except Hijo.DoesNotExist:
         return Response({"detail": "Estudiante no encontrado."}, status=status.HTTP_404_NOT_FOUND)
+
+    from apps.clientes.vigencia import motivo_no_recarga_hijo
+    _motivo = motivo_no_recarga_hijo(hijo)
+    if _motivo:
+        return Response({"detail": _motivo}, status=status.HTTP_400_BAD_REQUEST)
 
     if not bancard_service._public_key() or not bancard_service._private_key():
         return Response(
@@ -809,6 +818,10 @@ def bancard_pagar_con_tarjeta(request):
             {"detail": f"La tarjeta está {tarjeta.estado.lower()}. No se puede recargar."},
             status=status.HTTP_400_BAD_REQUEST,
         )
+    from apps.clientes.vigencia import motivo_no_recarga_tarjeta
+    _motivo = motivo_no_recarga_tarjeta(tarjeta)
+    if _motivo:
+        return Response({"detail": _motivo}, status=status.HTTP_400_BAD_REQUEST)
 
     cliente = getattr(request.user, "cliente", None)
     if cliente is None:
@@ -1174,6 +1187,11 @@ def bancard_pagar_almuerzo_con_tarjeta(request):
         hijo = Hijo.objects.get(pk=hijo_id, cliente_responsable=cliente)
     except Hijo.DoesNotExist:
         return Response({"detail": "Estudiante no encontrado."}, status=status.HTTP_404_NOT_FOUND)
+
+    from apps.clientes.vigencia import motivo_no_recarga_hijo
+    _motivo = motivo_no_recarga_hijo(hijo)
+    if _motivo:
+        return Response({"detail": _motivo}, status=status.HTTP_400_BAD_REQUEST)
 
     if not bancard_service._public_key() or not bancard_service._private_key():
         return Response(

@@ -637,3 +637,43 @@ class AlumnoResponsable(models.Model):
     def __str__(self):
         titular = " [TITULAR]" if self.es_titular else ""
         return f"{self.hijo} ← {self.cliente} ({self.get_parentesco_display()}){titular}"
+
+
+class CalendarioLectivo(models.Model):
+    """Fechas clave del año lectivo (enero–diciembre), configurables por año.
+
+    - fecha_aviso_ultimo_curso (por defecto 01/10): desde acá se avisa a admin,
+      caja y padres los saldos y deudas de los alumnos del último curso. Siguen
+      operando.
+    - fecha_cierre_lectivo (por defecto 31/12): último día en que opera el
+      último curso; después se da de baja. Los demás cursos no vencen.
+    Si un año no tiene fila se usan los valores por defecto.
+    """
+
+    id_calendario = models.BigAutoField(primary_key=True)
+    anio = models.IntegerField(unique=True)
+    fecha_aviso_ultimo_curso = models.DateField(
+        help_text="Desde esta fecha se avisan saldos y deudas del último curso (por defecto 01/10)."
+    )
+    fecha_cierre_lectivo = models.DateField(
+        help_text="Último día en que opera el último curso (por defecto 31/12)."
+    )
+    baja_ultimo_curso_aplicada = models.BooleanField(
+        default=False,
+        help_text="El sistema ya dio de baja al último curso de este año.",
+    )
+    fecha_creacion = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        verbose_name = "Calendario lectivo"
+        verbose_name_plural = "Calendarios lectivos"
+        ordering = ["-anio"]
+        constraints = [
+            models.CheckConstraint(
+                condition=models.Q(fecha_aviso_ultimo_curso__lt=models.F("fecha_cierre_lectivo")),
+                name="calendario_aviso_antes_del_cierre",
+            )
+        ]
+
+    def __str__(self):
+        return f"Año lectivo {self.anio}"

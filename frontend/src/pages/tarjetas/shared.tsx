@@ -49,6 +49,14 @@ export function describirDisponible(t: Tarjeta): { valor: string; detalle: strin
   return { valor: formatGs(saldo + tope), detalle: `Sobregiro autorizado hasta ${formatGs(tope)}` }
 }
 
+export interface VigenciaTarjeta {
+  operativa: boolean
+  puede_recargar: boolean
+  motivo: string | null
+  aviso: string | null
+  fecha_cierre: string | null
+}
+
 export interface Tarjeta {
   nro_tarjeta: string
   codigo_barras: string
@@ -64,6 +72,7 @@ export interface Tarjeta {
   deuda_maxima?: number | null
   cliente_saldo_cc?: number
   cliente_permite_cuenta_corriente?: boolean
+  vigencia?: VigenciaTarjeta
   limite_credito: string | number
   estado: string
   fecha_vencimiento: string | null

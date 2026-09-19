@@ -32,6 +32,7 @@ class TarjetaSerializer(serializers.ModelSerializer):
     hijo_cumple_hoy = serializers.SerializerMethodField()
     saldo_disponible = serializers.DecimalField(max_digits=12, decimal_places=0, read_only=True)
     sobregiro_sin_tope = serializers.BooleanField(read_only=True)
+    vigencia = serializers.SerializerMethodField()
     deuda_maxima = serializers.SerializerMethodField()
     saldo_almuerzo = serializers.SerializerMethodField()
 
@@ -107,6 +108,13 @@ class TarjetaSerializer(serializers.ModelSerializer):
         if obj.hijo_id and obj.hijo.foto_perfil:
             return f"/clientes/hijos/{obj.hijo_id}/foto/"
         return None
+
+    def get_vigencia(self, obj):
+        """Si la tarjeta opera hoy y avisos (baja, cierre del último curso, vencimiento)."""
+        from apps.clientes.vigencia import evaluar_tarjeta
+        if not hasattr(self, "_cache_calendarios"):
+            self._cache_calendarios = {}
+        return evaluar_tarjeta(obj, cache=self._cache_calendarios).como_dict()
 
     def get_deuda_maxima(self, obj):
         """Tope de deuda en Gs. (0 = prepago, null = sin tope)."""

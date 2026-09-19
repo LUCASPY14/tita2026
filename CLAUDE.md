@@ -187,7 +187,7 @@ Portal de padres (`/portal/*`) accesible desde internet via Bancard para recarga
 El límite de sesiones concurrentes se aplica automáticamente al hacer login
 (`apps/usuarios/views.py:_registrar_sesion`).
 
-## Tareas Celery periódicas (23 activas)
+## Tareas Celery periódicas (24 activas)
 
 | Tarea | Cuándo | Crítica |
 |-------|--------|---------|
@@ -212,7 +212,8 @@ El límite de sesiones concurrentes se aplica automáticamente al hacer login
 | `alertar_saldo_negativo_prolongado` | Diario 09:15 | No |
 | `resumen_mensual_deuda_clientes` | Día 5 de mes 08:30 | No |
 | `recordar_facturacion_mensual_pendiente` | Día 5 de mes 08:45 | No |
-| `dar_baja_alumnos_ultimo_curso` | 20 dic 05:00 | No |
+| `dar_baja_alumnos_ultimo_curso` | Diario 05:00 (actúa al pasar el cierre lectivo, 1 vez/año) | No |
+| `avisar_cierre_ultimo_curso` | Diario 08:10 (avisa 1 vez/semana del 01/10 al cierre) | No |
 | `marcar_alumnos_pendientes_purga` | Día 1 de mes 07:00 | No |
 
 Las tareas críticas envían email a `ADMINS` si fallan (configurado en `celery_app.py`). `generar_resumen_diario_ventas` y `generar_resumen_diario_stock` solo escriben logs y tienen `autoretry_for=(Exception,)` — no están en `_CRITICAL_TASKS`.
