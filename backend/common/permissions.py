@@ -2,9 +2,20 @@
 Permisos personalizados para la API
 """
 from rest_framework import permissions
+from rest_framework.exceptions import PermissionDenied
 
 # Roles internos del sistema (excluye CLIENTE_WEB)
 _STAFF_ROLES = frozenset({"ADMIN", "CAJERO", "COCINA", "SUPERVISOR", "COBRADOR"})
+
+# Roles que pueden autorizar decisiones con impacto económico (sobregiro,
+# vencimiento, alta/baja de alumnos, etc.).
+ROLES_AUTORIZADORES = frozenset({"ADMIN", "SUPERVISOR"})
+
+
+def exigir_rol(user, roles, mensaje):
+    """Lanza 403 si el usuario no tiene uno de los roles indicados."""
+    if getattr(user, "rol", None) not in roles:
+        raise PermissionDenied(mensaje)
 
 # Roles que operan el POS directamente
 _POS_ROLES = frozenset({"ADMIN", "CAJERO"})

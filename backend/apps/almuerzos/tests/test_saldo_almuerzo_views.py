@@ -602,3 +602,32 @@ class TestResumenHoy:
     def test_padre_no_puede_usarlo(self, api_padre):
         resp = api_padre.get("/api/v1/almuerzos/registros-consumo/resumen-hoy/")
         assert resp.status_code == 403
+
+
+# ── Las recargas registradas no se editan ni se borran ───────────────────────
+
+@pytest.mark.django_db
+class TestRecargasInmutables:
+
+    def test_patch_put_delete_no_permitidos(self, api_admin, hijo_almuerzo):
+        from apps.almuerzos.models import RecargaSaldoAlmuerzo
+        recarga = RecargaSaldoAlmuerzo.objects.create(
+            hijo=hijo_almuerzo, monto_cargado=Decimal("15000"),
+            metodo_pago="TRANSFERENCIA", estado=RecargaSaldoAlmuerzo.Estado.PENDIENTE,
+        )
+        url = f"/api/v1/almuerzos/recargas-saldo/{recarga.pk}/"
+        assert api_admin.patch(url, {"monto_cargado": 1}, format="json").status_code == 405
+        assert api_admin.put(url, {}, format="json").status_code == 405
+        assert api_admin.delete(url).status_code == 405
+        recarga.refresh_from_db()
+        assert recarga.monto_cargado == Decimal("15000")
+
+    def test_alta_y_confirmacion_siguen_funcionando(self, api_cajero, hijo_almuerzo):
+        resp = api_cajero.post(
+            "/api/v1/almuerzos/recargas-saldo/",
+            {"hijo": hijo_almuerzo.pk, "monto_cargado": "30000", "metodo_pago": "TRANSFERENCIA"},
+            format="json",
+        )
+        assert resp.status_code == 201
+        conf = api_cajero.post(f"/api/v1/almuerzos/recargas-saldo/{resp.data['id_recarga_almuerzo']}/confirmar/")
+        assert conf.status_code == 200

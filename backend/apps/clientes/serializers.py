@@ -124,6 +124,8 @@ class HijoSerializer(serializers.ModelSerializer):
         model = Hijo
         fields = "__all__"
         extra_kwargs = {"foto_perfil": {"write_only": True}}
+        # Los fija el sistema (baja, purga); no se editan por la API genérica.
+        read_only_fields = ["fecha_baja", "purga_solicitada_en", "datos_purgados"]
 
     def get_responsables(self, obj):
         qs = obj.responsables.filter(activo=True).select_related("cliente").order_by("orden_cobro")

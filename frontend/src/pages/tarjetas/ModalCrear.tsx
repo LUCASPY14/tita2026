@@ -3,6 +3,7 @@ import toast from 'react-hot-toast'
 import tarjetasService from '../../services/tarjetas'
 import clientesService from '../../services/clientes'
 import api from '../../services/api'
+import { useAuthStore } from '../../store/authStore'
 import Modal from '../../components/ui/Modal'
 import {
   extractErrorMessage, type ClienteBasico, type Hijo, type TarjetaForm, type TipoTitular, FORM_INITIAL,
@@ -18,6 +19,8 @@ const inputClass = 'border border-slate-200 rounded-xl px-3 py-2 text-base text-
 const labelClass = 'block text-sm font-semibold text-slate-500 uppercase tracking-wide mb-1.5'
 
 export default function ModalCrear({ open, onClose, onSaved }: Props) {
+  const rol = useAuthStore(s => s.user?.rol)
+  const puedeAutorizar = rol === 'ADMIN' || rol === 'SUPERVISOR'
   const [form, setForm] = useState<TarjetaForm>(FORM_INITIAL)
   const [saving, setSaving] = useState(false)
   const [hijos, setHijos] = useState<Hijo[]>([])
@@ -213,6 +216,7 @@ export default function ModalCrear({ open, onClose, onSaved }: Props) {
             <label className={labelClass}>Límite de Crédito (Gs.)</label>
             <input
               type="number"
+              disabled={!puedeAutorizar}
               value={form.limite_credito}
               onChange={e => setForm(f => ({ ...f, limite_credito: e.target.value }))}
               placeholder="0"
@@ -238,6 +242,7 @@ export default function ModalCrear({ open, onClose, onSaved }: Props) {
           <label className={labelClass}>Fecha de Vencimiento</label>
           <input
             type="date"
+            disabled={!puedeAutorizar}
             value={form.fecha_vencimiento}
             onChange={e => setForm(f => ({ ...f, fecha_vencimiento: e.target.value }))}
             className={inputClass}
@@ -249,6 +254,7 @@ export default function ModalCrear({ open, onClose, onSaved }: Props) {
             <input
               type="checkbox"
               className="sr-only peer"
+              disabled={!puedeAutorizar}
               checked={form.permite_saldo_negativo}
               onChange={e => setForm(f => ({ ...f, permite_saldo_negativo: e.target.checked }))}
             />
@@ -257,6 +263,11 @@ export default function ModalCrear({ open, onClose, onSaved }: Props) {
           </div>
           <span className="text-sm text-slate-700">Permite saldo negativo</span>
         </label>
+        {!puedeAutorizar && (
+          <p className="text-xs text-amber-600">
+            Límite, vencimiento y saldo negativo solo los configura un administrador o supervisor.
+          </p>
+        )}
       </div>
     </Modal>
   )

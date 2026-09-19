@@ -96,10 +96,11 @@ export default function ModalEditar({ tarjeta, onClose, onSaved }: Props) {
           <div>
             <label className={labelClass}>Límite de Crédito (Gs.)</label>
             <p className="text-xs text-slate-400 mb-1.5">
-              Monto máximo que puede gastar con saldo negativo, autorizado con PIN del padre
+              Campo de referencia: por ahora no limita el cobro. Lo que habilita la deuda es &quot;Permite saldo negativo&quot;.
             </p>
             <input
               type="number"
+              disabled={!puedeConfigurarAlertas}
               value={editForm.limite_credito}
               onChange={e => setEditForm(f => ({ ...f, limite_credito: e.target.value }))}
               placeholder="0"
@@ -126,6 +127,7 @@ export default function ModalEditar({ tarjeta, onClose, onSaved }: Props) {
               <label className={labelClass}>Fecha de Vencimiento</label>
               <input
                 type="date"
+                disabled={!puedeConfigurarAlertas}
                 value={editForm.fecha_vencimiento}
                 onChange={e => setEditForm(f => ({ ...f, fecha_vencimiento: e.target.value }))}
                 className={inputClass}
@@ -138,6 +140,7 @@ export default function ModalEditar({ tarjeta, onClose, onSaved }: Props) {
               <input
                 type="checkbox"
                 className="sr-only peer"
+                disabled={!puedeConfigurarAlertas}
                 checked={editForm.permite_saldo_negativo}
                 onChange={e => setEditForm(f => ({ ...f, permite_saldo_negativo: e.target.checked }))}
               />
@@ -146,7 +149,10 @@ export default function ModalEditar({ tarjeta, onClose, onSaved }: Props) {
             </div>
             <div>
               <span className="text-sm font-medium text-slate-700">Permite saldo negativo</span>
-              <p className="text-xs text-slate-400">Activa la solicitud de PIN del padre cuando se excede el saldo</p>
+              <p className="text-xs text-slate-400">La tarjeta puede quedar en negativo al cobrar en el POS</p>
+              {!puedeConfigurarAlertas && (
+                <p className="text-xs text-amber-600 mt-1">Solo un administrador o supervisor puede cambiar este dato.</p>
+              )}
             </div>
           </label>
 

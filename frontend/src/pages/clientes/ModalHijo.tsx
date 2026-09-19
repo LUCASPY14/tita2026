@@ -5,6 +5,7 @@ import api from '../../services/api'
 import Input from '../../components/ui/Input'
 import Modal from '../../components/ui/Modal'
 import { useAuthenticatedImage } from '../../hooks/useAuthenticatedImage'
+import { useAuthStore } from '../../store/authStore'
 import { extractErrorMessage, BLANK_HIJO, type GradoOption, type Hijo, type HijoForm } from './shared'
 
 interface Props {
@@ -16,6 +17,10 @@ interface Props {
 }
 
 export default function ModalHijo({ open, hijo, clienteId, onClose, onSaved }: Props) {
+  const rol = useAuthStore(s => s.user?.rol)
+  // Al editar, el grado lo cambia solo un administrador; alta/baja, admin o supervisor.
+  const puedeCambiarGrado = !hijo || rol === 'ADMIN'
+  const puedeCambiarActivo = !hijo || rol === 'ADMIN' || rol === 'SUPERVISOR'
   const [form, setForm] = useState<HijoForm>(BLANK_HIJO)
   const [saving, setSaving] = useState(false)
   const [photoFile, setPhotoFile] = useState<File | null>(null)
@@ -254,6 +259,8 @@ export default function ModalHijo({ open, hijo, clienteId, onClose, onSaved }: P
             <label className="text-sm font-medium text-slate-700">Grado</label>
             <select
               value={form.grado}
+              disabled={!puedeCambiarGrado}
+              title={puedeCambiarGrado ? undefined : 'Solo un administrador puede cambiar el grado'}
               onChange={e => setForm(prev => ({ ...prev, grado: e.target.value }))}
               className="w-full px-3 py-2 text-sm border border-slate-200 rounded-lg bg-white text-slate-800 focus:outline-none focus:ring-2 focus:ring-green-500/30 focus:border-green-400"
             >
@@ -267,6 +274,8 @@ export default function ModalHijo({ open, hijo, clienteId, onClose, onSaved }: P
         <div className="flex items-center gap-3">
           <button
             type="button" role="switch" aria-checked={form.activo}
+            disabled={!puedeCambiarActivo}
+            title={puedeCambiarActivo ? undefined : 'Solo un administrador o supervisor puede dar de alta o baja'}
             onClick={() => setForm(prev => ({ ...prev, activo: !prev.activo }))}
             className={['relative w-10 h-5 rounded-full transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-green-500/30', form.activo ? 'bg-green-500' : 'bg-slate-200'].join(' ')}
           >

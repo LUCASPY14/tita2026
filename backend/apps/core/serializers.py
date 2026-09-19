@@ -4,8 +4,12 @@ Serializers para la app core
 
 import logging
 
+from decimal import Decimal
+
 from django.core.exceptions import ObjectDoesNotExist
 from rest_framework import serializers
+
+from common.permissions import ROLES_AUTORIZADORES, exigir_rol
 
 from .models import (
     Tarjeta,
@@ -41,10 +45,42 @@ class TarjetaSerializer(serializers.ModelSerializer):
     lista_precio_id = serializers.SerializerMethodField()
     lista_es_default = serializers.SerializerMethodField()
 
+    # Campos con impacto económico: solo ADMIN/SUPERVISOR pueden fijarlos o
+    # cambiarlos (valor = el que se considera "sin autorización especial").
+    CAMPOS_SENSIBLES = {
+        "permite_saldo_negativo": False,
+        "limite_credito": Decimal("0"),
+        "fecha_vencimiento": None,
+    }
+
     class Meta:
         model = Tarjeta
         fields = "__all__"
-        read_only_fields = ["fecha_creacion", "ultima_notificacion_saldo", "estado"]
+        # saldo_actual jamás se edita a mano: solo cambia por operaciones que
+        # dejan movimiento (carga, venta, reverso, ajuste).
+        read_only_fields = ["fecha_creacion", "ultima_notificacion_saldo", "estado", "saldo_actual"]
+
+    def validate(self, attrs):
+        request = self.context.get("request")
+        if request is None:
+            return attrs
+        cambios = []
+        for campo, sin_autorizacion in self.CAMPOS_SENSIBLES.items():
+            if campo not in attrs:
+                continue
+            actual = getattr(self.instance, campo) if self.instance else sin_autorizacion
+            if attrs[campo] != actual:
+                cambios.append(campo)
+        if self.instance:
+            for campo in ("hijo", "cliente_directo"):
+                if campo in attrs and attrs[campo] != getattr(self.instance, campo):
+                    cambios.append(campo)
+        if cambios:
+            exigir_rol(
+                request.user, ROLES_AUTORIZADORES,
+                "Solo un administrador o supervisor puede cambiar: " + ", ".join(cambios) + ".",
+            )
+        return attrs
 
     def _get_cliente(self, obj):
         """Devuelve el cliente responsable del alumno o el cliente directo (docente)."""
@@ -179,7 +215,11 @@ class CargaSaldoSerializer(serializers.ModelSerializer):
     class Meta:
         model = CargaSaldo
         fields = "__all__"
-        read_only_fields = ["fecha_carga", "fecha_confirmacion", "fecha_aprobacion", "fecha_creacion"]
+        # El estado lo fija el servidor (PENDIENTE al crear; CONFIRMADA solo
+        # mediante el servicio que acredita el saldo).
+        read_only_fields = [
+            "fecha_carga", "fecha_confirmacion", "fecha_aprobacion", "fecha_creacion", "estado",
+        ]
 
 
 class MedioPagoSerializer(serializers.ModelSerializer):

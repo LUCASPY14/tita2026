@@ -12,7 +12,7 @@ from rest_framework.filters import SearchFilter, OrderingFilter
 from rest_framework.response import Response
 
 from common.pagination import CursorResultsSetPagination
-from common.permissions import IsAdminOrReadOnly, IsCajeroOrAdmin, IsStaffOrClienteWeb, IsStaffUser
+from common.permissions import IsAdmin, IsAdminOrReadOnly, IsCajeroOrAdmin, IsStaffOrClienteWeb, IsStaffUser
 from common.throttling import SensitiveEndpointThrottle
 from common.utils.medios_pago import resolver_medio_pago
 from apps.usuarios.auditoria import registrar_auditoria
@@ -64,6 +64,38 @@ class TarjetaViewSet(viewsets.ModelViewSet):
     ]
     ordering = ["nro_tarjeta"]
 
+    def get_permissions(self):
+        # Una tarjeta con saldo no se elimina desde la API salvo por un administrador.
+        if self.action == "destroy":
+            return [IsAdmin()]
+        return super().get_permissions()
+
+    def _auditar_sensibles(self, antes, tarjeta, operacion):
+        cambios = [
+            f"{campo}: {antes[campo]} -> {getattr(tarjeta, campo)}"
+            for campo in antes if antes[campo] != getattr(tarjeta, campo)
+        ]
+        if cambios:
+            registrar_auditoria(
+                request=self.request,
+                operacion=operacion,
+                tabla="core_tarjeta",
+                id_registro=None,
+                descripcion=f"Tarjeta {tarjeta.nro_tarjeta}: " + "; ".join(cambios),
+            )
+
+    def perform_create(self, serializer):
+        tarjeta = serializer.save()
+        sin_autorizacion = TarjetaSerializer.CAMPOS_SENSIBLES
+        self._auditar_sensibles(dict(sin_autorizacion), tarjeta, "CREAR_TARJETA")
+
+    def perform_update(self, serializer):
+        antes = {c: getattr(serializer.instance, c) for c in TarjetaSerializer.CAMPOS_SENSIBLES}
+        antes["hijo_id"] = serializer.instance.hijo_id
+        antes["cliente_directo_id"] = serializer.instance.cliente_directo_id
+        tarjeta = serializer.save()
+        self._auditar_sensibles(antes, tarjeta, "EDITAR_TARJETA")
+
     def get_queryset(self):
         # Un padre del portal solo ve las tarjetas de su propia familia.
         qs = super().get_queryset()
@@ -105,7 +137,10 @@ class TarjetaViewSet(viewsets.ModelViewSet):
         return self._cambiar_estado(request, pk, Tarjeta.Estado.BLOQUEADA, Tarjeta.Estado.ACTIVA, "ACTIVAR_TARJETA")
 
 
-class MovimientoTarjetaViewSet(viewsets.ModelViewSet):
+class MovimientoTarjetaViewSet(viewsets.ReadOnlyModelViewSet):
+    """Libro mayor de la tarjeta: solo lectura. Los movimientos los crean
+    únicamente las operaciones (carga, venta, reverso, ajuste)."""
+
     queryset = MovimientoTarjeta.objects.select_related("tarjeta").all()
     serializer_class = MovimientoTarjetaSerializer
     permission_classes = [IsStaffOrClienteWeb]
@@ -135,6 +170,8 @@ MONTO_MAX_CARGA_CAJA = 5_000_000
 
 
 class CargaSaldoViewSet(viewsets.ModelViewSet):
+    # Una carga registrada no se edita ni se borra: se corrige con un reverso.
+    http_method_names = ["get", "post", "head", "options"]
     queryset = CargaSaldo.objects.select_related("tarjeta", "cliente_origen", "responsable").all()
     serializer_class = CargaSaldoSerializer
     permission_classes = [IsCajeroOrAdmin]

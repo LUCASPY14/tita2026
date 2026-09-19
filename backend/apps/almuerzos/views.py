@@ -667,8 +667,12 @@ class SaldoAlmuerzoViewSet(viewsets.ReadOnlyModelViewSet):
 
 
 class RecargaSaldoAlmuerzoViewSet(viewsets.ModelViewSet):
-    """Recarga del saldo corriente de almuerzo — cajero, cobrador, admin o portal."""
+    """Recarga del saldo corriente de almuerzo — cajero, cobrador, admin o portal.
 
+    Una recarga registrada no se edita ni se borra (solo alta y confirmación).
+    """
+
+    http_method_names = ["get", "post", "head", "options"]
     queryset = RecargaSaldoAlmuerzo.objects.select_related("hijo", "registrado_por").all()
     serializer_class = RecargaSaldoAlmuerzoSerializer
     permission_classes = [IsCajeroCobradorOrAdmin]

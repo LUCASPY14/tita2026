@@ -16,7 +16,10 @@ from rest_framework.filters import SearchFilter
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
-from common.permissions import IsAdmin, IsAdminOrReadOnly, IsCajeroCobradorSupervisorOrAdmin, IsCajeroOrAdmin, IsStaffOrClienteWeb, IsStaffUser
+from common.permissions import (
+    IsAdmin, IsAdminOrReadOnly, IsCajeroCobradorSupervisorOrAdmin, IsCajeroOrAdmin,
+    IsStaffOrClienteWeb, IsStaffUser, ROLES_AUTORIZADORES, exigir_rol,
+)
 from common.utils.medios_pago import resolver_medio_pago
 from apps.usuarios.auditoria import registrar_auditoria
 
@@ -254,7 +257,7 @@ class HijoViewSet(viewsets.ModelViewSet):
     def get_permissions(self):
         if self.action == "foto":
             return [IsCajeroOrAdmin()]
-        if self.action in ("pendientes_purga", "aprobar_purga"):
+        if self.action in ("pendientes_purga", "aprobar_purga", "destroy"):
             return [IsAdmin()]
         return super().get_permissions()
 
@@ -288,7 +291,38 @@ class HijoViewSet(viewsets.ModelViewSet):
     def perform_update(self, serializer):
         instance = serializer.instance
         era_activo = instance.activo
+        grado_anterior = instance.grado
+        datos = serializer.validated_data
+        user = self.request.user
+
+        # Cambios con impacto económico y administrativo: no los hace cualquier staff.
+        if "grado" in datos and datos["grado"] != grado_anterior:
+            exigir_rol(user, {"ADMIN"}, "Solo un administrador puede cambiar el grado de un alumno.")
+        if "activo" in datos and datos["activo"] != era_activo:
+            exigir_rol(user, ROLES_AUTORIZADORES, "Solo un administrador o supervisor puede dar de alta o baja a un alumno.")
+        if "cliente_responsable" in datos and datos["cliente_responsable"] != instance.cliente_responsable:
+            exigir_rol(user, ROLES_AUTORIZADORES, "Solo un administrador o supervisor puede cambiar el responsable de un alumno.")
+
         hijo = serializer.save()
+
+        if hijo.grado_id != (grado_anterior.pk if grado_anterior else None):
+            HistorialGrado.objects.create(
+                hijo=hijo,
+                grado_anterior=grado_anterior.nombre if grado_anterior else None,
+                grado_nuevo=hijo.grado.nombre if hijo.grado else "Sin grado",
+                anio_escolar=timezone.localdate().year,
+            )
+            registrar_auditoria(
+                request=self.request,
+                operacion="CAMBIAR_GRADO",
+                tabla="clientes_hijo",
+                id_registro=hijo.id_hijo,
+                descripcion=(
+                    f"{hijo.nombre_completo}: "
+                    f"{grado_anterior.nombre if grado_anterior else 'sin grado'} -> "
+                    f"{hijo.grado.nombre if hijo.grado else 'sin grado'}"
+                ),
+            )
         # Baja manual: si se acaba de desactivar y no tenía fecha_baja, se
         # completa sola — de acá arranca el reloj de 1 año hasta la purga.
         if era_activo and not hijo.activo and not hijo.fecha_baja:
@@ -368,7 +402,9 @@ class GradoViewSet(viewsets.ModelViewSet):
     permission_classes = [IsAdminOrReadOnly]
 
 
-class HistorialGradoViewSet(viewsets.ModelViewSet):
+class HistorialGradoViewSet(viewsets.ReadOnlyModelViewSet):
+    """Historial de grados: solo lectura. Lo escribe el sistema al cambiar el grado."""
+
     queryset = HistorialGrado.objects.select_related("hijo").all()
     serializer_class = HistorialGradoSerializer
     permission_classes = [IsStaffUser]

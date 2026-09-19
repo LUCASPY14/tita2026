@@ -13,6 +13,7 @@ import ModalHijo from './ModalHijo'
 import ModalResponsables from './ModalResponsables'
 import ModalConsumo from './ModalConsumo'
 import { useAuthenticatedImage } from '../../hooks/useAuthenticatedImage'
+import { useAuthStore } from '../../store/authStore'
 import {
   extractErrorMessage, SEV_COLOR, SEV_LABEL,
   type Cliente, type Hijo, type RestriccionHijo,
@@ -34,6 +35,8 @@ function HijoAvatar({ hijo }: { hijo: Hijo }) {
 }
 
 export default function ModalHijos({ open, cliente, onClose }: Props) {
+  const rolActual = useAuthStore(s => s.user?.rol)
+  const puedeCambiarActivo = rolActual === 'ADMIN' || rolActual === 'SUPERVISOR'
   const [hijos, setHijos] = useState<Hijo[]>([])
   const [restricciones, setRestricciones] = useState<Record<number, RestriccionHijo[]>>({})
   const [loading, setLoading] = useState(false)
@@ -171,11 +174,13 @@ export default function ModalHijos({ open, cliente, onClose }: Props) {
                           className="p-1.5 text-slate-400 hover:text-slate-700 hover:bg-slate-100 rounded-lg transition-colors" title="Editar">
                           <Edit2 className="w-3.5 h-3.5" />
                         </button>
+                        {puedeCambiarActivo && (
                         <button onClick={() => toggleActivo(hijo)}
                           className={['px-2 py-1 text-sm font-medium rounded-lg transition-colors', hijo.activo ? 'text-slate-400 hover:text-red-600 hover:bg-red-50' : 'text-slate-400 hover:text-green-600 hover:bg-green-50'].join(' ')}
                           title={hijo.activo ? 'Desactivar' : 'Activar'}>
                           {hijo.activo ? 'Desactivar' : 'Activar'}
                         </button>
+                        )}
                       </div>
                     </div>
 
