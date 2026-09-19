@@ -420,3 +420,87 @@ class TestSaldoAlmuerzoPanelCobranza:
             resp = api_admin.get("/api/v1/almuerzos/saldos/")
         assert resp.data["count"] == 3
         assert len(ctx.captured_queries) <= 6
+
+
+# ── Advertencia de caja cerrada al cobrar ────────────────────────────────────
+
+@pytest.fixture
+def cierre_abierto_cajero(db, usuario_cajero):
+    from apps.contabilidad.models import Caja, CierreCaja
+    caja = Caja.objects.create(nombre="Caja advertencia")
+    return CierreCaja.objects.create(
+        caja=caja, empleado=usuario_cajero, estado=CierreCaja.Estado.ABIERTO,
+    )
+
+
+@pytest.mark.django_db
+class TestAdvertenciaSinCajaAbierta:
+
+    def _post_efectivo(self, api, hijo):
+        return api.post(
+            "/api/v1/almuerzos/recargas-saldo/",
+            {"hijo": hijo.pk, "monto_cargado": "20000", "metodo_pago": "EFECTIVO"},
+            format="json",
+        )
+
+    def test_efectivo_sin_caja_abierta_acredita_y_advierte(self, api_cajero, hijo_almuerzo):
+        from apps.almuerzos.models import SaldoAlmuerzo
+        resp = self._post_efectivo(api_cajero, hijo_almuerzo)
+        assert resp.status_code == 201
+        assert "caja" in resp.data["advertencia"].lower()
+        assert SaldoAlmuerzo.objects.get(hijo=hijo_almuerzo).saldo_actual == Decimal("20000")
+
+    def test_efectivo_con_caja_abierta_no_advierte_y_registra_movimiento(
+        self, api_cajero, hijo_almuerzo, cierre_abierto_cajero,
+    ):
+        from apps.contabilidad.models import MovimientoCaja
+        resp = self._post_efectivo(api_cajero, hijo_almuerzo)
+        assert resp.status_code == 201
+        assert "advertencia" not in resp.data
+        assert MovimientoCaja.objects.filter(cierre=cierre_abierto_cajero, monto=Decimal("20000")).count() == 1
+
+    def test_transferencia_pendiente_no_advierte_todavia(self, api_cajero, hijo_almuerzo):
+        resp = api_cajero.post(
+            "/api/v1/almuerzos/recargas-saldo/",
+            {"hijo": hijo_almuerzo.pk, "monto_cargado": "20000", "metodo_pago": "TRANSFERENCIA"},
+            format="json",
+        )
+        assert resp.status_code == 201
+        assert "advertencia" not in resp.data
+
+    def test_confirmar_sin_caja_abierta_advierte(self, api_cajero, hijo_almuerzo):
+        from apps.almuerzos.models import RecargaSaldoAlmuerzo
+        recarga = RecargaSaldoAlmuerzo.objects.create(
+            hijo=hijo_almuerzo, monto_cargado=Decimal("15000"),
+            metodo_pago="TRANSFERENCIA", estado=RecargaSaldoAlmuerzo.Estado.PENDIENTE,
+        )
+        resp = api_cajero.post(f"/api/v1/almuerzos/recargas-saldo/{recarga.pk}/confirmar/")
+        assert resp.status_code == 200
+        assert "caja" in resp.data["advertencia"].lower()
+
+    def test_confirmar_con_caja_abierta_no_advierte(
+        self, api_cajero, hijo_almuerzo, cierre_abierto_cajero,
+    ):
+        from apps.almuerzos.models import RecargaSaldoAlmuerzo
+        recarga = RecargaSaldoAlmuerzo.objects.create(
+            hijo=hijo_almuerzo, monto_cargado=Decimal("15000"),
+            metodo_pago="TRANSFERENCIA", estado=RecargaSaldoAlmuerzo.Estado.PENDIENTE,
+        )
+        resp = api_cajero.post(f"/api/v1/almuerzos/recargas-saldo/{recarga.pk}/confirmar/")
+        assert resp.status_code == 200
+        assert "advertencia" not in resp.data
+
+    def test_listado_de_pendientes_filtra_por_estado(self, api_cajero, hijo_almuerzo):
+        from apps.almuerzos.models import RecargaSaldoAlmuerzo
+        RecargaSaldoAlmuerzo.objects.create(
+            hijo=hijo_almuerzo, monto_cargado=Decimal("15000"),
+            metodo_pago="TRANSFERENCIA", estado=RecargaSaldoAlmuerzo.Estado.PENDIENTE,
+        )
+        RecargaSaldoAlmuerzo.objects.create(
+            hijo=hijo_almuerzo, monto_cargado=Decimal("9000"),
+            metodo_pago="EFECTIVO", estado=RecargaSaldoAlmuerzo.Estado.CONFIRMADA,
+        )
+        resp = api_cajero.get("/api/v1/almuerzos/recargas-saldo/", {"estado": "PENDIENTE"})
+        assert resp.status_code == 200
+        assert resp.data["count"] == 1
+        assert resp.data["results"][0]["hijo_nombre"]

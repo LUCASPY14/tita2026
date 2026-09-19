@@ -32,7 +32,7 @@ export default function ModalPagoCuenta({ cuenta, onClose, onSaved }: Props) {
     if (form.emitirFactura && !form.nroFactura.trim()) { toast.error('Ingresá el número de factura'); return }
     setSaving(true)
     try {
-      await api.post('/almuerzos/recargas-saldo/', {
+      const { data } = await api.post('/almuerzos/recargas-saldo/', {
         hijo: cuenta.hijo,
         monto_cargado: Number(form.monto),
         metodo_pago: form.medio_pago,
@@ -46,6 +46,7 @@ export default function ModalPagoCuenta({ cuenta, onClose, onSaved }: Props) {
           ? `Saldo de almuerzo cargado (${formatGs(form.monto)})`
           : `Carga de ${formatGs(form.monto)} registrada — pendiente de confirmación`
       )
+      if (data.advertencia) toast(data.advertencia, { duration: 9000 })
       onSaved()
       onClose()
     } catch (err) {

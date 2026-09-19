@@ -146,6 +146,17 @@ const SALDO_MOCK = {
   fecha_actualizacion: '2026-05-20T10:00:00Z',
 }
 
+const RECARGA_PENDIENTE_MOCK = {
+  id_recarga_almuerzo: 7,
+  hijo: 1,
+  hijo_nombre: 'Sofía Torres',
+  monto_cargado: '60000',
+  metodo_pago: 'TRANSFERENCIA',
+  referencia: 'TR-998877',
+  fecha_carga: '2026-05-21T09:00:00Z',
+  registrado_por_nombre: 'Cajero Uno',
+}
+
 const RESUMEN_SALDOS_MOCK = {
   deuda_total: 45000,
   alumnos_con_deuda: 1,
@@ -243,8 +254,33 @@ test.describe('Almuerzos — Saldos', () => {
     await page.route(/\/api\/v1\/almuerzos\/saldos\/(\?|$)/, (route) =>
       route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ results: [SALDO_MOCK], count: 1 }) })
     )
+    await page.route(/\/api\/v1\/almuerzos\/recargas-saldo\/(\?|$)/, (route) =>
+      route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ results: [RECARGA_PENDIENTE_MOCK], count: 1 }) })
+    )
     await page.goto('/almuerzos')
     await page.getByRole('button', { name: 'Saldos' }).click()
+  })
+
+  test('muestra las recargas pendientes de confirmación', async ({ page }) => {
+    await expect(page.getByText(/Recargas pendientes de confirmación/)).toBeVisible({ timeout: 6000 })
+    await expect(page.getByText(/TR-998877/)).toBeVisible()
+  })
+
+  test('confirmar una recarga pendiente llama al endpoint y muestra la advertencia de caja', async ({ page }) => {
+    let confirmada = false
+    await page.route(/\/api\/v1\/almuerzos\/recargas-saldo\/7\/confirmar/, (route) => {
+      confirmada = true
+      return route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify({ ...RECARGA_PENDIENTE_MOCK, estado: 'CONFIRMADA', advertencia: 'La recarga se acreditó, pero no tenés una caja abierta' }),
+      })
+    })
+    await page.getByRole('button', { name: 'Confirmar', exact: true }).click()
+    await expect(page.getByText('Confirmar Recarga de Almuerzo')).toBeVisible({ timeout: 5000 })
+    await page.getByRole('button', { name: /Confirmar y acreditar/ }).click()
+    await expect(async () => { expect(confirmada).toBe(true) }).toPass({ timeout: 5000 })
+    await expect(page.getByText(/no tenés una caja abierta/)).toBeVisible({ timeout: 5000 })
   })
 
   test('muestra el alumno con su deuda y el estado Pendiente', async ({ page }) => {

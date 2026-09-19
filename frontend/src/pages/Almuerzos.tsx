@@ -15,6 +15,7 @@ import Table, { type Column } from '../components/ui/Table'
 import ModalConsumo from './almuerzos/ModalConsumo'
 import ModalSuscripcion from './almuerzos/ModalSuscripcion'
 import ModalPagoCuenta from './almuerzos/ModalPagoCuenta'
+import ModalConfirmarRecarga from './almuerzos/ModalConfirmarRecarga'
 import ModalEditSusc from './almuerzos/ModalEditSusc'
 import ModalMenu from './almuerzos/ModalMenu'
 import ModalEditMenu from './almuerzos/ModalEditMenu'
@@ -25,7 +26,7 @@ import {
   ESTADO_REGISTRO_COLOR, ESTADO_CUENTA_COLOR, ESTADO_SUSCRIPCION_COLOR,
   type TabKey, type Hijo, type TipoAlmuerzo, type PlanAlmuerzo, type Suscripcion,
   type MenuDiario, type RegistroConsumo, type CuentaMensual,
-  type SaldoAlmuerzoItem, type ResumenSaldos, type CargaAlmuerzoTarget,
+  type SaldoAlmuerzoItem, type ResumenSaldos, type CargaAlmuerzoTarget, type RecargaPendiente,
 } from './almuerzos/shared'
 
 export default function Almuerzos() {
@@ -71,6 +72,8 @@ export default function Almuerzos() {
   const [pageSaldos, setPageSaldos] = useState(1)
   const [totalSaldos, setTotalSaldos] = useState(0)
   const [resumenSaldos, setResumenSaldos] = useState<ResumenSaldos | null>(null)
+  const [recargasPendientes, setRecargasPendientes] = useState<RecargaPendiente[]>([])
+  const [confirmarRecarga, setConfirmarRecarga] = useState<RecargaPendiente | null>(null)
   const searchTimerSaldos = useRef<ReturnType<typeof setTimeout>>(undefined)
 
   // ── Suscripciones ─────────────────────────────────────────────────
@@ -155,13 +158,17 @@ export default function Almuerzos() {
       const params: Record<string, unknown> = { page: p, page_size: 15, ordering: 'saldo_actual' }
       if (q) params.search = q
       if (deuda) params.con_deuda = true
-      const [{ data }, { data: resumen }] = await Promise.all([
+      const [{ data }, { data: resumen }, pendientes] = await Promise.all([
         api.get('/almuerzos/saldos/', { params }),
         api.get('/almuerzos/saldos/resumen/'),
+        // Roles sin permiso sobre recargas (403) simplemente no ven la sección.
+        api.get('/almuerzos/recargas-saldo/', { params: { estado: 'PENDIENTE', page_size: 50, ordering: 'fecha_carga' } })
+          .catch(() => ({ data: { results: [] } })),
       ])
       setSaldos(data.results ?? [])
       setTotalSaldos(data.count ?? 0)
       setResumenSaldos(resumen)
+      setRecargasPendientes(pendientes.data.results ?? [])
     } catch {
       toast.error('Error al cargar saldos de almuerzo')
     } finally {
@@ -759,6 +766,38 @@ export default function Almuerzos() {
               </div>
             ))}
           </div>
+          {recargasPendientes.length > 0 && (
+            <div className="bg-amber-50 rounded-2xl border border-amber-200 overflow-hidden">
+              <div className="px-6 py-3 border-b border-amber-200">
+                <h2 className="text-sm font-semibold text-amber-800">
+                  Recargas pendientes de confirmación ({recargasPendientes.length})
+                </h2>
+                <p className="text-xs text-amber-700 mt-0.5">
+                  Transferencias u otros medios registrados que todavía no acreditaron saldo al alumno.
+                </p>
+              </div>
+              <ul className="divide-y divide-amber-100">
+                {recargasPendientes.map(r => (
+                  <li key={r.id_recarga_almuerzo} className="px-6 py-3 flex flex-wrap items-center justify-between gap-3">
+                    <div>
+                      <p className="text-sm font-medium text-slate-800">{r.hijo_nombre}</p>
+                      <p className="text-xs text-slate-500">
+                        {r.metodo_pago} · {formatFecha(r.fecha_carga.slice(0, 10))}
+                        {r.referencia ? ` · Ref. ${r.referencia}` : ''}
+                      </p>
+                    </div>
+                    <div className="flex items-center gap-3">
+                      <span className="tabular-nums font-semibold text-slate-800">{formatGs(r.monto_cargado)}</span>
+                      <Button size="sm" variant="primary" onClick={() => setConfirmarRecarga(r)}>
+                        <CheckCircle className="w-3.5 h-3.5" />
+                        Confirmar
+                      </Button>
+                    </div>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          )}
           <div className="bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden">
             <div className="px-6 py-4 border-b border-slate-100 flex flex-wrap items-center justify-between gap-3">
               <div>
@@ -847,6 +886,11 @@ export default function Almuerzos() {
           if (tab === 'cuentas') loadCuentas()
           if (tab === 'saldos') loadSaldos(searchSaldos, soloDeuda, pageSaldos)
         }}
+      />
+      <ModalConfirmarRecarga
+        recarga={confirmarRecarga}
+        onClose={() => setConfirmarRecarga(null)}
+        onSaved={() => loadSaldos(searchSaldos, soloDeuda, pageSaldos)}
       />
       <ModalEditSusc
         susc={editingSusc}

@@ -177,9 +177,10 @@ export default function CargaSaldo() {
       })
 
       if (tipoCobro === 'CREDITO') {
-        toast.success(`Recarga de ${formatGs(montoNum)} acreditada a cuenta corriente`)
+        toast.success(`Recarga de ${formatGs(montoNum)} cargada a la cuenta corriente del responsable`)
       } else if (metodoInfo?.autoconfirma) {
         toast.success(`Recarga de ${formatGs(montoNum)} confirmada`)
+        if (data.advertencia) toast(data.advertencia, { duration: 9000 })
       } else {
         toast.success(`Recarga de ${formatGs(montoNum)} registrada — pendiente de confirmación`)
       }
@@ -566,8 +567,8 @@ export default function CargaSaldo() {
                   <div className="mt-2 bg-orange-50 border border-orange-200 rounded-xl px-3 py-2 space-y-0.5">
                     <p className="text-xs text-orange-700 font-semibold">
                       {tipoSaldo === 'ALMUERZO'
-                        ? 'La recarga de almuerzo se acredita a cuenta corriente del responsable.'
-                        : 'La recarga se acredita a cuenta corriente del responsable.'}
+                        ? 'Se acredita al saldo de almuerzo del alumno y el monto queda como deuda en la cuenta corriente del responsable.'
+                        : 'Se acredita al saldo de la tarjeta y el monto queda como deuda en la cuenta corriente del responsable.'}
                     </p>
                     {limiteCC > 0 && (
                       <p className="text-xs text-orange-600">

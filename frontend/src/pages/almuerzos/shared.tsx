@@ -141,6 +141,17 @@ export interface ResumenSaldos {
   alumnos_con_saldo_a_favor: number
 }
 
+export interface RecargaPendiente {
+  id_recarga_almuerzo: number
+  hijo: number
+  hijo_nombre: string
+  monto_cargado: string | number
+  metodo_pago: string
+  referencia: string | null
+  fecha_carga: string
+  registrado_por_nombre: string | null
+}
+
 /** Alumno al que se le va a cargar saldo de almuerzo (desde cualquier tab). */
 export interface CargaAlmuerzoTarget {
   hijo: number

@@ -575,6 +575,11 @@ class PagoCuentaAlmuerzoViewSet(viewsets.ModelViewSet):
 
 METODOS_CONFIRMACION_INMEDIATA = ("EFECTIVO", "POS DEBITO", "POS CREDITO")
 
+ADVERTENCIA_SIN_CAJA = (
+    "La recarga se acreditó, pero no tenés una caja abierta: el ingreso no quedó "
+    "registrado en caja. Abrí tu caja y registralo manualmente."
+)
+
 # Mismo tope que Bancard (core/bancard_views.py) — evitar cargas por caja sin límite.
 MONTO_MIN_CARGA_CAJA = 5_000
 MONTO_MAX_CARGA_CAJA = 5_000_000
@@ -694,8 +699,10 @@ class RecargaSaldoAlmuerzoViewSet(viewsets.ModelViewSet):
                     f" de {data['hijo']} vía {metodo}"
                 ),
             )
-            out = self.get_serializer(recarga)
-            return Response(out.data, status=status.HTTP_201_CREATED)
+            out = dict(self.get_serializer(recarga).data)
+            if cierre_caja is None:
+                out["advertencia"] = ADVERTENCIA_SIN_CAJA
+            return Response(out, status=status.HTTP_201_CREATED)
 
         if metodo == "CUENTA_CORRIENTE":
             from apps.clientes.models import CuentaCorrienteCliente
@@ -811,7 +818,10 @@ class RecargaSaldoAlmuerzoViewSet(viewsets.ModelViewSet):
                 f" en saldo de almuerzo de hijo={recarga_confirmada.hijo_id}"
             ),
         )
-        return Response(self.get_serializer(recarga_confirmada).data)
+        out = dict(self.get_serializer(recarga_confirmada).data)
+        if cierre_caja is None:
+            out["advertencia"] = ADVERTENCIA_SIN_CAJA
+        return Response(out)
 
 
 # ==============================================================================
