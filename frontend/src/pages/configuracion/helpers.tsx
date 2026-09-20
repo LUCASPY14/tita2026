@@ -82,8 +82,7 @@ export interface Categoria {
 export interface TipoCliente {
   id_tipo_cliente: number
   nombre: string
-  descripcion: string
-  descuento_porcentaje: number | string
+  activo: boolean
 }
 
 export interface ListaPrecio {

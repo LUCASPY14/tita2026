@@ -2,6 +2,7 @@ import { useCallback, useEffect, useState } from 'react'
 import toast from 'react-hot-toast'
 import { Edit2, Trash2, Plus } from 'lucide-react'
 import api from '../../services/api'
+import Badge from '../../components/ui/Badge'
 import Button from '../../components/ui/Button'
 import Table, { type Column } from '../../components/ui/Table'
 import Modal from '../../components/ui/Modal'
@@ -12,7 +13,7 @@ export default function TabTiposCliente({ onDelete }: { onDelete: (t: DeleteTarg
   const [loading, setLoading] = useState(false)
   const [modal, setModal] = useState(false)
   const [editing, setEditing] = useState<TipoCliente | null>(null)
-  const [form, setForm] = useState({ nombre: '', descripcion: '', descuento_porcentaje: '0' })
+  const [form, setForm] = useState({ nombre: '' })
   const [saving, setSaving] = useState(false)
 
   const load = useCallback(async () => {
@@ -29,7 +30,7 @@ export default function TabTiposCliente({ onDelete }: { onDelete: (t: DeleteTarg
 
   const open = useCallback((t?: TipoCliente) => {
     setEditing(t ?? null)
-    setForm(t ? { nombre: t.nombre, descripcion: t.descripcion, descuento_porcentaje: String(Number(t.descuento_porcentaje) || 0) } : { nombre: '', descripcion: '', descuento_porcentaje: '0' })
+    setForm(t ? { nombre: t.nombre } : { nombre: '' })
     setModal(true)
   }, [])
 
@@ -37,12 +38,11 @@ export default function TabTiposCliente({ onDelete }: { onDelete: (t: DeleteTarg
     if (!form.nombre) { toast.error('Ingresá el nombre'); return }
     setSaving(true)
     try {
-      const payload = { ...form, descuento_porcentaje: Number(form.descuento_porcentaje) || 0 }
       if (editing) {
-        await api.put(`/clientes/tipos-cliente/${editing.id_tipo_cliente}/`, payload)
+        await api.put(`/clientes/tipos-cliente/${editing.id_tipo_cliente}/`, form)
         toast.success('Tipo de cliente actualizado')
       } else {
-        await api.post('/clientes/tipos-cliente/', payload)
+        await api.post('/clientes/tipos-cliente/', form)
         toast.success('Tipo de cliente creado')
       }
       setModal(false); load()
@@ -52,8 +52,7 @@ export default function TabTiposCliente({ onDelete }: { onDelete: (t: DeleteTarg
 
   const columns: Column<TipoCliente>[] = [
     { title: 'Nombre', key: 'nombre', render: (_, r) => <span className="text-sm font-medium text-slate-800">{r.nombre}</span> },
-    { title: 'Descripción', key: 'desc', render: (_, r) => <span className="text-sm text-slate-500">{r.descripcion || '—'}</span> },
-    { title: 'Descuento', key: 'desc_pct', render: (_, r) => <span className="tabular-nums text-sm text-slate-700">{Number(r.descuento_porcentaje) || 0}%</span> },
+    { title: 'Estado', key: 'activo', width: 100, render: (_, r) => <Badge color={r.activo ? 'green' : 'default'}>{r.activo ? 'Activo' : 'Inactivo'}</Badge> },
     {
       title: '', key: 'acc', width: 100,
       render: (_, r) => (
@@ -82,14 +81,6 @@ export default function TabTiposCliente({ onDelete }: { onDelete: (t: DeleteTarg
           <div>
             <label className={labelClass}>Nombre *</label>
             <input value={form.nombre} onChange={e => setForm(f => ({ ...f, nombre: e.target.value }))} className={inputClass} />
-          </div>
-          <div>
-            <label className={labelClass}>Descripción</label>
-            <textarea value={form.descripcion} onChange={e => setForm(f => ({ ...f, descripcion: e.target.value }))} rows={2} className={`${inputClass} resize-none`} />
-          </div>
-          <div>
-            <label className={labelClass}>Descuento (%)</label>
-            <input type="number" min={0} max={100} step={0.5} value={form.descuento_porcentaje} onChange={e => setForm(f => ({ ...f, descuento_porcentaje: e.target.value }))} className={inputClass} />
           </div>
         </div>
       </Modal>
