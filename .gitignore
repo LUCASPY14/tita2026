@@ -219,3 +219,7 @@ test_factura_out.txt
 # Environment files with sensitive data
 .env.production
 .env.staging
+
+# Archivos de trabajo locales
+scratch/
+eCommerce_bancard_compra_simple_version_1.23.1.pdf
