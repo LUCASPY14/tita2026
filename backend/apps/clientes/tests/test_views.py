@@ -250,6 +250,77 @@ class TestAlumnoResponsable:
         assert resp.status_code == 200
 
 
+# ── AlumnoResponsableViewSet.crear_con_cliente_nuevo ─────────────────────────
+
+@pytest.mark.django_db
+class TestCrearResponsableConClienteNuevo:
+
+    def _payload(self, hijo, **extra):
+        datos = {
+            "hijo": hijo.pk, "nombres": "Marta", "apellidos": "Gómez", "ruc_ci": "9998887",
+            "parentesco": "MADRE",
+        }
+        datos.update(extra)
+        return datos
+
+    def test_crea_cliente_y_responsable(self, api_admin, hijo_fixture):
+        from apps.clientes.models import AlumnoResponsable, Cliente
+        resp = api_admin.post(
+            "/api/v1/clientes/responsables/crear-con-cliente-nuevo/",
+            self._payload(hijo_fixture, orden_cobro=2, recibe_notificaciones=True),
+            format="json",
+        )
+        assert resp.status_code == 201, resp.data
+        cliente = Cliente.objects.get(ruc_ci="9998887")
+        assert cliente.nombres == "Marta" and cliente.apellidos == "Gómez"
+        assert cliente.tipo_cliente.nombre == "Familia"
+        assert cliente.lista_precio is not None
+        resp_obj = AlumnoResponsable.objects.get(cliente=cliente, hijo=hijo_fixture)
+        assert resp_obj.parentesco == "MADRE" and resp_obj.orden_cobro == 2
+        assert resp_obj.recibe_notificaciones is True and resp_obj.es_titular is False
+
+    def test_crea_usuario_portal(self, api_admin, hijo_fixture):
+        from apps.clientes.models import Cliente
+        from apps.usuarios.models import Usuario
+        api_admin.post(
+            "/api/v1/clientes/responsables/crear-con-cliente-nuevo/",
+            self._payload(hijo_fixture, email="marta@test.com"),
+            format="json",
+        )
+        cliente = Cliente.objects.get(ruc_ci="9998887")
+        usuario = Usuario.objects.get(email="marta@test.com")
+        assert usuario.cliente_id == cliente.pk and usuario.rol == Usuario.Rol.CLIENTE_WEB
+
+    def test_ruc_ci_duplicado_no_crea_y_sugiere_el_existente(self, api_admin, hijo_fixture, cliente):
+        from apps.clientes.models import Cliente
+        resp = api_admin.post(
+            "/api/v1/clientes/responsables/crear-con-cliente-nuevo/",
+            self._payload(hijo_fixture, ruc_ci=cliente.ruc_ci),
+            format="json",
+        )
+        assert resp.status_code == 400
+        assert cliente.nombre_completo in resp.data["field_errors"]["ruc_ci"][0]
+        assert Cliente.objects.filter(ruc_ci=cliente.ruc_ci).count() == 1
+
+    def test_solo_admin(self, api_cajero, hijo_fixture):
+        resp = api_cajero.post(
+            "/api/v1/clientes/responsables/crear-con-cliente-nuevo/",
+            self._payload(hijo_fixture),
+            format="json",
+        )
+        assert resp.status_code == 403
+
+    def test_faltan_datos_obligatorios(self, api_admin, hijo_fixture):
+        resp = api_admin.post(
+            "/api/v1/clientes/responsables/crear-con-cliente-nuevo/",
+            {"hijo": hijo_fixture.pk, "parentesco": "MADRE"},
+            format="json",
+        )
+        assert resp.status_code == 400
+        errores = resp.data["field_errors"]
+        assert "nombres" in errores and "apellidos" in errores and "ruc_ci" in errores
+
+
 # ── ReporteCuentaCorrienteView ────────────────────────────────────────────────
 
 @pytest.mark.django_db
@@ -524,7 +595,7 @@ class TestCuentaCorrienteCreate:
         assert resp.data["origen"] == "CANTINA"
 
 
-# ── ClienteViewSet.perform_create → _crear_usuario_portal ────────────────────
+# ── ClienteViewSet.perform_create → crear_usuario_portal ────────────────────
 
 @pytest.mark.django_db
 class TestCrearUsuarioPortal:
@@ -584,10 +655,10 @@ class TestCrearUsuarioPortal:
     def test_cliente_ya_con_portal_no_crea_segundo_usuario(
         self, api_admin, tipo_cliente, lista_precio,
     ):
-        """Si el cliente ya tiene usuario_portal, _crear_usuario_portal retorna sin crear otro."""
+        """Si el cliente ya tiene usuario_portal, crear_usuario_portal retorna sin crear otro."""
         from apps.clientes.models import Cliente
         from apps.usuarios.models import Usuario
-        from apps.clientes.views import _crear_usuario_portal
+        from apps.clientes.services import crear_usuario_portal
         cliente = Cliente.objects.create(
             nombres="Ya",
             apellidos="Tiene",
@@ -604,7 +675,7 @@ class TestCrearUsuarioPortal:
             cliente=cliente,
         )
         before = Usuario.objects.count()
-        _crear_usuario_portal(cliente)  # debe ser no-op
+        crear_usuario_portal(cliente)  # debe ser no-op
         assert Usuario.objects.count() == before
 
 

@@ -91,6 +91,82 @@ class TestCambiarTitular:
             cambiar_titular(hijo, cliente_nuevo.pk)
 
 
+# ── crear_responsable_con_cliente_nuevo ─────────────────────────────────────
+
+@pytest.mark.django_db
+class TestCrearResponsableConClienteNuevo:
+
+    def test_crea_cliente_tipo_familia_y_responsable(self, hijo_con_responsables):
+        from apps.clientes.services import crear_responsable_con_cliente_nuevo
+        from apps.clientes.models import AlumnoResponsable, TipoCliente
+
+        hijo, _, _ = hijo_con_responsables
+        resp = crear_responsable_con_cliente_nuevo(
+            hijo=hijo,
+            datos_cliente={"nombres": "Elena", "apellidos": "Cruz", "ruc_ci": "5551234"},
+            parentesco=AlumnoResponsable.Parentesco.TIA,
+        )
+        assert resp.cliente.nombres == "Elena" and resp.cliente.ruc_ci == "5551234"
+        assert resp.cliente.tipo_cliente == TipoCliente.objects.get(nombre="Familia")
+        assert resp.es_titular is False
+
+    def test_usa_la_lista_de_precio_por_defecto(self, hijo_con_responsables, lista_precio):
+        from apps.clientes.services import crear_responsable_con_cliente_nuevo
+        from apps.clientes.models import AlumnoResponsable
+        from apps.productos.models import ListaPrecio
+
+        lista_precio.es_por_defecto = True
+        lista_precio.save()
+        hijo, _, _ = hijo_con_responsables
+        resp = crear_responsable_con_cliente_nuevo(
+            hijo=hijo,
+            datos_cliente={"nombres": "Fabio", "apellidos": "Ruiz", "ruc_ci": "5551235"},
+            parentesco=AlumnoResponsable.Parentesco.TIO,
+        )
+        assert resp.cliente.lista_precio == lista_precio
+
+    def test_sin_lista_por_defecto_crea_lista_general(self, hijo_con_responsables):
+        from apps.clientes.services import crear_responsable_con_cliente_nuevo
+        from apps.clientes.models import AlumnoResponsable
+        from apps.productos.models import ListaPrecio
+
+        hijo, _, _ = hijo_con_responsables
+        resp = crear_responsable_con_cliente_nuevo(
+            hijo=hijo,
+            datos_cliente={"nombres": "Gina", "apellidos": "Ortiz", "ruc_ci": "5551236"},
+            parentesco=AlumnoResponsable.Parentesco.OTRO,
+        )
+        assert resp.cliente.lista_precio == ListaPrecio.objects.get(nombre="Lista General")
+
+    def test_ruc_ci_existente_no_crea_duplicado(self, hijo_con_responsables):
+        from apps.clientes.services import crear_responsable_con_cliente_nuevo
+        from apps.clientes.models import AlumnoResponsable, Cliente
+
+        hijo, cliente1, _ = hijo_con_responsables
+        with pytest.raises(ValidationError) as exc:
+            crear_responsable_con_cliente_nuevo(
+                hijo=hijo,
+                datos_cliente={"nombres": "Copia", "apellidos": "De", "ruc_ci": cliente1.ruc_ci},
+                parentesco=AlumnoResponsable.Parentesco.OTRO,
+            )
+        assert cliente1.nombre_completo in str(exc.value.detail["ruc_ci"])
+        assert Cliente.objects.filter(ruc_ci=cliente1.ruc_ci).count() == 1
+
+    def test_crea_usuario_portal_para_el_cliente_nuevo(self, hijo_con_responsables):
+        from apps.clientes.services import crear_responsable_con_cliente_nuevo
+        from apps.clientes.models import AlumnoResponsable
+        from apps.usuarios.models import Usuario
+
+        hijo, _, _ = hijo_con_responsables
+        resp = crear_responsable_con_cliente_nuevo(
+            hijo=hijo,
+            datos_cliente={"nombres": "Hugo", "apellidos": "Vera", "ruc_ci": "5551237", "email": "hugo@test.com"},
+            parentesco=AlumnoResponsable.Parentesco.ABUELO,
+        )
+        usuario = Usuario.objects.get(cliente=resp.cliente)
+        assert usuario.email == "hugo@test.com" and usuario.rol == Usuario.Rol.CLIENTE_WEB
+
+
 # ── agregar_responsable ───────────────────────────────────────────────────────
 
 @pytest.mark.django_db

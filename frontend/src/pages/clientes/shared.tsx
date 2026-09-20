@@ -105,7 +105,13 @@ export interface AlumnoResponsable {
 }
 
 export interface AgregarResponsableForm {
+  modo: 'existente' | 'nuevo'
   cliente: string
+  nombres: string
+  apellidos: string
+  ruc_ci: string
+  telefono: string
+  email: string
   parentesco: string
   orden_cobro: string
   recibe_notificaciones: boolean
@@ -152,8 +158,8 @@ export const BLANK_HIJO: HijoForm = {
 }
 
 export const BLANK_RESP: AgregarResponsableForm = {
-  cliente: '', parentesco: 'OTRO', orden_cobro: '1',
-  recibe_notificaciones: true, puede_ver_saldo: false,
+  modo: 'existente', cliente: '', nombres: '', apellidos: '', ruc_ci: '', telefono: '', email: '',
+  parentesco: 'OTRO', orden_cobro: '1', recibe_notificaciones: true, puede_ver_saldo: false,
 }
 
 export const PARENTESCO_LABELS: Record<string, string> = {

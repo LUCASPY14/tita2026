@@ -61,6 +61,22 @@ class AlumnoResponsableSerializer(serializers.ModelSerializer):
         return attrs
 
 
+class ResponsableClienteNuevoSerializer(serializers.Serializer):
+    """Datos para agregar un responsable creando su cliente al mismo tiempo
+    (ver services.crear_responsable_con_cliente_nuevo)."""
+
+    hijo = serializers.PrimaryKeyRelatedField(queryset=Hijo.objects.all())
+    nombres = serializers.CharField(max_length=100)
+    apellidos = serializers.CharField(max_length=100)
+    ruc_ci = serializers.CharField(max_length=20)
+    telefono = serializers.CharField(max_length=20, required=False, allow_blank=True)
+    email = serializers.EmailField(required=False, allow_blank=True)
+    parentesco = serializers.ChoiceField(choices=AlumnoResponsable.Parentesco.choices)
+    orden_cobro = serializers.IntegerField(min_value=1, default=1)
+    recibe_notificaciones = serializers.BooleanField(default=False)
+    puede_ver_saldo = serializers.BooleanField(default=False)
+
+
 class AlumnoResponsableResumenSerializer(serializers.ModelSerializer):
     """Versión compacta para incluir en HijoSerializer."""
 

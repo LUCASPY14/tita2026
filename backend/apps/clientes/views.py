@@ -61,52 +61,12 @@ from .serializers import (
     GenerarPromocionSerializer,
     PromocionAlumnoSerializer,
     PromocionAnualSerializer,
+    ResponsableClienteNuevoSerializer,
     RestriccionHijoSerializer,
     TipoClienteSerializer,
 )
 from . import promocion as promo
-from .services import cambiar_titular, purgar_alumno
-
-
-def _crear_usuario_portal(cliente):
-    """Crea (o vincula) un usuario CLIENTE_WEB para el cliente dado.
-
-    - Si ya tiene usuario portal, no hace nada.
-    - Usa el email del cliente como identificador; si no tiene email, genera
-      uno sintético: <ruc_ci_limpio>@portal.tita.local
-    - La contraseña inicial es el RUC/CI tal como está almacenado.
-    - El usuario queda marcado con debe_cambiar_contrasena=True.
-    """
-    from apps.usuarios.models import Usuario
-
-    if hasattr(cliente, "usuario_portal"):
-        return
-
-    ruc_ci_limpio = cliente.ruc_ci.strip()
-    email = (cliente.email or "").strip()
-    if not email:
-        sufijo = ruc_ci_limpio.replace("-", "").replace(".", "")
-        email = f"{sufijo}@portal.tita.local"
-
-    usuario_existente = Usuario.objects.filter(email=email).first()
-    if usuario_existente:
-        # Ya existe un usuario con ese email: vincular si no tiene cliente
-        if not usuario_existente.cliente_id:
-            usuario_existente.cliente = cliente
-            usuario_existente.save(update_fields=["cliente"])
-        return
-
-    Usuario.objects.create_user(
-        email=email,
-        password=ruc_ci_limpio,
-        nombre=cliente.nombres,
-        apellido=cliente.apellidos,
-        rol=Usuario.Rol.CLIENTE_WEB,
-        is_active=True,
-        email_verificado=bool(cliente.email),
-        debe_cambiar_contrasena=True,
-        cliente=cliente,
-    )
+from .services import cambiar_titular, crear_responsable_con_cliente_nuevo, crear_usuario_portal, purgar_alumno
 
 
 class ClienteViewSet(viewsets.ModelViewSet):
@@ -127,7 +87,7 @@ class ClienteViewSet(viewsets.ModelViewSet):
 
     def perform_create(self, serializer):
         cliente = serializer.save()
-        _crear_usuario_portal(cliente)
+        crear_usuario_portal(cliente)
         registrar_auditoria(
             request=self.request,
             operacion="CREAR_CLIENTE",
@@ -809,6 +769,9 @@ class AlumnoResponsableViewSet(viewsets.ModelViewSet):
 
     Acciones custom:
       POST /clientes/responsables/{id}/set_titular/ → designar como titular
+      POST /clientes/responsables/crear-con-cliente-nuevo/ → crea el cliente y
+        lo agrega como responsable en un solo paso (persona que todavía no
+        está cargada como cliente)
     """
 
     serializer_class = AlumnoResponsableSerializer
@@ -824,6 +787,33 @@ class AlumnoResponsableViewSet(viewsets.ModelViewSet):
 
     def perform_create(self, serializer):
         serializer.save(agregado_por=self.request.user)
+
+    @action(detail=False, methods=["post"], url_path="crear-con-cliente-nuevo")
+    def crear_con_cliente_nuevo(self, request):
+        """Crea el cliente (tipo Familia, lista de precios por defecto) y lo
+        agrega como responsable del alumno, en un solo paso."""
+        datos = ResponsableClienteNuevoSerializer(data=request.data)
+        datos.is_valid(raise_exception=True)
+        v = dict(datos.validated_data)
+        hijo = v.pop("hijo")
+        parentesco = v.pop("parentesco")
+        orden_cobro = v.pop("orden_cobro")
+        recibe_notificaciones = v.pop("recibe_notificaciones")
+        puede_ver_saldo = v.pop("puede_ver_saldo")
+        responsable = crear_responsable_con_cliente_nuevo(
+            hijo=hijo, datos_cliente=v, parentesco=parentesco, orden_cobro=orden_cobro,
+            recibe_notificaciones=recibe_notificaciones, puede_ver_saldo=puede_ver_saldo,
+            added_by=request.user,
+        )
+        registrar_auditoria(
+            request=request, operacion="CREAR_CLIENTE", tabla="clientes_cliente",
+            id_registro=responsable.cliente_id,
+            descripcion=(
+                f"Cliente creado desde 'Agregar responsable': {responsable.cliente.nombres} "
+                f"{responsable.cliente.apellidos} RUC/CI={responsable.cliente.ruc_ci}"
+            ),
+        )
+        return Response(AlumnoResponsableSerializer(responsable).data, status=status.HTTP_201_CREATED)
 
     def perform_destroy(self, instance):
         # Impedir eliminar el único titular activo

@@ -115,3 +115,110 @@ test.describe('Clientes', () => {
     }
   })
 })
+
+const HIJO_MOCK = {
+  id_hijo: 10, nombre: 'Lucía', apellido: 'González', fecha_nacimiento: null,
+  grado: 1, grado_nombre: '3° Grado A', foto_url: null, activo: true, fecha_baja: null,
+  cliente_responsable: 1, cliente_nombre: 'María González',
+}
+
+async function abrirResponsables(page: import('@playwright/test').Page) {
+  await page.route(/\/api\/v1\/clientes\/hijos\/\?/, (route) =>
+    route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ results: [HIJO_MOCK], count: 1 }) })
+  )
+  await page.route(/\/api\/v1\/clientes\/restricciones\//, (route) =>
+    route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ results: [], count: 0 }) })
+  )
+  await page.getByRole('button', { name: 'Hijos' }).first().click()
+  await expect(page.getByText('Lucía')).toBeVisible({ timeout: 6000 })
+  await page.getByRole('button', { name: /Resp\./ }).click()
+  await expect(page.getByText('Responsables — González, Lucía')).toBeVisible()
+  await page.getByRole('dialog').last().getByRole('button', { name: 'Agregar', exact: true }).click()
+  await expect(page.getByText('Agregar Responsable')).toBeVisible()
+}
+
+test.describe('Clientes — agregar responsable', () => {
+  test.beforeEach(async ({ page }) => {
+    await loginAs(page, ADMIN)
+    await page.route(/\/api\/v1\/clientes\/responsables\/\?/, (route) =>
+      route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ results: [], count: 0 }) })
+    )
+    await page.goto('/clientes')
+  })
+
+  test('cliente existente: elige de la lista y no pide datos personales', async ({ page }) => {
+    let enviado: Record<string, unknown> | null = null
+    await page.route(/\/api\/v1\/clientes\/responsables\/$/, (route) => {
+      if (route.request().method() !== 'POST') return route.fallback()
+      enviado = route.request().postDataJSON()
+      return route.fulfill({ status: 201, contentType: 'application/json', body: JSON.stringify({ id_responsable: 99 }) })
+    })
+    await abrirResponsables(page)
+
+    await expect(page.getByLabel('Nombres')).toHaveCount(0)
+    await page.getByLabel('Cliente (responsable)').selectOption({ label: 'Rodríguez, Carlos — 8765432-1' })
+    await page.getByRole('dialog').last().getByRole('button', { name: 'Agregar', exact: true }).click()
+
+    await expect.poll(() => enviado).toMatchObject({ hijo: 10, cliente: 2 })
+    await expect(page.getByText('Responsable agregado')).toBeVisible()
+  })
+
+  test('cliente nuevo: crea el cliente y el responsable en un solo paso', async ({ page }) => {
+    let enviado: Record<string, unknown> | null = null
+    await page.route(/\/api\/v1\/clientes\/responsables\/crear-con-cliente-nuevo\/$/, (route) => {
+      enviado = route.request().postDataJSON()
+      return route.fulfill({ status: 201, contentType: 'application/json', body: JSON.stringify({ id_responsable: 100 }) })
+    })
+    await abrirResponsables(page)
+
+    await page.getByRole('button', { name: 'Cliente nuevo' }).click()
+    await expect(page.getByText('todavía no está cargada como cliente')).toBeVisible()
+    await page.getByLabel('Nombres').fill('Rosa')
+    await page.getByLabel('Apellidos').fill('Benítez')
+    await page.getByLabel('RUC/CI').fill('4445556')
+    await page.getByLabel('Parentesco').selectOption('ABUELA')
+    await page.getByRole('dialog').last().getByRole('button', { name: 'Agregar', exact: true }).click()
+
+    await expect.poll(() => enviado).toMatchObject({
+      hijo: 10, nombres: 'Rosa', apellidos: 'Benítez', ruc_ci: '4445556', parentesco: 'ABUELA',
+    })
+    await expect(page.getByText('Responsable agregado')).toBeVisible()
+  })
+
+  test('cliente nuevo: RUC/CI inválido no envía la solicitud', async ({ page }) => {
+    let llamado = false
+    await page.route(/\/api\/v1\/clientes\/responsables\/crear-con-cliente-nuevo\/$/, (route) => {
+      llamado = true
+      return route.fulfill({ status: 201, contentType: 'application/json', body: '{}' })
+    })
+    await abrirResponsables(page)
+    await page.getByRole('button', { name: 'Cliente nuevo' }).click()
+    await page.getByLabel('Nombres').fill('Rosa')
+    await page.getByLabel('Apellidos').fill('Benítez')
+    await page.getByLabel('RUC/CI').fill('abc')
+    await page.getByRole('dialog').last().getByRole('button', { name: 'Agregar', exact: true }).click()
+
+    await expect(page.getByText('RUC/CI inválido')).toBeVisible()
+    expect(llamado).toBe(false)
+  })
+
+  test('RUC/CI duplicado muestra el error del cliente existente', async ({ page }) => {
+    await page.route(/\/api\/v1\/clientes\/responsables\/crear-con-cliente-nuevo\/$/, (route) =>
+      route.fulfill({
+        status: 400, contentType: 'application/json',
+        body: JSON.stringify({
+          detail: 'Error de validación.', code: 'validation_error',
+          field_errors: { ruc_ci: ['Ya existe un cliente con ese RUC/CI: Carlos Rodríguez. Elegilo desde "Cliente existente" en vez de crear uno nuevo.'] },
+        }),
+      })
+    )
+    await abrirResponsables(page)
+    await page.getByRole('button', { name: 'Cliente nuevo' }).click()
+    await page.getByLabel('Nombres').fill('Rosa')
+    await page.getByLabel('Apellidos').fill('Benítez')
+    await page.getByLabel('RUC/CI').fill('8765432-1')
+    await page.getByRole('dialog').last().getByRole('button', { name: 'Agregar', exact: true }).click()
+
+    await expect(page.getByText(/Ya existe un cliente con ese RUC\/CI: Carlos Rodríguez/)).toBeVisible()
+  })
+})
