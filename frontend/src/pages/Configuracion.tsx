@@ -29,12 +29,13 @@ import TabWhatsApp from './configuracion/TabWhatsApp'
 import TabPurgaAlumnos from './configuracion/TabPurgaAlumnos'
 import TabNotificaciones from './configuracion/TabNotificaciones'
 import TabAnioLectivo from './configuracion/TabAnioLectivo'
+import TabPromocionAnual from './configuracion/TabPromocionAnual'
 
 type TabKey =
   | 'categorias' | 'tipos_cliente' | 'listas_precio' | 'medios_pago' | 'cajas'
   | 'grados' | 'datos_empresa' | 'historial_precios' | 'ubicaciones'
   | 'tipos_almuerzo' | 'planes_almuerzo' | 'precios_almuerzo' | 'unidades_medida' | 'alergenos' | 'impuestos'
-  | 'whatsapp' | 'purga_alumnos' | 'notificaciones' | 'anio_lectivo'
+  | 'whatsapp' | 'purga_alumnos' | 'notificaciones' | 'anio_lectivo' | 'promocion_anual'
 
 const TABS: { key: TabKey; labelKey: string; icon: typeof Settings }[] = [
   { key: 'categorias',        labelKey: 'settings.categories',  icon: Tag },
@@ -56,6 +57,7 @@ const TABS: { key: TabKey; labelKey: string; icon: typeof Settings }[] = [
   { key: 'purga_alumnos',     labelKey: 'settings.purgaAlumnos',icon: UserX },
   { key: 'notificaciones',    labelKey: 'settings.notifications',icon: Bell },
   { key: 'anio_lectivo',      labelKey: 'settings.schoolYear',  icon: CalendarClock },
+  { key: 'promocion_anual',   labelKey: 'settings.promotion',   icon: GraduationCap },
 ]
 
 export default function Configuracion() {
@@ -127,6 +129,7 @@ export default function Configuracion() {
         {tab === 'purga_alumnos'     && <TabPurgaAlumnos />}
         {tab === 'notificaciones'    && <TabNotificaciones />}
         {tab === 'anio_lectivo'      && <TabAnioLectivo />}
+        {tab === 'promocion_anual'   && <TabPromocionAnual />}
       </div>
 
       <Modal

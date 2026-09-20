@@ -359,6 +359,10 @@ class Grado(models.Model):
     nivel = models.IntegerField(help_text="Nivel numérico (1-12)")
     orden = models.IntegerField(help_text="Orden de visualización")
     es_ultimo = models.BooleanField(default=False, help_text="True si es el último grado")
+    siguiente = models.ForeignKey(
+        "self", models.SET_NULL, null=True, blank=True, related_name="anteriores",
+        help_text="Grado al que promocionan los alumnos (vacío en el último grado).",
+    )
     activo = models.BooleanField(default=True)
     fecha_creacion = models.DateTimeField(auto_now_add=True)
 
@@ -382,7 +386,18 @@ class HistorialGrado(models.Model):
     grado_nuevo = models.CharField(max_length=50)
     anio_escolar = models.IntegerField()
     fecha_cambio = models.DateTimeField(auto_now_add=True)
-    motivo = models.CharField(max_length=20)
+
+    class Motivo(models.TextChoices):
+        PROMOCION = "PROMOCION", "Promoción"
+        REPITE = "REPITE", "Repite el grado"
+        CAMBIO = "CAMBIO", "Cambio de grado"
+        EGRESO = "EGRESO", "Egreso / no continúa"
+        MANUAL = "MANUAL", "Cambio manual"
+
+    motivo = models.CharField(max_length=20, choices=Motivo.choices, default=Motivo.MANUAL)
+    promocion = models.ForeignKey(
+        "PromocionAnual", models.SET_NULL, null=True, blank=True, related_name="historial",
+    )
     usuario_registro = models.CharField(max_length=100, blank=True, null=True)
     observaciones = models.TextField(blank=True, null=True)
 
@@ -677,3 +692,66 @@ class CalendarioLectivo(models.Model):
 
     def __str__(self):
         return f"Año lectivo {self.anio}"
+
+
+class PromocionAnual(models.Model):
+    """Promoción de grados de un año lectivo: borrador editable y luego aplicada
+    una sola vez. `anio` es el año lectivo que TERMINA (los alumnos entran al
+    siguiente)."""
+
+    class Estado(models.TextChoices):
+        BORRADOR = "BORRADOR", "Borrador"
+        APLICADA = "APLICADA", "Aplicada"
+
+    id_promocion = models.BigAutoField(primary_key=True)
+    anio = models.IntegerField(unique=True)
+    estado = models.CharField(max_length=10, choices=Estado.choices, default=Estado.BORRADOR)
+    creada_por = models.ForeignKey(
+        "usuarios.Usuario", models.SET_NULL, null=True, blank=True, related_name="+",
+    )
+    fecha_creacion = models.DateTimeField(auto_now_add=True)
+    aplicada_por = models.ForeignKey(
+        "usuarios.Usuario", models.SET_NULL, null=True, blank=True, related_name="+",
+    )
+    fecha_aplicacion = models.DateTimeField(null=True, blank=True)
+
+    class Meta:
+        verbose_name = "Promoción anual"
+        verbose_name_plural = "Promociones anuales"
+        ordering = ["-anio"]
+
+    def __str__(self):
+        return f"Promoción {self.anio} → {self.anio + 1} ({self.get_estado_display()})"
+
+
+class PromocionAlumno(models.Model):
+    """Decisión sobre un alumno dentro de una promoción."""
+
+    class Decision(models.TextChoices):
+        PROMUEVE = "PROMUEVE", "Promociona al grado siguiente"
+        REPITE = "REPITE", "Repite el grado"
+        CAMBIA = "CAMBIA", "Cambia a otro grado"
+        EGRESA = "EGRESA", "Egresa"
+        NO_CONTINUA = "NO_CONTINUA", "No continúa"
+
+    id_promocion_alumno = models.BigAutoField(primary_key=True)
+    promocion = models.ForeignKey(PromocionAnual, models.CASCADE, related_name="lineas")
+    hijo = models.ForeignKey(Hijo, models.PROTECT, related_name="lineas_promocion")
+    grado_origen = models.ForeignKey(
+        Grado, models.SET_NULL, null=True, blank=True, related_name="+",
+    )
+    decision = models.CharField(max_length=12, choices=Decision.choices, default=Decision.PROMUEVE)
+    grado_destino = models.ForeignKey(
+        Grado, models.SET_NULL, null=True, blank=True, related_name="+",
+    )
+    motivo = models.TextField(blank=True)
+
+    class Meta:
+        verbose_name = "Alumno en promoción"
+        verbose_name_plural = "Alumnos en promoción"
+        constraints = [
+            models.UniqueConstraint(fields=["promocion", "hijo"], name="unique_promocion_hijo"),
+        ]
+
+    def __str__(self):
+        return f"{self.hijo} — {self.get_decision_display()}"

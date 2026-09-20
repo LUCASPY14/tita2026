@@ -16,6 +16,8 @@ from .models import (
     HistorialGrado,
     Hijo,
     Pais,
+    PromocionAlumno,
+    PromocionAnual,
     RestriccionHijo,
     TipoCliente,
 )
@@ -139,10 +141,22 @@ class HijoSerializer(serializers.ModelSerializer):
 
 
 class GradoSerializer(serializers.ModelSerializer):
+    siguiente_nombre = serializers.CharField(source="siguiente.nombre", read_only=True, default=None)
+
     class Meta:
         model = Grado
         fields = "__all__"
         read_only_fields = ["fecha_creacion"]
+
+    def validate(self, attrs):
+        siguiente = attrs.get("siguiente", getattr(self.instance, "siguiente", None))
+        es_ultimo = attrs.get("es_ultimo", getattr(self.instance, "es_ultimo", False))
+        if siguiente is not None:
+            if self.instance is not None and siguiente.pk == self.instance.pk:
+                raise serializers.ValidationError({"siguiente": "Un grado no puede ser su propio siguiente."})
+            if es_ultimo:
+                raise serializers.ValidationError({"siguiente": "El último curso no tiene grado siguiente."})
+        return attrs
 
 
 class CalendarioLectivoSerializer(serializers.ModelSerializer):
@@ -213,3 +227,58 @@ class CiudadSerializer(serializers.ModelSerializer):
     class Meta:
         model = Ciudad
         fields = "__all__"
+
+
+class PromocionAlumnoSerializer(serializers.ModelSerializer):
+    hijo_nombre = serializers.CharField(source="hijo.nombre_completo", read_only=True)
+    hijo_activo = serializers.BooleanField(source="hijo.activo", read_only=True)
+    grado_origen_nombre = serializers.CharField(source="grado_origen.nombre", read_only=True, default=None)
+    grado_destino_nombre = serializers.CharField(source="grado_destino.nombre", read_only=True, default=None)
+    origen_es_ultimo = serializers.BooleanField(source="grado_origen.es_ultimo", read_only=True, default=False)
+    origen_siguiente = serializers.IntegerField(source="grado_origen.siguiente_id", read_only=True, default=None)
+    problema = serializers.SerializerMethodField()
+
+    class Meta:
+        model = PromocionAlumno
+        fields = [
+            "id_promocion_alumno", "hijo", "hijo_nombre", "hijo_activo", "grado_origen", "grado_origen_nombre",
+            "origen_es_ultimo", "origen_siguiente", "decision", "grado_destino", "grado_destino_nombre", "motivo", "problema",
+        ]
+        read_only_fields = fields
+
+    def get_problema(self, obj):
+        from .promocion import problema_de_linea
+        return problema_de_linea(obj)
+
+
+class PromocionAnualSerializer(serializers.ModelSerializer):
+    creada_por_nombre = serializers.CharField(source="creada_por.email", read_only=True, default=None)
+    aplicada_por_nombre = serializers.CharField(source="aplicada_por.email", read_only=True, default=None)
+    total_alumnos = serializers.SerializerMethodField()
+
+    class Meta:
+        model = PromocionAnual
+        fields = [
+            "id_promocion", "anio", "estado", "creada_por_nombre", "fecha_creacion",
+            "aplicada_por_nombre", "fecha_aplicacion", "total_alumnos",
+        ]
+        read_only_fields = fields
+
+    def get_total_alumnos(self, obj):
+        return obj.lineas.count()
+
+
+class GenerarPromocionSerializer(serializers.Serializer):
+    anio = serializers.IntegerField(min_value=2000, max_value=2100)
+
+
+class ActualizarLineaSerializer(serializers.Serializer):
+    decision = serializers.ChoiceField(choices=PromocionAlumno.Decision.choices)
+    grado_destino = serializers.PrimaryKeyRelatedField(queryset=Grado.objects.all(), required=False, allow_null=True)
+    motivo = serializers.CharField(required=False, allow_blank=True, max_length=500)
+
+
+class ActualizarGrupoSerializer(serializers.Serializer):
+    grado_origen = serializers.PrimaryKeyRelatedField(queryset=Grado.objects.all())
+    decision = serializers.ChoiceField(choices=PromocionAlumno.Decision.choices)
+    grado_destino = serializers.PrimaryKeyRelatedField(queryset=Grado.objects.all(), required=False, allow_null=True)

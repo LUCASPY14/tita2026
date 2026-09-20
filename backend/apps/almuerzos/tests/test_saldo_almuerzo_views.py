@@ -5,6 +5,7 @@ confirmada/pendiente, confirmación manual y permisos.
 """
 import pytest
 from decimal import Decimal
+from django.utils import timezone
 from rest_framework.test import APIClient
 
 
@@ -511,7 +512,6 @@ class TestAdvertenciaSinCajaAbierta:
 @pytest.fixture
 def otra_familia(db, cliente, grado, usuario_cajero):
     """Un hijo de OTRO responsable con un consumo cobrado hoy."""
-    from datetime import date
     from apps.almuerzos.models import RegistroConsumoAlmuerzo
     from apps.clientes.models import Cliente, Hijo
     otro = Cliente.objects.create(
@@ -523,7 +523,7 @@ def otra_familia(db, cliente, grado, usuario_cajero):
         nombre="Ajeno", apellido="Otro", cliente_responsable=otro, grado=grado, activo=True,
     )
     RegistroConsumoAlmuerzo.objects.create(
-        hijo=ajeno, fecha_consumo=date.today(), costo_almuerzo=Decimal("25000"),
+        hijo=ajeno, fecha_consumo=timezone.localdate(), costo_almuerzo=Decimal("25000"),
         registrado_por=usuario_cajero,
     )
     return ajeno
@@ -540,10 +540,9 @@ class TestRegistrosConsumoAislamientoPortal:
     def test_padre_ve_los_consumos_de_su_propio_hijo(
         self, api_padre, otra_familia, hijo_almuerzo, usuario_cajero,
     ):
-        from datetime import date
         from apps.almuerzos.models import RegistroConsumoAlmuerzo
         propio = RegistroConsumoAlmuerzo.objects.create(
-            hijo=hijo_almuerzo, fecha_consumo=date.today(), costo_almuerzo=Decimal("25000"),
+            hijo=hijo_almuerzo, fecha_consumo=timezone.localdate(), costo_almuerzo=Decimal("25000"),
             registrado_por=usuario_cajero,
         )
         resp = api_padre.get("/api/v1/almuerzos/registros-consumo/")
@@ -564,10 +563,9 @@ class TestRegistrosConsumoAislamientoPortal:
 class TestResumenHoy:
 
     def _registro(self, hijo, usuario, **kw):
-        from datetime import date
         from apps.almuerzos.models import RegistroConsumoAlmuerzo
         datos = dict(
-            hijo=hijo, fecha_consumo=date.today(), costo_almuerzo=Decimal("25000"),
+            hijo=hijo, fecha_consumo=timezone.localdate(), costo_almuerzo=Decimal("25000"),
             registrado_por=usuario, ya_cobrado=True,
             estado=RegistroConsumoAlmuerzo.Estado.REGISTRADO,
         )
@@ -586,10 +584,10 @@ class TestResumenHoy:
         assert resp.data["almuerzos_hoy"] == 1
 
     def test_no_cuenta_anulados_ni_otros_dias(self, api_admin, hijo_almuerzo, usuario_cajero):
-        from datetime import date, timedelta
+        from datetime import timedelta
         from apps.almuerzos.models import RegistroConsumoAlmuerzo
         self._registro(hijo_almuerzo, usuario_cajero, estado=RegistroConsumoAlmuerzo.Estado.ANULADO)
-        self._registro(hijo_almuerzo, usuario_cajero, fecha_consumo=date.today() - timedelta(days=1))
+        self._registro(hijo_almuerzo, usuario_cajero, fecha_consumo=timezone.localdate() - timedelta(days=1))
         resp = api_admin.get("/api/v1/almuerzos/registros-consumo/resumen-hoy/")
         assert resp.data["almuerzos_hoy"] == 0
 

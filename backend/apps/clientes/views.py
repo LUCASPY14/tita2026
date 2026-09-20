@@ -12,6 +12,7 @@ from django.http import FileResponse, Http404, HttpResponse
 from django.utils import timezone
 
 from rest_framework import viewsets, status
+from rest_framework.exceptions import MethodNotAllowed
 from rest_framework.filters import SearchFilter
 from rest_framework.response import Response
 from rest_framework.views import APIView
@@ -39,6 +40,7 @@ from .models import (
     HistorialGrado,
     Hijo,
     Pais,
+    PromocionAnual,
     RestriccionHijo,
     TipoCliente,
 )
@@ -54,9 +56,15 @@ from .serializers import (
     HistorialGradoSerializer,
     HijoSerializer,
     PaisSerializer,
+    ActualizarGrupoSerializer,
+    ActualizarLineaSerializer,
+    GenerarPromocionSerializer,
+    PromocionAlumnoSerializer,
+    PromocionAnualSerializer,
     RestriccionHijoSerializer,
     TipoClienteSerializer,
 )
+from . import promocion as promo
 from .services import cambiar_titular, purgar_alumno
 
 
@@ -313,6 +321,8 @@ class HijoViewSet(viewsets.ModelViewSet):
                 grado_anterior=grado_anterior.nombre if grado_anterior else None,
                 grado_nuevo=hijo.grado.nombre if hijo.grado else "Sin grado",
                 anio_escolar=timezone.localdate().year,
+                motivo=HistorialGrado.Motivo.MANUAL,
+                usuario_registro=getattr(user, "email", None),
             )
             registrar_auditoria(
                 request=self.request,
@@ -399,9 +409,110 @@ class HijoViewSet(viewsets.ModelViewSet):
 
 
 class GradoViewSet(viewsets.ModelViewSet):
-    queryset = Grado.objects.all()
+    queryset = Grado.objects.select_related("siguiente").all()
     serializer_class = GradoSerializer
     permission_classes = [IsAdminOrReadOnly]
+
+    @action(detail=False, methods=["post"], url_path="sugerir-siguientes", permission_classes=[IsAdmin])
+    def sugerir_siguientes(self, request):
+        """Completa el grado siguiente donde falta y el nombre lo permite. Con
+        `{"aplicar": false}` solo muestra lo que haría."""
+        aplicar = request.data.get("aplicar", True) is not False
+        resultado = promo.sugerir_siguientes(aplicar=aplicar)
+        if aplicar and resultado["asignados"]:
+            registrar_auditoria(
+                request=request, operacion="SUGERIR_GRADOS_SIGUIENTES", tabla="clientes_grado",
+                descripcion=f"{len(resultado['asignados'])} grados con siguiente asignado",
+            )
+        return Response(resultado)
+
+
+class PromocionAnualViewSet(viewsets.ModelViewSet):
+    """Promoción anual de grados. Solo ADMIN: prepara el borrador, lo ajusta y lo aplica."""
+
+    http_method_names = ["get", "post", "patch", "delete", "head", "options"]
+    permission_classes = [IsAdmin]
+    serializer_class = PromocionAnualSerializer
+    queryset = PromocionAnual.objects.select_related("creada_por", "aplicada_por").all()
+
+    def create(self, request, *args, **kwargs):
+        datos = GenerarPromocionSerializer(data=request.data)
+        datos.is_valid(raise_exception=True)
+        promocion, creada = promo.generar_borrador(datos.validated_data["anio"], request.user)
+        return Response(
+            self._detalle(promocion), status=status.HTTP_201_CREATED if creada else status.HTTP_200_OK,
+        )
+
+    def retrieve(self, request, *args, **kwargs):
+        return Response(self._detalle(self.get_object()))
+
+    def partial_update(self, request, *args, **kwargs):
+        raise MethodNotAllowed(request.method)
+
+    def destroy(self, request, *args, **kwargs):
+        promocion = self.get_object()
+        if promocion.estado != PromocionAnual.Estado.BORRADOR:
+            return Response({"error": "Solo se elimina un borrador."}, status=status.HTTP_400_BAD_REQUEST)
+        registrar_auditoria(
+            request=request, operacion="PROMOCION_DESCARTAR", tabla="clientes_promocionanual",
+            id_registro=promocion.pk, descripcion=f"Borrador {promocion.anio} descartado",
+        )
+        promocion.delete()
+        return Response(status=status.HTTP_204_NO_CONTENT)
+
+    def _detalle(self, promocion):
+        lineas = promocion.lineas.select_related("hijo", "grado_origen", "grado_destino").order_by(
+            "grado_origen__nivel", "grado_origen__orden", "grado_origen__nombre",
+            "hijo__apellido", "hijo__nombre",
+        )
+        data = PromocionAnualSerializer(promocion).data
+        data["lineas"] = PromocionAlumnoSerializer(lineas, many=True).data
+        data["requisitos"] = promo.requisitos(promocion)
+        return data
+
+    @action(detail=True, methods=["patch"], url_path=r"lineas/(?P<linea_id>[0-9]+)")
+    def linea(self, request, pk=None, linea_id=None):
+        promocion = self.get_object()
+        obj = promocion.lineas.select_related("hijo", "grado_origen", "promocion").filter(pk=linea_id).first()
+        if obj is None:
+            return Response({"error": "Línea inexistente."}, status=status.HTTP_404_NOT_FOUND)
+        datos = ActualizarLineaSerializer(data=request.data)
+        datos.is_valid(raise_exception=True)
+        promo.actualizar_linea(
+            obj, datos.validated_data["decision"], datos.validated_data.get("grado_destino"),
+            datos.validated_data.get("motivo", ""),
+        )
+        return Response(self._detalle(promocion))
+
+    @action(detail=True, methods=["post"], url_path="lineas-masivas")
+    def lineas_masivas(self, request, pk=None):
+        promocion = self.get_object()
+        datos = ActualizarGrupoSerializer(data=request.data)
+        datos.is_valid(raise_exception=True)
+        resultado = promo.actualizar_grupo(
+            promocion, datos.validated_data["grado_origen"], datos.validated_data["decision"],
+            datos.validated_data.get("grado_destino"),
+        )
+        data = self._detalle(promocion)
+        data["resultado"] = resultado
+        return Response(data)
+
+    @action(detail=True, methods=["post"])
+    def refrescar(self, request, pk=None):
+        promocion = self.get_object()
+        agregados = promo.refrescar(promocion)
+        data = self._detalle(promocion)
+        data["agregados"] = agregados
+        return Response(data)
+
+    @action(detail=True, methods=["post"])
+    def aplicar(self, request, pk=None):
+        promocion = self.get_object()
+        resumen = promo.aplicar(promocion, request.user)
+        promocion.refresh_from_db()
+        data = self._detalle(promocion)
+        data["resumen"] = resumen
+        return Response(data)
 
 
 class CalendarioLectivoViewSet(viewsets.ModelViewSet):

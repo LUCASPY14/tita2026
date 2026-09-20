@@ -115,7 +115,8 @@
     "whatsapp":    "WhatsApp",
     "purgaAlumnos":"Purga de Alumnos",
     "notifications":"Notificaciones",
-    "schoolYear":  "Año lectivo"
+    "schoolYear":  "Año lectivo",
+    "promotion":   "Promoción anual"
   },
 
   "errors": {

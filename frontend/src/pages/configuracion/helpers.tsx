@@ -116,6 +116,8 @@ export interface Grado {
   orden: number
   es_ultimo: boolean
   activo: boolean
+  siguiente: number | null
+  siguiente_nombre: string | null
 }
 
 export interface DatosEmpresa {

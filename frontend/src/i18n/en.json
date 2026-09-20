@@ -112,7 +112,8 @@
     "whatsapp":    "WhatsApp",
     "purgaAlumnos":"Student Data Purge",
     "notifications":"Notifications",
-    "schoolYear":  "School year"
+    "schoolYear":  "School year",
+    "promotion":   "Yearly promotion"
   },
 
   "errors": {

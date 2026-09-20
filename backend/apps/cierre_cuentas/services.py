@@ -142,12 +142,17 @@ class CierreCuentaService:
     def abrir_masivo(anio=None, usuario=None):
         """Abre el expediente de todos los alumnos del último curso (activos) y de los
         dados de baja en el año. Es idempotente."""
-        from apps.clientes.models import Hijo
+        from apps.clientes.models import Hijo, PromocionAlumno
 
         anio = anio or timezone.localdate().year
+        # Quien repite o cambia de grado según el borrador de promoción no egresa.
+        continuan = PromocionAlumno.objects.filter(
+            promocion__anio=anio,
+            decision__in=[PromocionAlumno.Decision.REPITE, PromocionAlumno.Decision.CAMBIA],
+        ).values("hijo_id")
         alumnos = Hijo.objects.filter(
             Q(activo=True, grado__es_ultimo=True) | Q(activo=False, fecha_baja__year=anio)
-        ).select_related("tarjeta", "saldo_almuerzo")
+        ).exclude(pk__in=continuan).select_related("tarjeta", "saldo_almuerzo")
         creados = existentes = 0
         for hijo in alumnos:
             _, creado = CierreCuentaService.abrir(hijo, anio, usuario)

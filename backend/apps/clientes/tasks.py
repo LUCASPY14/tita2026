@@ -253,7 +253,7 @@ def dar_baja_alumnos_ultimo_curso():
     No borra ni ajusta saldos: si quedan saldos o deudas pendientes, avisa a los
     administradores con el detalle (se resuelven en el cierre de cuentas).
     """
-    from apps.clientes.models import Hijo
+    from apps.clientes.models import Hijo, PromocionAlumno
     from apps.clientes.vigencia import obtener_calendario
 
     hoy = timezone.localdate()
@@ -273,8 +273,14 @@ def dar_baja_alumnos_ultimo_curso():
         if cal.pk is None:
             cal.save()
 
+        # Quien repite (o cambia de grado) según el borrador de promoción sigue activo.
+        continuan = PromocionAlumno.objects.filter(
+            promocion__anio=cal.anio,
+            decision__in=[PromocionAlumno.Decision.REPITE, PromocionAlumno.Decision.CAMBIA],
+        ).values("hijo_id")
         egresados = list(
             Hijo.objects.filter(activo=True, grado__es_ultimo=True)
+            .exclude(pk__in=continuan)
             .select_related("tarjeta", "saldo_almuerzo")
         )
         ahora = timezone.now()
