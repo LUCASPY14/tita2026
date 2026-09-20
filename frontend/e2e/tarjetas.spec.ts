@@ -143,7 +143,7 @@ async function abrirFicha(page: import('@playwright/test').Page, tarjeta: Record
     route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ results: [tarjeta], count: 1 }) })
   )
   await page.route(/\/api\/v1\/core\/tarjetas\/resumen/, (route) =>
-    route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ tarjetas_con_deuda: 0, deuda_total: 0 }) })
+    route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ tarjetas_con_deuda_cantina: 0, deuda_cantina_total: 0, tarjetas_con_deuda_almuerzo: 0, deuda_almuerzo_total: 0 }) })
   )
   await page.route(/\/api\/v1\/core\/movimientos-tarjeta/, (route) =>
     route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(MOVIMIENTOS_MOCK) })
@@ -185,7 +185,7 @@ test.describe('Tarjetas — ficha financiera', () => {
   })
 })
 
-test.describe('Tarjetas — deuda de cantina', () => {
+test.describe('Tarjetas — deuda de cantina y almuerzo', () => {
   test('el filtro "Solo con deuda" consulta con con_deuda=true', async ({ page }) => {
     await loginAs(page, ADMIN)
     const urls: string[] = []
@@ -194,7 +194,7 @@ test.describe('Tarjetas — deuda de cantina', () => {
       return route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(TARJETAS_MOCK) })
     })
     await page.route(/\/api\/v1\/core\/tarjetas\/resumen/, (route) =>
-      route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ tarjetas_con_deuda: 2, deuda_total: 70000 }) })
+      route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ tarjetas_con_deuda_cantina: 2, deuda_cantina_total: 70000, tarjetas_con_deuda_almuerzo: 0, deuda_almuerzo_total: 0 }) })
     )
     await page.goto('/tarjetas')
     await page.getByText('T-001234').waitFor({ state: 'visible', timeout: 6000 })
@@ -204,16 +204,29 @@ test.describe('Tarjetas — deuda de cantina', () => {
     }).toPass({ timeout: 5000 })
   })
 
-  test('muestra cuántas tarjetas tienen deuda y el total', async ({ page }) => {
+  test('muestra cuántas tarjetas tienen deuda de cantina y el total', async ({ page }) => {
     await loginAs(page, ADMIN)
     await page.route(/\/api\/v1\/core\/tarjetas/, (route) =>
       route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(TARJETAS_MOCK) })
     )
     await page.route(/\/api\/v1\/core\/tarjetas\/resumen/, (route) =>
-      route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ tarjetas_con_deuda: 2, deuda_total: 70000 }) })
+      route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ tarjetas_con_deuda_cantina: 2, deuda_cantina_total: 70000, tarjetas_con_deuda_almuerzo: 0, deuda_almuerzo_total: 0 }) })
     )
     await page.goto('/tarjetas')
-    await expect(page.getByText(/2 con deuda/)).toBeVisible({ timeout: 6000 })
+    await expect(page.getByText(/2 con deuda de cantina/)).toBeVisible({ timeout: 6000 })
+  })
+
+  test('muestra por separado la deuda de almuerzo', async ({ page }) => {
+    await loginAs(page, ADMIN)
+    await page.route(/\/api\/v1\/core\/tarjetas/, (route) =>
+      route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(TARJETAS_MOCK) })
+    )
+    await page.route(/\/api\/v1\/core\/tarjetas\/resumen/, (route) =>
+      route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ tarjetas_con_deuda_cantina: 0, deuda_cantina_total: 0, tarjetas_con_deuda_almuerzo: 3, deuda_almuerzo_total: 45000 }) })
+    )
+    await page.goto('/tarjetas')
+    await expect(page.getByText(/3 con deuda de almuerzo/)).toBeVisible({ timeout: 6000 })
+    await expect(page.getByText(/45\.000/)).toBeVisible()
   })
 })
 

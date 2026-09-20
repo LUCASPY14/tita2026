@@ -19,7 +19,12 @@ export default function Tarjetas() {
   const [estadoFilter, setEstadoFilter] = useState('')
   const [conDeuda, setConDeuda] = useState(false)
   const conDeudaRef = useRef(false)
-  const [resumen, setResumen] = useState<{ tarjetas_con_deuda: number; deuda_total: number } | null>(null)
+  const [resumen, setResumen] = useState<{
+    tarjetas_con_deuda_cantina: number
+    deuda_cantina_total: number
+    tarjetas_con_deuda_almuerzo: number
+    deuda_almuerzo_total: number
+  } | null>(null)
   const [page, setPage] = useState(1)
   const [total, setTotal] = useState(0)
   const searchTimer = useRef<ReturnType<typeof setTimeout>>(undefined)
@@ -254,9 +259,14 @@ export default function Tarjetas() {
             Tarjetas
           </h2>
           <span className="text-sm text-slate-400">
-            {resumen && resumen.tarjetas_con_deuda > 0 && (
+            {resumen && resumen.tarjetas_con_deuda_cantina > 0 && (
               <span className="text-red-600 font-semibold mr-3">
-                {resumen.tarjetas_con_deuda} con deuda · {formatGs(resumen.deuda_total)}
+                {resumen.tarjetas_con_deuda_cantina} con deuda de cantina · {formatGs(resumen.deuda_cantina_total)}
+              </span>
+            )}
+            {resumen && resumen.tarjetas_con_deuda_almuerzo > 0 && (
+              <span className="text-orange-600 font-semibold mr-3">
+                {resumen.tarjetas_con_deuda_almuerzo} con deuda de almuerzo · {formatGs(resumen.deuda_almuerzo_total)}
               </span>
             )}
             {total} registros

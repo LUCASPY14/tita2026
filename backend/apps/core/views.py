@@ -74,14 +74,20 @@ class TarjetaViewSet(viewsets.ModelViewSet):
 
     @action(detail=False, methods=["get"], url_path="resumen")
     def resumen(self, request):
-        """GET /core/tarjetas/resumen/ — deuda de cantina acumulada en tarjetas."""
+        """GET /core/tarjetas/resumen/ — deuda acumulada en tarjetas, de cantina y de
+        almuerzo por separado (son dos bolsillos independientes, ver vigencia.py)."""
         from django.db.models import Count, Sum
-        agregado = Tarjeta.objects.filter(saldo_actual__lt=0).aggregate(
+        cantina = Tarjeta.objects.filter(saldo_actual__lt=0).aggregate(
             total=Sum("saldo_actual"), n=Count("pk"),
         )
+        almuerzo = Tarjeta.objects.filter(hijo__saldo_almuerzo__saldo_actual__lt=0).aggregate(
+            total=Sum("hijo__saldo_almuerzo__saldo_actual"), n=Count("pk"),
+        )
         return Response({
-            "tarjetas_con_deuda": agregado["n"],
-            "deuda_total": int(-(agregado["total"] or 0)),
+            "tarjetas_con_deuda_cantina": cantina["n"],
+            "deuda_cantina_total": int(-(cantina["total"] or 0)),
+            "tarjetas_con_deuda_almuerzo": almuerzo["n"],
+            "deuda_almuerzo_total": int(-(almuerzo["total"] or 0)),
         })
 
     def _auditar_sensibles(self, antes, tarjeta, operacion):
@@ -121,7 +127,8 @@ class TarjetaViewSet(viewsets.ModelViewSet):
                 Q(hijo__cliente_responsable_id=user.cliente_id) | Q(cliente_directo_id=user.cliente_id)
             )
         if self.request.query_params.get("con_deuda") in ("1", "true", "True"):
-            qs = qs.filter(saldo_actual__lt=0)
+            # Deuda de cantina o de almuerzo — son dos bolsillos independientes.
+            qs = qs.filter(Q(saldo_actual__lt=0) | Q(hijo__saldo_almuerzo__saldo_actual__lt=0))
         return qs
 
     def _cambiar_estado(self, request, pk, desde, hacia, operacion):

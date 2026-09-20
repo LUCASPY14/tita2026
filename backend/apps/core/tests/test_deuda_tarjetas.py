@@ -15,10 +15,13 @@ def grado(db):
     return g
 
 
-def _tarjeta(cliente, grado, nro, saldo, permite=True, limite=0):
+def _tarjeta(cliente, grado, nro, saldo, permite=True, limite=0, saldo_almuerzo=None):
+    from apps.almuerzos.models import SaldoAlmuerzo
     from apps.clientes.models import Hijo
     from apps.core.models import Tarjeta
     h = Hijo.objects.create(nombre=f"H{nro}", apellido="Deuda", cliente_responsable=cliente, grado=grado, activo=True)
+    if saldo_almuerzo is not None:
+        SaldoAlmuerzo.objects.create(hijo=h, saldo_actual=Decimal(str(saldo_almuerzo)))
     return Tarjeta.objects.create(
         nro_tarjeta=nro, hijo=h, saldo_actual=Decimal(str(saldo)),
         permite_saldo_negativo=permite, limite_credito=Decimal(str(limite)),
@@ -57,26 +60,34 @@ class TestFiltroYResumen:
 
     @pytest.fixture
     def tarjetas(self, cliente, grado):
-        _tarjeta(cliente, grado, "DF-OK", 30000)
+        _tarjeta(cliente, grado, "DF-OK", 30000, saldo_almuerzo=5000)
         _tarjeta(cliente, grado, "DF-D1", -20000)
         _tarjeta(cliente, grado, "DF-D2", -50000)
+        # Sin deuda de cantina, pero sí de almuerzo — es el caso que se estaba perdiendo.
+        _tarjeta(cliente, grado, "DF-D3", 10000, saldo_almuerzo=-15000)
 
-    def test_con_deuda_filtra_solo_negativas(self, usuario_cajero, tarjetas):
+    def test_con_deuda_filtra_cantina_o_almuerzo_negativos(self, usuario_cajero, tarjetas):
         resp = _api(usuario_cajero).get("/api/v1/core/tarjetas/", {"con_deuda": "true"})
-        assert sorted(t["nro_tarjeta"] for t in resp.data["results"]) == ["DF-D1", "DF-D2"]
+        assert sorted(t["nro_tarjeta"] for t in resp.data["results"]) == ["DF-D1", "DF-D2", "DF-D3"]
 
     def test_sin_filtro_devuelve_todas(self, usuario_cajero, tarjetas):
         resp = _api(usuario_cajero).get("/api/v1/core/tarjetas/")
-        assert resp.data["count"] == 3
+        assert resp.data["count"] == 4
 
-    def test_resumen(self, usuario_cajero, tarjetas):
+    def test_resumen_desglosa_cantina_y_almuerzo(self, usuario_cajero, tarjetas):
         resp = _api(usuario_cajero).get("/api/v1/core/tarjetas/resumen/")
         assert resp.status_code == 200
-        assert resp.data == {"tarjetas_con_deuda": 2, "deuda_total": 70000}
+        assert resp.data == {
+            "tarjetas_con_deuda_cantina": 2, "deuda_cantina_total": 70000,
+            "tarjetas_con_deuda_almuerzo": 1, "deuda_almuerzo_total": 15000,
+        }
 
     def test_resumen_sin_deudas(self, usuario_cajero):
         resp = _api(usuario_cajero).get("/api/v1/core/tarjetas/resumen/")
-        assert resp.data == {"tarjetas_con_deuda": 0, "deuda_total": 0}
+        assert resp.data == {
+            "tarjetas_con_deuda_cantina": 0, "deuda_cantina_total": 0,
+            "tarjetas_con_deuda_almuerzo": 0, "deuda_almuerzo_total": 0,
+        }
 
     def test_el_padre_no_accede_al_resumen(self, cliente, tarjetas):
         from apps.usuarios.models import Usuario
