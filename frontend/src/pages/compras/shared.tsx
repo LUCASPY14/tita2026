@@ -215,3 +215,31 @@ export const OC_ESTADO_LABEL: Record<string, string> = {
 }
 
 export const ITEM_EMPTY: ItemForm = { producto: null, cantidad: 1, costo_unitario: 0, subtotal: 0, precio_venta: 0 }
+
+// ─── Margen (costo de compra vs. precio de venta) ──────────────────────────────
+
+export interface Margen {
+  /** null cuando no hay precio de venta para comparar. */
+  pct: number | null
+  color: 'red' | 'orange' | 'green' | 'default'
+}
+
+/** Margen % = (venta - costo) / venta. <0% = pérdida, <15% = bajo, resto = ok. */
+export function calcularMargen(costo: number, precioVenta: number): Margen {
+  if (!precioVenta || precioVenta <= 0) return { pct: null, color: 'default' }
+  const pct = ((precioVenta - costo) / precioVenta) * 100
+  const color = pct < 0 ? 'red' : pct < 15 ? 'orange' : 'green'
+  return { pct, color }
+}
+
+export const MARGEN_TEXT_COLOR: Record<Margen['color'], string> = {
+  red: 'text-red-600',
+  orange: 'text-orange-600',
+  green: 'text-emerald-600',
+  default: 'text-slate-400',
+}
+
+export function formatMargen(margen: Margen): string {
+  if (margen.pct === null) return '—'
+  return `${margen.pct >= 0 ? '+' : ''}${margen.pct.toFixed(0)}%`
+}

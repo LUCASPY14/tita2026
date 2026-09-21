@@ -1,11 +1,14 @@
-import { useCallback, useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import toast from 'react-hot-toast'
 import { Edit2, Trash2, Plus, Search } from 'lucide-react'
 import api from '../../services/api'
 import Button from '../../components/ui/Button'
 import Modal from '../../components/ui/Modal'
 import Table, { type Column } from '../../components/ui/Table'
-import { extractErrorMessage, formatGs, formatFecha, type Producto, type Proveedor, type ProductoProveedorRecord } from './shared'
+import {
+  extractErrorMessage, formatGs, formatFecha, calcularMargen, formatMargen, MARGEN_TEXT_COLOR,
+  type Producto, type Proveedor, type ProductoProveedorRecord,
+} from './shared'
 
 const inputClass = 'border border-slate-200 rounded-xl px-3 py-2 text-base text-slate-900 bg-white focus:outline-none focus:ring-2 focus:ring-green-500/30 focus:border-green-500 transition-colors duration-150 w-full'
 const labelClass = 'block text-sm font-semibold text-slate-500 uppercase tracking-wide mb-1.5'
@@ -27,6 +30,12 @@ export default function TabProductosProveedor({ proveedores, productos }: { prov
 
   const [deleting, setDeleting] = useState<ProductoProveedorRecord | null>(null)
   const [removing, setRemoving] = useState(false)
+
+  const precioVentaPorProducto = useMemo(() => {
+    const map: Record<number, number> = {}
+    for (const p of productos) map[p.id_producto] = Number(p.precio_actual) || 0
+    return map
+  }, [productos])
 
   const load = useCallback(async (s: string, prov: string, p: number) => {
     setLoading(true)
@@ -94,6 +103,13 @@ export default function TabProductosProveedor({ proveedores, productos }: { prov
     { title: 'Proveedor', key: 'proveedor', render: (_, r) => <span className="text-sm font-medium text-slate-800">{r.proveedor_nombre}</span> },
     { title: 'Producto', key: 'producto', render: (_, r) => <span className="text-sm text-slate-700">{r.producto_nombre}</span> },
     { title: 'Precio de Compra', key: 'precio', render: (_, r) => <span className="tabular-nums text-sm font-medium text-slate-800">{formatGs(r.precio_compra)}</span> },
+    {
+      title: 'Margen', key: 'margen',
+      render: (_, r) => {
+        const margen = calcularMargen(Number(r.precio_compra) || 0, precioVentaPorProducto[r.producto] || 0)
+        return <span className={`tabular-nums text-sm font-bold ${MARGEN_TEXT_COLOR[margen.color]}`}>{formatMargen(margen)}</span>
+      },
+    },
     { title: 'Última Compra', key: 'fecha', render: (_, r) => <span className="text-sm text-slate-500">{r.fecha_ultima_compra ? formatFecha(r.fecha_ultima_compra) : '— sin compras'}</span> },
     {
       title: '', key: 'acc', width: 100,

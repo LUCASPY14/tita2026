@@ -8,7 +8,7 @@ import Combobox from '../../components/ui/Combobox'
 import Modal from '../../components/ui/Modal'
 import {
   extractErrorMessage, formatGs,
-  ITEM_EMPTY,
+  ITEM_EMPTY, calcularMargen, formatMargen, MARGEN_TEXT_COLOR,
   type CompraFormFields, type ItemForm, type OrdenCompra, type Producto, type ProductoProveedorRecord, type Proveedor,
 } from './shared'
 
@@ -158,8 +158,19 @@ export default function ModalOC({ open, editingOC, proveedores, productos, onClo
               <Plus className="w-3.5 h-3.5" /> Agregar
             </Button>
           </div>
+          <div className="flex gap-2 items-center px-3 mb-1">
+            <span className="flex-1 text-xs font-semibold text-slate-400 uppercase">Producto</span>
+            <span className="w-16 text-xs font-semibold text-slate-400 uppercase text-center">Cant.</span>
+            <span className="w-28 text-xs font-semibold text-slate-400 uppercase text-right">Costo compra</span>
+            <span className="w-28 text-xs font-semibold text-slate-400 uppercase text-right">Subtotal</span>
+            <span className="w-5" />
+          </div>
           <div className="space-y-2 max-h-52 overflow-y-auto pr-1">
-            {ocItems.map((item, idx) => (
+            {ocItems.map((item, idx) => {
+              const margen = item.producto
+                ? calcularMargen(item.costo_unitario, Number(item.producto.precio_actual) || 0)
+                : null
+              return (
               <div key={idx} className="flex gap-2 items-center bg-slate-50 rounded-xl px-3 py-2">
                 <div className="flex-1">
                   <Combobox
@@ -186,16 +197,23 @@ export default function ModalOC({ open, editingOC, proveedores, productos, onClo
                   }))}
                   className="w-16 border border-slate-200 rounded-xl px-2 py-2 text-sm text-center bg-white focus:outline-none focus:ring-2 focus:ring-green-500/30 focus:border-green-500"
                 />
-                <input
-                  type="number" min={0} value={item.costo_unitario}
-                  onChange={e => setOcItems(prev => prev.map((it, i) => {
-                    if (i !== idx) return it
-                    const costo = Number(e.target.value) || 0
-                    return { ...it, costo_unitario: costo, subtotal: it.cantidad * costo }
-                  }))}
-                  className="w-28 border border-slate-200 rounded-xl px-2 py-2 text-sm text-right bg-white focus:outline-none focus:ring-2 focus:ring-green-500/30 focus:border-green-500"
-                  placeholder="Costo"
-                />
+                <div className="w-28 shrink-0">
+                  <input
+                    type="number" min={0} value={item.costo_unitario}
+                    onChange={e => setOcItems(prev => prev.map((it, i) => {
+                      if (i !== idx) return it
+                      const costo = Number(e.target.value) || 0
+                      return { ...it, costo_unitario: costo, subtotal: it.cantidad * costo }
+                    }))}
+                    className="w-full border border-slate-200 rounded-xl px-2 py-2 text-sm text-right bg-white focus:outline-none focus:ring-2 focus:ring-green-500/30 focus:border-green-500"
+                    placeholder="Costo"
+                  />
+                  {margen && (
+                    <p className={`text-[10px] font-bold text-center mt-0.5 ${MARGEN_TEXT_COLOR[margen.color]}`}>
+                      {margen.pct === null ? 'Sin precio de venta' : `${formatMargen(margen)} margen ref.`}
+                    </p>
+                  )}
+                </div>
                 <span className="w-28 text-sm font-semibold text-right text-slate-700 tabular-nums">{formatGs(item.subtotal)}</span>
                 <button
                   onClick={() => setOcItems(prev => prev.length > 1 ? prev.filter((_, i) => i !== idx) : prev)}
@@ -204,7 +222,8 @@ export default function ModalOC({ open, editingOC, proveedores, productos, onClo
                   <X className="w-4 h-4" />
                 </button>
               </div>
-            ))}
+              )
+            })}
           </div>
           <div className="flex justify-between items-center mt-3 pt-3 border-t border-slate-200">
             <span className="text-sm font-semibold text-slate-600">Total estimado</span>

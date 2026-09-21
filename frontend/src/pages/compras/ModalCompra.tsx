@@ -8,7 +8,7 @@ import Combobox from '../../components/ui/Combobox'
 import Modal from '../../components/ui/Modal'
 import {
   extractErrorMessage, formatGs,
-  ITEM_EMPTY,
+  ITEM_EMPTY, calcularMargen, formatMargen, MARGEN_TEXT_COLOR,
   type Compra, type CompraFormFields, type ItemForm, type Producto, type ProductoProveedorRecord, type Proveedor,
 } from './shared'
 
@@ -299,12 +299,22 @@ export default function ModalCompra({ open, editingCompra, proveedores, producto
                   className="w-28 border border-slate-200 rounded-xl px-2 py-2 text-sm text-right bg-white focus:outline-none focus:ring-2 focus:ring-green-500/30 focus:border-green-500"
                   placeholder="Costo"
                 />
-                <input
-                  type="number" min={0} value={item.precio_venta || ''}
-                  onChange={e => actualizarItem(idx, 'precio_venta', Number(e.target.value) || 0)}
-                  className="w-28 border border-blue-200 rounded-xl px-2 py-2 text-sm text-right bg-blue-50 focus:outline-none focus:ring-2 focus:ring-blue-500/30 focus:border-blue-400"
-                  placeholder="Opcional"
-                />
+                <div className="w-28 shrink-0">
+                  <input
+                    type="number" min={0} value={item.precio_venta || ''}
+                    onChange={e => actualizarItem(idx, 'precio_venta', Number(e.target.value) || 0)}
+                    className="w-full border border-blue-200 rounded-xl px-2 py-2 text-sm text-right bg-blue-50 focus:outline-none focus:ring-2 focus:ring-blue-500/30 focus:border-blue-400"
+                    placeholder="Opcional"
+                  />
+                  {item.producto && (() => {
+                    const margen = calcularMargen(item.costo_unitario, item.precio_venta)
+                    return (
+                      <p className={`text-[10px] font-bold text-center mt-0.5 ${MARGEN_TEXT_COLOR[margen.color]}`}>
+                        {margen.pct === null ? 'Sin precio de venta' : `${formatMargen(margen)} margen`}
+                      </p>
+                    )
+                  })()}
+                </div>
                 <span className="w-24 text-sm font-semibold text-right text-slate-700 tabular-nums">{formatGs(item.subtotal)}</span>
                 <button
                   onClick={() => setItems(prev => prev.length > 1 ? prev.filter((_, i) => i !== idx) : prev)}
