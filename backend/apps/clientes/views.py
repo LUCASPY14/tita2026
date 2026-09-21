@@ -562,6 +562,68 @@ class CiudadViewSet(viewsets.ModelViewSet):
     permission_classes = [IsAdminOrReadOnly]
 
 
+def _dias_atraso_ciclo(movimientos_qs, hoy, negativo=False):
+    """
+    Antigüedad del ciclo de deuda vigente sobre un ledger de movimientos
+    (cuenta corriente, tarjeta o saldo de almuerzo — todos comparten los
+    campos `fecha` y `saldo_resultante`).
+
+    Busca el último movimiento en que el saldo volvió a estar en orden
+    (>=0 para cantina/almuerzo, que se miden en negativo; <=0 para cuenta
+    corriente, que se mide en positivo) y cuenta los días desde el primer
+    movimiento posterior que volvió a dejarlo en deuda. Si nunca estuvo en
+    orden, cuenta desde el movimiento más antiguo que ya estaba en deuda.
+    """
+    filtro_ok = {"saldo_resultante__gte": 0} if negativo else {"saldo_resultante__lte": 0}
+    filtro_en_deuda = {"saldo_resultante__lt": 0} if negativo else {"saldo_resultante__gt": 0}
+
+    ultimo_ok = (
+        movimientos_qs.filter(**filtro_ok)
+        .order_by("-fecha", "-pk")
+        .values("pk", "fecha")
+        .first()
+    )
+    if ultimo_ok:
+        inicio_ciclo = (
+            movimientos_qs.filter(pk__gt=ultimo_ok["pk"], **filtro_en_deuda)
+            .order_by("fecha", "pk")
+            .values("fecha")
+            .first()
+        )
+    else:
+        inicio_ciclo = (
+            movimientos_qs.filter(**filtro_en_deuda)
+            .order_by("fecha", "pk")
+            .values("fecha")
+            .first()
+        )
+    if not inicio_ciclo:
+        return 0
+    return (hoy - inicio_ciclo["fecha"].date()).days
+
+
+def _texto_detalle(entradas):
+    """Línea de texto plano con el desglose de deuda, para CSV/Excel."""
+    etiquetas = {"CUENTA_CORRIENTE": "Cta. Cte.", "CANTINA": "Cantina", "ALMUERZO": "Almuerzo"}
+    partes = []
+    for e in entradas:
+        etiqueta = etiquetas[e["tipo"]]
+        if e["hijo_nombre"]:
+            etiqueta += f" ({e['hijo_nombre']})"
+        partes.append(f"{etiqueta}: {e['monto']:,.0f}".replace(",", "."))
+    return " | ".join(partes)
+
+
+def _bucket_aging(dias_atraso):
+    if dias_atraso <= 30:
+        return "0-30"
+    if dias_atraso <= 60:
+        return "31-60"
+    if dias_atraso <= 90:
+        return "61-90"
+    return "90+"
+
+
 # ==============================================================================
 # REPORTE CUENTA CORRIENTE
 # ==============================================================================
@@ -569,75 +631,106 @@ class CiudadViewSet(viewsets.ModelViewSet):
 class ReporteCuentaCorrienteView(APIView):
     """
     GET /api/clientes/reporte-cuenta-corriente/
-    Clientes con saldo pendiente y distribución por aging (30/60/90/90+ días).
-    Opcional: ?formato=csv
+    Familias con deuda pendiente — cuenta corriente propia más la deuda de
+    la tarjeta de cantina y el saldo de almuerzo de sus hijos — con
+    distribución por aging (30/60/90/90+ días) según el ciclo de deuda más
+    antiguo entre los tres orígenes.
+    Opcional: ?formato=csv|excel
     """
     permission_classes = [IsStaffUser]
 
     def get(self, request):
         hoy = date.today()
 
-        # Último movimiento por cliente para conocer saldo actual
         from django.db.models import OuterRef, Subquery
+        from apps.core.models import MovimientoTarjeta, Tarjeta
+        from apps.almuerzos.models import MovimientoSaldoAlmuerzo, SaldoAlmuerzo
 
+        detalle_por_cliente: dict[int, list[dict]] = {}
+
+        def _agregar(cliente_id, entrada):
+            detalle_por_cliente.setdefault(cliente_id, []).append(entrada)
+
+        # ---- Cuenta corriente ----
         ultimo_mov = (
             CuentaCorrienteCliente.objects
             .filter(cliente=OuterRef("pk"))
             .order_by("-id_movimiento_cc")
             .values("saldo_resultante")[:1]
         )
-        clientes_con_saldo = (
+        clientes_con_saldo_cc = (
             Cliente.objects
             .filter(activo=True)
-            .annotate(saldo_deuda=Subquery(ultimo_mov))
-            .filter(saldo_deuda__gt=0)
-            .order_by("-saldo_deuda")
+            .annotate(saldo_deuda_cc=Subquery(ultimo_mov))
+            .filter(saldo_deuda_cc__gt=0)
         )
+        for cliente in clientes_con_saldo_cc:
+            saldo_cc = Decimal(str(cliente.saldo_deuda_cc or 0))
+            dias_atraso = _dias_atraso_ciclo(
+                CuentaCorrienteCliente.objects.filter(cliente=cliente), hoy,
+            )
+            _agregar(cliente.pk, {
+                "tipo": "CUENTA_CORRIENTE",
+                "hijo_nombre": None,
+                "nro_tarjeta": None,
+                "monto": int(saldo_cc),
+                "dias_atraso": dias_atraso,
+            })
+
+        # ---- Tarjeta de cantina (deuda por hijo) ----
+        tarjetas_deuda = (
+            Tarjeta.objects
+            .filter(saldo_actual__lt=0, hijo__cliente_responsable__activo=True)
+            .select_related("hijo", "hijo__cliente_responsable")
+        )
+        for tarjeta in tarjetas_deuda:
+            cliente_id = tarjeta.hijo.cliente_responsable_id
+            dias_atraso = _dias_atraso_ciclo(
+                MovimientoTarjeta.objects.filter(tarjeta=tarjeta), hoy, negativo=True,
+            )
+            _agregar(cliente_id, {
+                "tipo": "CANTINA",
+                "hijo_nombre": tarjeta.hijo.nombre_completo,
+                "nro_tarjeta": tarjeta.nro_tarjeta,
+                "monto": int(-tarjeta.saldo_actual),
+                "dias_atraso": dias_atraso,
+            })
+
+        # ---- Saldo de almuerzo (deuda por hijo) ----
+        saldos_deuda = (
+            SaldoAlmuerzo.objects
+            .filter(saldo_actual__lt=0, hijo__cliente_responsable__activo=True)
+            .select_related("hijo", "hijo__cliente_responsable", "hijo__tarjeta")
+        )
+        for saldo in saldos_deuda:
+            cliente_id = saldo.hijo.cliente_responsable_id
+            dias_atraso = _dias_atraso_ciclo(
+                MovimientoSaldoAlmuerzo.objects.filter(saldo=saldo), hoy, negativo=True,
+            )
+            nro_tarjeta = getattr(getattr(saldo.hijo, "tarjeta", None), "nro_tarjeta", None)
+            _agregar(cliente_id, {
+                "tipo": "ALMUERZO",
+                "hijo_nombre": saldo.hijo.nombre_completo,
+                "nro_tarjeta": nro_tarjeta,
+                "monto": int(-saldo.saldo_actual),
+                "dias_atraso": dias_atraso,
+            })
+
+        clientes_map = {
+            c.pk: c for c in Cliente.objects.filter(pk__in=detalle_por_cliente.keys())
+        }
 
         filas = []
-        for cliente in clientes_con_saldo:
-            saldo = Decimal(str(cliente.saldo_deuda or 0))
-
-            # Aging = antigüedad del ciclo de deuda actual.
-            # Buscamos el último movimiento donde el saldo volvió a 0 (o quedó negativo),
-            # y contamos desde el primer movimiento posterior a ese punto.
-            ultimo_saldo_cero = (
-                CuentaCorrienteCliente.objects
-                .filter(cliente=cliente, saldo_resultante__lte=0)
-                .order_by("-fecha", "-id_movimiento_cc")
-                .values("id_movimiento_cc", "fecha")
-                .first()
-            )
-            dias_atraso = 0
-            if ultimo_saldo_cero:
-                # Primer mov con saldo > 0 DESPUÉS del último cierre
-                inicio_ciclo = (
-                    CuentaCorrienteCliente.objects
-                    .filter(cliente=cliente, id_movimiento_cc__gt=ultimo_saldo_cero["id_movimiento_cc"], saldo_resultante__gt=0)
-                    .order_by("fecha", "id_movimiento_cc")
-                    .values("fecha")
-                    .first()
-                )
-            else:
-                # El saldo nunca fue 0: tomar el movimiento más antiguo con saldo > 0
-                inicio_ciclo = (
-                    CuentaCorrienteCliente.objects
-                    .filter(cliente=cliente, saldo_resultante__gt=0)
-                    .order_by("fecha", "id_movimiento_cc")
-                    .values("fecha")
-                    .first()
-                )
-            if inicio_ciclo:
-                dias_atraso = (hoy - inicio_ciclo["fecha"].date()).days
-
-            if dias_atraso <= 30:
-                bucket = "0-30"
-            elif dias_atraso <= 60:
-                bucket = "31-60"
-            elif dias_atraso <= 90:
-                bucket = "61-90"
-            else:
-                bucket = "90+"
+        for cliente_id, entradas in detalle_por_cliente.items():
+            cliente = clientes_map.get(cliente_id)
+            if cliente is None:
+                continue
+            saldo = sum(e["monto"] for e in entradas)
+            if saldo <= 0:
+                continue
+            dias_atraso = max(e["dias_atraso"] for e in entradas)
+            bucket = _bucket_aging(dias_atraso)
+            entradas.sort(key=lambda e: (e["tipo"] != "CUENTA_CORRIENTE", -e["monto"]))
 
             filas.append({
                 "cliente_id": cliente.pk,
@@ -646,11 +739,13 @@ class ReporteCuentaCorrienteView(APIView):
                 "telefono": cliente.telefono or "",
                 "email": cliente.email or "",
                 "saldo_deuda": int(saldo),
-                "saldo_cantina": int(cliente.saldo_cc_cantina),
-                "saldo_almuerzo": int(cliente.saldo_cc_almuerzo),
+                "saldo_cc_cantina": int(cliente.saldo_cc_cantina),
+                "saldo_cc_almuerzo": int(cliente.saldo_cc_almuerzo),
                 "dias_atraso": dias_atraso,
                 "aging": bucket,
+                "deuda_detalle": entradas,
             })
+        filas.sort(key=lambda f: -f["saldo_deuda"])
 
         # Totales por bucket
         aging_totales = {"0-30": 0, "31-60": 0, "61-90": 0, "90+": 0}
@@ -669,12 +764,14 @@ class ReporteCuentaCorrienteView(APIView):
             writer = csv.writer(resp)
             writer.writerow(["REPORTE CUENTA CORRIENTE", str(hoy)])
             writer.writerow([])
-            writer.writerow(["Cliente", "RUC/CI", "Teléfono", "Email", "Saldo (Gs)",
-                              "Cantina (Gs)", "Almuerzo (Gs)", "Días atraso", "Aging"])
+            writer.writerow(["Cliente", "RUC/CI", "Teléfono", "Email", "Deuda total (Gs)",
+                              "Cta. Cte. Cantina (Gs)", "Cta. Cte. Almuerzo (Gs)",
+                              "Días atraso", "Aging", "Detalle"])
             for f in filas:
                 writer.writerow([f["cliente"], f["ruc_ci"], f["telefono"],
-                                  f["email"], f["saldo_deuda"], f["saldo_cantina"],
-                                  f["saldo_almuerzo"], f["dias_atraso"], f["aging"]])
+                                  f["email"], f["saldo_deuda"], f["saldo_cc_cantina"],
+                                  f["saldo_cc_almuerzo"], f["dias_atraso"], f["aging"],
+                                  _texto_detalle(f["deuda_detalle"])])
             writer.writerow([])
             writer.writerow(["TOTALES POR AGING"])
             for bucket, total in aging_totales.items():
@@ -699,8 +796,9 @@ class ReporteCuentaCorrienteView(APIView):
             ws["A1"].font = Font(bold=True, size=13)
             ws.append([])
 
-            headers = ["Cliente", "RUC/CI", "Teléfono", "Email", "Saldo (Gs)",
-                       "Cantina (Gs)", "Almuerzo (Gs)", "Días atraso", "Aging"]
+            headers = ["Cliente", "RUC/CI", "Teléfono", "Email", "Deuda total (Gs)",
+                       "Cta. Cte. Cantina (Gs)", "Cta. Cte. Almuerzo (Gs)",
+                       "Días atraso", "Aging", "Detalle"]
             ws.append(headers)
             for cell in ws[ws.max_row]:
                 cell.font = header_font
@@ -709,25 +807,26 @@ class ReporteCuentaCorrienteView(APIView):
 
             for f in filas:
                 ws.append([f["cliente"], f["ruc_ci"], f["telefono"],
-                            f["email"], f["saldo_deuda"], f["saldo_cantina"],
-                            f["saldo_almuerzo"], f["dias_atraso"], f["aging"]])
+                            f["email"], f["saldo_deuda"], f["saldo_cc_cantina"],
+                            f["saldo_cc_almuerzo"], f["dias_atraso"], f["aging"],
+                            _texto_detalle(f["deuda_detalle"])])
 
             ws.append([])
-            ws.append(["TOTALES POR AGING", "", "", "", "", "", "", "", ""])
+            ws.append(["TOTALES POR AGING", "", "", "", "", "", "", "", "", ""])
             for cell in ws[ws.max_row]:
                 cell.font = total_font
             for bucket, total in aging_totales.items():
-                row = [bucket, "", "", "", total, "", "", "", ""]
+                row = [bucket, "", "", "", total, "", "", "", "", ""]
                 ws.append(row)
                 for cell in ws[ws.max_row]:
                     cell.fill = totals_fill
 
             ws.append([])
-            ws.append(["TOTAL DEUDA", "", "", "", total_deuda, "", "", "", ""])
+            ws.append(["TOTAL DEUDA", "", "", "", total_deuda, "", "", "", "", ""])
             for cell in ws[ws.max_row]:
                 cell.font = total_font
 
-            col_widths = [35, 14, 14, 28, 14, 14, 14, 14, 10]
+            col_widths = [35, 14, 14, 28, 14, 16, 16, 14, 10, 45]
             for i, w in enumerate(col_widths, 1):
                 ws.column_dimensions[ws.cell(row=1, column=i).column_letter].width = w
 

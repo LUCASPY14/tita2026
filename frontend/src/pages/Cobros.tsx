@@ -1,9 +1,18 @@
 import { useCallback, useEffect, useState } from 'react'
-import { HandCoins, Users, AlertTriangle, RefreshCw, Search, FileWarning } from 'lucide-react'
+import { useNavigate } from 'react-router-dom'
+import { HandCoins, Users, AlertTriangle, RefreshCw, Search, FileWarning, Wallet } from 'lucide-react'
 import toast from 'react-hot-toast'
 import api from '../services/api'
 import ModalPagarCC from './clientes/ModalPagarCC'
 import { formatGs, type Cliente } from './clientes/shared'
+
+interface DetalleDeuda {
+  tipo: 'CUENTA_CORRIENTE' | 'CANTINA' | 'ALMUERZO'
+  hijo_nombre: string | null
+  nro_tarjeta: string | null
+  monto: number
+  dias_atraso: number
+}
 
 interface DeudorRow {
   cliente_id: number
@@ -14,6 +23,13 @@ interface DeudorRow {
   saldo_deuda: number
   dias_atraso: number
   aging: '0-30' | '31-60' | '61-90' | '90+'
+  deuda_detalle: DetalleDeuda[]
+}
+
+const ETIQUETA_TIPO: Record<DetalleDeuda['tipo'], string> = {
+  CUENTA_CORRIENTE: 'Cta. Cte.',
+  CANTINA: 'Cantina',
+  ALMUERZO: 'Almuerzo',
 }
 
 interface ReporteCuenta {
@@ -34,6 +50,7 @@ const AGING_BADGE: Record<string, string> = {
 }
 
 export default function Cobros() {
+  const navigate = useNavigate()
   const [reporte, setReporte] = useState<ReporteCuenta | null>(null)
   const [loading, setLoading] = useState(false)
   const [busqueda, setBusqueda] = useState('')
@@ -153,11 +170,34 @@ export default function Cobros() {
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-50">
-                {filas.map(row => (
+                {filas.map(row => {
+                  const detalle = row.deuda_detalle ?? []
+                  const tieneCC = detalle.some(d => d.tipo === 'CUENTA_CORRIENTE')
+                  const mostrarDesglose = detalle.length > 1 || (detalle.length === 1 && !tieneCC)
+                  return (
                   <tr key={row.cliente_id} className="hover:bg-slate-50/50 transition-colors">
                     <td className="px-5 py-3.5">
                       <p className="font-semibold text-slate-900">{row.cliente}</p>
                       {row.telefono && <p className="text-xs text-slate-400 mt-0.5">{row.telefono}</p>}
+                      {mostrarDesglose && (
+                        <div className="mt-1 space-y-0.5">
+                          {detalle.map((d, i) => (
+                            <p key={i} className="text-xs text-slate-400 flex items-center gap-1.5">
+                              <span>
+                                {ETIQUETA_TIPO[d.tipo]}{d.hijo_nombre ? ` (${d.hijo_nombre})` : ''}: {formatGs(d.monto)}
+                              </span>
+                              {d.tipo !== 'CUENTA_CORRIENTE' && d.nro_tarjeta && (
+                                <button
+                                  onClick={() => navigate(`/carga-saldo?tarjeta=${encodeURIComponent(d.nro_tarjeta ?? '')}&tipo=${d.tipo}`)}
+                                  className="text-emerald-600 hover:underline font-semibold cursor-pointer"
+                                >
+                                  Cargar saldo →
+                                </button>
+                              )}
+                            </p>
+                          ))}
+                        </div>
+                      )}
                     </td>
                     <td className="px-4 py-3.5 font-mono text-slate-600 text-xs">{row.ruc_ci || '—'}</td>
                     <td className="px-4 py-3.5 text-center">
@@ -177,16 +217,29 @@ export default function Cobros() {
                       )}
                     </td>
                     <td className="px-4 py-3.5">
-                      <button
-                        onClick={() => abrirCobrar(row)}
-                        className="flex items-center gap-1.5 px-3.5 py-1.5 bg-green-600 hover:bg-green-500 text-white text-sm font-bold rounded-xl transition-colors cursor-pointer ml-auto"
-                      >
-                        <HandCoins className="w-4 h-4" />
-                        Cobrar
-                      </button>
+                      {tieneCC && (
+                        <button
+                          onClick={() => abrirCobrar(row)}
+                          className="flex items-center gap-1.5 px-3.5 py-1.5 bg-green-600 hover:bg-green-500 text-white text-sm font-bold rounded-xl transition-colors cursor-pointer ml-auto"
+                        >
+                          <HandCoins className="w-4 h-4" />
+                          Cobrar
+                        </button>
+                      )}
+                      {!tieneCC && detalle.length === 1 && (
+                        <button
+                          onClick={() => navigate(`/carga-saldo?tarjeta=${encodeURIComponent(detalle[0].nro_tarjeta ?? '')}&tipo=${detalle[0].tipo}`)}
+                          disabled={!detalle[0].nro_tarjeta}
+                          className="flex items-center gap-1.5 px-3.5 py-1.5 bg-emerald-600 hover:bg-emerald-500 disabled:opacity-40 disabled:cursor-not-allowed text-white text-sm font-bold rounded-xl transition-colors cursor-pointer ml-auto"
+                        >
+                          <Wallet className="w-4 h-4" />
+                          Cargar saldo
+                        </button>
+                      )}
                     </td>
                   </tr>
-                ))}
+                  )
+                })}
               </tbody>
             </table>
           </div>

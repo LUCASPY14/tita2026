@@ -429,6 +429,114 @@ class TestReporteCuentaCorriente:
         assert ws.max_row >= 2  # encabezado + al menos 1 fila de datos
 
 
+# ── ReporteCuentaCorrienteView: deuda de tarjeta y saldo de almuerzo ─────────
+
+@pytest.mark.django_db
+class TestReporteCuentaCorrienteDeudaWallets:
+
+    @pytest.fixture
+    def tarjeta_con_deuda(self, hijo_fixture):
+        from apps.core.models import MovimientoTarjeta, Tarjeta
+        tarjeta = Tarjeta.objects.create(
+            nro_tarjeta="T-001", hijo=hijo_fixture,
+            saldo_actual=Decimal("-300000"), permite_saldo_negativo=True,
+        )
+        MovimientoTarjeta.objects.create(
+            tarjeta=tarjeta, tipo=MovimientoTarjeta.Tipo.CONSUMO, monto=Decimal("300000"),
+            saldo_anterior=Decimal("0"), saldo_resultante=Decimal("-300000"),
+        )
+        return tarjeta
+
+    @pytest.fixture
+    def saldo_almuerzo_con_deuda(self, hijo_fixture):
+        from apps.almuerzos.models import MovimientoSaldoAlmuerzo, SaldoAlmuerzo
+        saldo = SaldoAlmuerzo.objects.create(hijo=hijo_fixture, saldo_actual=Decimal("-175000"))
+        MovimientoSaldoAlmuerzo.objects.create(
+            saldo=saldo, tipo=MovimientoSaldoAlmuerzo.Tipo.CONSUMO, monto=Decimal("-175000"),
+            saldo_resultante=Decimal("-175000"),
+        )
+        return saldo
+
+    def test_deuda_de_tarjeta_cantina_aparece_sin_deuda_cc(self, api_admin, tarjeta_con_deuda, hijo_fixture):
+        resp = api_admin.get("/api/v1/clientes/reporte-cuenta-corriente/")
+        assert resp.status_code == 200
+        detalle = resp.data["detalle"]
+        fila = next(f for f in detalle if f["cliente_id"] == hijo_fixture.cliente_responsable_id)
+        assert fila["saldo_deuda"] == 300000
+        [entrada] = fila["deuda_detalle"]
+        assert entrada["tipo"] == "CANTINA"
+        assert entrada["hijo_nombre"] == "Pedro López"
+        assert entrada["nro_tarjeta"] == "T-001"
+        assert entrada["monto"] == 300000
+
+    def test_deuda_de_almuerzo_aparece_sin_deuda_cc(self, api_admin, saldo_almuerzo_con_deuda, hijo_fixture):
+        resp = api_admin.get("/api/v1/clientes/reporte-cuenta-corriente/")
+        assert resp.status_code == 200
+        detalle = resp.data["detalle"]
+        fila = next(f for f in detalle if f["cliente_id"] == hijo_fixture.cliente_responsable_id)
+        assert fila["saldo_deuda"] == 175000
+        [entrada] = fila["deuda_detalle"]
+        assert entrada["tipo"] == "ALMUERZO"
+        assert entrada["hijo_nombre"] == "Pedro López"
+        assert entrada["monto"] == 175000
+
+    def test_deuda_total_combina_cc_cantina_y_almuerzo(
+        self, api_admin, cuenta_con_deuda, tarjeta_con_deuda, saldo_almuerzo_con_deuda, cliente,
+    ):
+        resp = api_admin.get("/api/v1/clientes/reporte-cuenta-corriente/")
+        assert resp.status_code == 200
+        fila = next(f for f in resp.data["detalle"] if f["cliente_id"] == cliente.pk)
+        # cuenta_con_deuda = 50000, tarjeta = 300000, almuerzo = 175000
+        assert fila["saldo_deuda"] == 50000 + 300000 + 175000
+        tipos = {e["tipo"] for e in fila["deuda_detalle"]}
+        assert tipos == {"CUENTA_CORRIENTE", "CANTINA", "ALMUERZO"}
+
+    def test_antiguedad_toma_el_ciclo_mas_antiguo_entre_origenes(
+        self, api_admin, cliente, hijo_fixture,
+    ):
+        from django.utils import timezone
+        import datetime
+        from apps.core.models import MovimientoTarjeta, Tarjeta
+        from apps.almuerzos.models import MovimientoSaldoAlmuerzo, SaldoAlmuerzo
+
+        tarjeta = Tarjeta.objects.create(
+            nro_tarjeta="T-002", hijo=hijo_fixture,
+            saldo_actual=Decimal("-10000"), permite_saldo_negativo=True,
+        )
+        MovimientoTarjeta.objects.create(
+            tarjeta=tarjeta, tipo=MovimientoTarjeta.Tipo.CONSUMO, monto=Decimal("10000"),
+            saldo_anterior=Decimal("0"), saldo_resultante=Decimal("-10000"),
+            fecha=timezone.now() - datetime.timedelta(days=5),
+        )
+        saldo = SaldoAlmuerzo.objects.create(hijo=hijo_fixture, saldo_actual=Decimal("-20000"))
+        MovimientoSaldoAlmuerzo.objects.create(
+            saldo=saldo, tipo=MovimientoSaldoAlmuerzo.Tipo.CONSUMO, monto=Decimal("-20000"),
+            saldo_resultante=Decimal("-20000"),
+            fecha=timezone.now() - datetime.timedelta(days=95),
+        )
+        resp = api_admin.get("/api/v1/clientes/reporte-cuenta-corriente/")
+        assert resp.status_code == 200
+        fila = next(f for f in resp.data["detalle"] if f["cliente_id"] == cliente.pk)
+        assert fila["dias_atraso"] >= 95
+        assert fila["aging"] == "90+"
+
+    def test_cliente_inactivo_no_aparece_aunque_el_hijo_deba(self, api_admin, cliente, hijo_fixture):
+        from apps.core.models import MovimientoTarjeta, Tarjeta
+        tarjeta = Tarjeta.objects.create(
+            nro_tarjeta="T-003", hijo=hijo_fixture,
+            saldo_actual=Decimal("-10000"), permite_saldo_negativo=True,
+        )
+        MovimientoTarjeta.objects.create(
+            tarjeta=tarjeta, tipo=MovimientoTarjeta.Tipo.CONSUMO, monto=Decimal("10000"),
+            saldo_anterior=Decimal("0"), saldo_resultante=Decimal("-10000"),
+        )
+        cliente.activo = False
+        cliente.save(update_fields=["activo"])
+        resp = api_admin.get("/api/v1/clientes/reporte-cuenta-corriente/")
+        assert resp.status_code == 200
+        assert all(f["cliente_id"] != cliente.pk for f in resp.data["detalle"])
+
+
 # ── CuentaCorrienteClienteViewSet.create ─────────────────────────────────────
 
 @pytest.mark.django_db
