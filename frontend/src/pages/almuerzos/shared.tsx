@@ -105,8 +105,7 @@ export interface CuentaMensual {
   anio: number
   mes: number | null
   es_arrastre: boolean
-  arrastre_hasta_anio: number | null
-  arrastre_hasta_mes: number | null
+  arrastre_hasta_fecha: string | null
   cantidad_almuerzos: number
   monto_total: string | number
   monto_pagado: string | number

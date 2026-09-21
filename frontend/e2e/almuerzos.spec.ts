@@ -130,8 +130,7 @@ const CUENTA_MOCK = {
   anio: 2026,
   mes: 5,
   es_arrastre: false,
-  arrastre_hasta_anio: null,
-  arrastre_hasta_mes: null,
+  arrastre_hasta_fecha: null,
   cantidad_almuerzos: 3,
   monto_total: '45000',
   monto_pagado: '0',
@@ -254,17 +253,17 @@ test.describe('Almuerzos — Cuentas Mensuales', () => {
     await expect(page.getByText('45.000').first()).toBeVisible()
   })
 
-  test('una fila de arrastre no tiene botón Cargar saldo ni saldo propio', async ({ page }) => {
+  test('una fila de arrastre muestra el saldo traído del sistema anterior, sin botón Cargar saldo', async ({ page }) => {
     const arrastre = {
       ...CUENTA_MOCK, id: '1-2026-arrastre', mes: null, es_arrastre: true,
-      arrastre_hasta_anio: 2026, arrastre_hasta_mes: 8,
-      saldo_inicial: null, saldo_final: null, saldo_pendiente: null, estado: null,
+      arrastre_hasta_fecha: '2026-08-07',
+      saldo_inicial: null, saldo_final: 100000, saldo_pendiente: 0, estado: 'PAGADO',
     }
     await page.route(/\/api\/v1\/almuerzos\/estado-cuenta/, (route) =>
       route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ results: [arrastre], count: 1 }) })
     )
     await page.getByRole('button', { name: 'Cuentas Mensuales' }).click()
-    await expect(page.getByText('Antes de Agosto 2026')).toBeVisible({ timeout: 6000 })
+    await expect(page.getByText('Antes del 07/08/2026')).toBeVisible({ timeout: 6000 })
     await expect(page.getByRole('button', { name: /Cargar saldo/i })).toHaveCount(0)
   })
 

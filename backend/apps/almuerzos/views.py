@@ -473,31 +473,40 @@ class EstadoCuentaAlmuerzoView(APIView):
     """
     GET /api/v1/almuerzos/estado-cuenta/?anio=2026&mes=9 (mes opcional)
     Fuente del tab "Cuentas Mensuales" del staff, calculado en vivo:
-      - cantidad_almuerzos / monto_total: RegistroConsumoAlmuerzo del mes.
-      - monto_pagado: recargas de saldo CONFIRMADAS de ese mismo mes.
+      - cantidad_almuerzos / monto_total / monto_pagado: consumos y recargas
+        del mes, pero solo los que ya tienen rastro en la billetera (ver
+        "corte" abajo) — así estas columnas siempre cuadran con el saldo.
       - saldo_inicial / saldo_final: arrastre real, reconstruido desde el
         historial de la billetera (MovimientoSaldoAlmuerzo) — el saldo_final
         de un mes es el saldo_inicial del siguiente. estado se calcula sobre
-        el saldo_final de ESE mes, no sobre el saldo de hoy (antes de este
-        cambio, la deuda mostrada era siempre la de hoy repetida en cada fila).
-      - Si el alumno no tiene ningún movimiento de billetera (cuenta vieja
-        sin historial, o un fixture de test con saldo cargado a mano), no hay
-        arrastre que reconstruir: saldo_final usa el saldo de hoy en todas
-        sus filas, igual que el comportamiento anterior.
-      - Los meses anteriores al primer movimiento de billetera del alumno
-        (de cuando el cobro era solo por CuentaAlmuerzoMensual, antes de que
-        existiera SaldoAlmuerzo) se agrupan en una única fila "arrastre" con
-        lo que costaron y se pagó en conjunto — no queda rastro para
-        reconstruirlos mes a mes, y por eso no llevan saldo propio.
-    Una fila por hijo y mes con consumo en el período, más la fila de
-    arrastre si corresponde.
+        el saldo_final de ESE mes, no sobre el saldo de hoy.
+
+    "Corte" de un alumno = el instante exacto de su primer movimiento de
+    billetera (no el mes calendario: una migración puede caer a mitad de
+    mes, y todo lo anterior a ese instante — aunque sea del mismo mes —
+    nunca tocó la billetera). Todo consumo o recarga con fecha_creacion /
+    fecha_carga anterior al corte se agrupa en una única fila "arrastre",
+    en vez de contarse en el mes que le tocaría por calendario.
+      - Si el primer movimiento es un AJUSTE (cuenta migrada desde el
+        sistema viejo), su saldo_resultante es lo que se "trajo" de antes
+        y pasa a ser el saldo_inicial real del primer mes con billetera
+        (no 0) — así saldo_inicial + pagado − consumido = saldo_final
+        cierra exacto, sin un ajuste invisible.
+      - Si el primer movimiento es un consumo o recarga real (alumno nuevo,
+        nunca migrado), no hay nada que traer: arrastre = 0, y en la
+        práctica no aparece fila de arrastre si tampoco hay consumos previos
+        sin rastro. Esto es automático para cualquier alumno, viejo o nuevo.
+      - Sin ningún movimiento de billetera (cuenta sin historial, o un
+        saldo cargado a mano sin pasar por el servicio): no hay corte que
+        aplicar — se usa el saldo de hoy en todas las filas, igual que
+        antes de que existiera este reporte.
+    Una fila por hijo y mes con actividad posterior a su corte, más la fila
+    de arrastre cuando corresponde.
     """
     permission_classes = [IsStaffUser]
 
     def get(self, request):
         from collections import defaultdict
-        from django.db.models import Count, Sum
-        from django.db.models.functions import ExtractMonth
         from apps.clientes.models import Hijo
         from .models import MovimientoSaldoAlmuerzo, RecargaSaldoAlmuerzo, SaldoAlmuerzo
 
@@ -515,14 +524,9 @@ class EstadoCuentaAlmuerzoView(APIView):
         )
         if mes:
             consumos_qs = consumos_qs.filter(fecha_consumo__month=mes)
+        consumos = list(consumos_qs.values("hijo_id", "fecha_consumo", "costo_almuerzo", "fecha_creacion"))
 
-        agregados = list(
-            consumos_qs
-            .annotate(mes_c=ExtractMonth("fecha_consumo"))
-            .values("hijo_id", "mes_c")
-            .annotate(cantidad=Count("id_registro_consumo"), monto=Sum("costo_almuerzo"))
-        )
-        hijo_ids = {a["hijo_id"] for a in agregados}
+        hijo_ids = {c["hijo_id"] for c in consumos}
         if not hijo_ids:
             return Response({"count": 0, "results": []})
 
@@ -537,14 +541,14 @@ class EstadoCuentaAlmuerzoView(APIView):
         )
         if mes:
             recargas_qs = recargas_qs.filter(fecha_carga__month=mes)
-        recargas_por_hijo_mes = {
-            (r["hijo_id"], r["mes_r"]): r["total"]
-            for r in (
-                recargas_qs.annotate(mes_r=ExtractMonth("fecha_carga"))
-                .values("hijo_id", "mes_r")
-                .annotate(total=Sum("monto_cargado"))
-            )
-        }
+        recargas_por_hijo = defaultdict(list)
+        for r in recargas_qs.values("hijo_id", "fecha_carga", "monto_cargado"):
+            recargas_por_hijo[r["hijo_id"]].append(r)
+
+        consumos_por_hijo = defaultdict(list)
+        for c in consumos:
+            consumos_por_hijo[c["hijo_id"]].append(c)
+
         saldo_actual_por_hijo = dict(
             SaldoAlmuerzo.objects.filter(hijo_id__in=hijo_ids).values_list("hijo_id", "saldo_actual")
         )
@@ -554,18 +558,12 @@ class EstadoCuentaAlmuerzoView(APIView):
             MovimientoSaldoAlmuerzo.objects
             .filter(saldo__hijo_id__in=hijo_ids)
             .order_by("saldo__hijo_id", "fecha")
-            .values("saldo__hijo_id", "fecha", "saldo_resultante")
+            .values("saldo__hijo_id", "fecha", "saldo_resultante", "tipo")
         ):
-            movimientos_por_hijo[m["saldo__hijo_id"]].append((m["fecha"], m["saldo_resultante"]))
-
-        meses_por_hijo = defaultdict(list)
-        for a in agregados:
-            meses_por_hijo[a["hijo_id"]].append(a)
-        for lista in meses_por_hijo.values():
-            lista.sort(key=lambda a: a["mes_c"])
+            movimientos_por_hijo[m["saldo__hijo_id"]].append(m)
 
         filas = []
-        for hijo_id, meses in meses_por_hijo.items():
+        for hijo_id in hijo_ids:
             hijo = hijos_map.get(hijo_id)
             if not hijo:
                 continue
@@ -573,13 +571,39 @@ class EstadoCuentaAlmuerzoView(APIView):
             movimientos = movimientos_por_hijo.get(hijo_id, [])
             saldo_actual = int(saldo_actual_por_hijo.get(hijo_id, 0) or 0)
 
-            arrastre_cantidad = arrastre_monto = arrastre_pagado = 0
+            corte = None
+            saldo_arrastre = 0
+            if movimientos:
+                primero = movimientos[0]
+                corte = primero["fecha"]
+                if primero["tipo"] == MovimientoSaldoAlmuerzo.Tipo.AJUSTE:
+                    saldo_arrastre = int(primero["saldo_resultante"])
 
-            for a in meses:
-                mes_c = a["mes_c"]
+            # Repartir consumos/recargas entre "antes del corte" (arrastre,
+            # sin rastro en la billetera) y "después" (mes a mes, real).
+            consumos_post = defaultdict(lambda: {"cantidad": 0, "monto": 0})
+            arrastre_cantidad = arrastre_monto = 0
+            for c in consumos_por_hijo.get(hijo_id, []):
+                if corte is not None and c["fecha_creacion"] < corte:
+                    arrastre_cantidad += 1
+                    arrastre_monto += int(c["costo_almuerzo"] or 0)
+                else:
+                    grupo = consumos_post[c["fecha_consumo"].month]
+                    grupo["cantidad"] += 1
+                    grupo["monto"] += int(c["costo_almuerzo"] or 0)
+
+            pagado_post = defaultdict(int)
+            arrastre_pagado = 0
+            for r in recargas_por_hijo.get(hijo_id, []):
+                if corte is not None and r["fecha_carga"] < corte:
+                    arrastre_pagado += int(r["monto_cargado"] or 0)
+                else:
+                    pagado_post[r["fecha_carga"].month] += int(r["monto_cargado"] or 0)
+
+            for mes_c in sorted(consumos_post):
                 primer_dia = date(anio, mes_c, 1)
                 primer_dia_sig = date(anio + 1, 1, 1) if mes_c == 12 else date(anio, mes_c + 1, 1)
-                pagado_mes = int(recargas_por_hijo_mes.get((hijo_id, mes_c), 0) or 0)
+                pagado_mes = pagado_post.get(mes_c, 0)
 
                 if not movimientos:
                     # Sin ningún movimiento de billetera: no hay arrastre que
@@ -588,22 +612,15 @@ class EstadoCuentaAlmuerzoView(APIView):
                     saldo_inicial = None
                 else:
                     anterior = hasta = None
-                    for fecha_mov, saldo_res in movimientos:
-                        fecha_mov_date = fecha_mov.date()
+                    for m in movimientos:
+                        fecha_mov_date = m["fecha"].date()
                         if fecha_mov_date >= primer_dia_sig:
                             break
                         if fecha_mov_date < primer_dia:
-                            anterior = saldo_res
-                        hasta = saldo_res
-                    if hasta is None:
-                        # Todo el mes es anterior al primer movimiento real —
-                        # se junta en la fila de arrastre, sin saldo propio.
-                        arrastre_cantidad += a["cantidad"]
-                        arrastre_monto += int(a["monto"] or 0)
-                        arrastre_pagado += pagado_mes
-                        continue
-                    saldo_inicial = anterior if anterior is not None else 0
-                    saldo_final = hasta
+                            anterior = m["saldo_resultante"]
+                        hasta = m["saldo_resultante"]
+                    saldo_inicial = int(anterior) if anterior is not None else saldo_arrastre
+                    saldo_final = int(hasta) if hasta is not None else saldo_inicial
 
                 filas.append({
                     "id": f"{hijo_id}-{anio}-{mes_c}",
@@ -614,10 +631,9 @@ class EstadoCuentaAlmuerzoView(APIView):
                     "anio": anio,
                     "mes": mes_c,
                     "es_arrastre": False,
-                    "arrastre_hasta_anio": None,
-                    "arrastre_hasta_mes": None,
-                    "cantidad_almuerzos": a["cantidad"],
-                    "monto_total": int(a["monto"] or 0),
+                    "arrastre_hasta_fecha": None,
+                    "cantidad_almuerzos": consumos_post[mes_c]["cantidad"],
+                    "monto_total": consumos_post[mes_c]["monto"],
                     "monto_pagado": pagado_mes,
                     "saldo_inicial": saldo_inicial,
                     "saldo_final": saldo_final,
@@ -625,8 +641,7 @@ class EstadoCuentaAlmuerzoView(APIView):
                     "estado": "PENDIENTE" if saldo_final < 0 else "PAGADO",
                 })
 
-            if arrastre_cantidad:
-                primer_mov_fecha = movimientos[0][0]
+            if arrastre_cantidad or saldo_arrastre:
                 filas.append({
                     "id": f"{hijo_id}-{anio}-arrastre",
                     "hijo": hijo_id,
@@ -636,15 +651,14 @@ class EstadoCuentaAlmuerzoView(APIView):
                     "anio": anio,
                     "mes": None,
                     "es_arrastre": True,
-                    "arrastre_hasta_anio": primer_mov_fecha.year,
-                    "arrastre_hasta_mes": primer_mov_fecha.month,
+                    "arrastre_hasta_fecha": corte.date().isoformat() if corte else None,
                     "cantidad_almuerzos": arrastre_cantidad,
                     "monto_total": arrastre_monto,
                     "monto_pagado": arrastre_pagado,
                     "saldo_inicial": None,
-                    "saldo_final": None,
-                    "saldo_pendiente": None,
-                    "estado": None,
+                    "saldo_final": saldo_arrastre,
+                    "saldo_pendiente": max(0, -saldo_arrastre),
+                    "estado": "PENDIENTE" if saldo_arrastre < 0 else "PAGADO",
                 })
 
         filas.sort(key=lambda f: (-f["anio"], -(f["mes"] or -1)))

@@ -81,7 +81,9 @@ function gs(n: number | string | null | undefined) {
 
 function periodoCuenta(c: CuentaMensual) {
   if (c.es_arrastre) {
-    return `Antes de ${c.arrastre_hasta_mes != null ? MESES[c.arrastre_hasta_mes] : ''} ${c.arrastre_hasta_anio ?? ''}`
+    if (!c.arrastre_hasta_fecha) return 'Antes de tener billetera'
+    const [y, m, d] = c.arrastre_hasta_fecha.split('-')
+    return `Antes del ${d}/${m}/${y}`
   }
   return `${c.mes != null ? MESES[c.mes] : ''} ${c.anio}`
 }
@@ -211,7 +213,7 @@ export interface CuentaMensual {
   nro_tarjeta?: string
   anio: number; mes: number | null
   es_arrastre: boolean
-  arrastre_hasta_anio: number | null; arrastre_hasta_mes: number | null
+  arrastre_hasta_fecha: string | null
   cantidad_almuerzos: number; monto_total: string | number
   monto_pagado: string | number; saldo_pendiente: string | number | null; estado: string | null
 }

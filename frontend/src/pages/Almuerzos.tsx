@@ -7,6 +7,7 @@ import {
   PauseCircle, Banknote, EyeOff, Eye, FileText, Trash2, Wallet,
 } from 'lucide-react'
 import api from '../services/api'
+import { formatDateOnly } from '../lib/format'
 import { useAuthStore } from '../store/authStore'
 import { exportarCuentasMensualesPDF, type RegistroConsumoDetalle } from '../utils/pdf'
 import Badge from '../components/ui/Badge'
@@ -426,7 +427,7 @@ export default function Almuerzos() {
       key: 'periodo',
       render: (_, r) => r.es_arrastre ? (
         <span className="text-sm text-slate-500 italic">
-          Antes de {r.arrastre_hasta_mes !== null ? MESES[r.arrastre_hasta_mes] : ''} {r.arrastre_hasta_anio}
+          Antes del {formatDateOnly(r.arrastre_hasta_fecha)}
         </span>
       ) : (
         <span className="text-sm text-slate-600">{r.mes !== null ? MESES[r.mes] : ''} {r.anio}</span>
