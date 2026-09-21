@@ -134,6 +134,11 @@ services:
       backend:
         condition: service_healthy
     restart: unless-stopped
+    # Sin esto, un deploy puede tardar de más esperando el "warm shutdown" de
+    # Celery (termina la tarea en curso antes de cerrar) antes de recrear el
+    # contenedor. Las tareas periódicas son reintentables (autoretry_for), así
+    # que cortar una a mitad de un deploy es aceptable.
+    stop_grace_period: 30s
     networks:
       - cantina_net
 
@@ -159,6 +164,7 @@ services:
       backend:
         condition: service_healthy
     restart: unless-stopped
+    stop_grace_period: 10s
     networks:
       - cantina_net
 
