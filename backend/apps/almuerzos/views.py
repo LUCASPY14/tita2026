@@ -43,7 +43,6 @@ from .models import (
     MenuDiario,
     MovimientoSaldoAlmuerzo,
     PagoCuentaAlmuerzo,
-    PlanAlmuerzo,
     PrecioAlmuerzo,
     ProductoAlergeno,
     RecargaSaldoAlmuerzo,
@@ -59,7 +58,6 @@ from .serializers import (
     MenuDiarioSerializer,
     MovimientoSaldoAlmuerzoSerializer,
     PagoCuentaAlmuerzoSerializer,
-    PlanAlmuerzoSerializer,
     PrecioAlmuerzoSerializer,
     ProductoAlergenoSerializer,
     RecargaSaldoAlmuerzoSerializer,
@@ -137,19 +135,6 @@ class TipoAlmuerzoViewSet(viewsets.ModelViewSet):
 
 
 # ==============================================================================
-# PLAN ALMUERZO
-# ==============================================================================
-
-class PlanAlmuerzoViewSet(viewsets.ModelViewSet):
-    queryset = PlanAlmuerzo.objects.all()
-    serializer_class = PlanAlmuerzoSerializer
-    permission_classes = [IsAdminOrReadOnly]
-    filter_backends = [DjangoFilterBackend, SearchFilter]
-    filterset_fields = ["activo", "tipo"]
-    search_fields = ["nombre"]
-
-
-# ==============================================================================
 # SUSCRIPCION ALMUERZO
 # ==============================================================================
 
@@ -157,11 +142,11 @@ class SuscripcionAlmuerzoViewSet(viewsets.ModelViewSet):
     serializer_class = SuscripcionAlmuerzoSerializer
     permission_classes = [IsStaffOrClienteWeb]
     filter_backends = [DjangoFilterBackend, OrderingFilter]
-    filterset_fields = ["estado", "hijo", "plan"]
+    filterset_fields = ["estado", "hijo"]
     ordering = ["-fecha_inicio"]
 
     def get_queryset(self):
-        qs = SuscripcionAlmuerzo.objects.select_related("hijo", "plan").all()
+        qs = SuscripcionAlmuerzo.objects.select_related("hijo").all()
         user = self.request.user
         if user.rol == "CLIENTE_WEB":
             if not user.cliente:

@@ -165,17 +165,6 @@ export interface TipoAlmuerzo {
   es_predeterminado: boolean
 }
 
-export interface PlanAlmuerzo {
-  id_plan_almuerzo: number
-  nombre: string
-  tipo: 'CANTIDAD' | 'SIN_LIMITE'
-  precio_mensual: string | number
-  cantidad_almuerzos_mes: number | null
-  dias_semana_incluidos: number[]
-  activo: boolean
-  es_predeterminado: boolean
-}
-
 export interface UnidadMedida {
   id_unidad_medida: number
   nombre: string

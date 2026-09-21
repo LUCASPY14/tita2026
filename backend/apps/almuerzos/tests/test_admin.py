@@ -20,7 +20,6 @@ def sa_client(db):
 @pytest.mark.parametrize("url", [
     "/admin/almuerzos/precioalmuerzo/",
     "/admin/almuerzos/tipoalmuerzo/",
-    "/admin/almuerzos/planalmuerzo/",
     "/admin/almuerzos/suscripcionalmuerzo/",
     "/admin/almuerzos/registroconsumoalmuerzo/",
     "/admin/almuerzos/cuentaalmuerzomensual/",

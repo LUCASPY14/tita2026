@@ -1,6 +1,6 @@
 """
 Modelos de la app almuerzos
-Gestión de almuerzos escolares: precios, planes, suscripciones y consumo
+Gestión de almuerzos escolares: precios, suscripciones y consumo
 """
 
 from datetime import date
@@ -109,63 +109,16 @@ class TipoAlmuerzo(models.Model):
 
 
 # ==============================================================================
-# PLAN DE ALMUERZO
-# ==============================================================================
-
-class PlanAlmuerzo(models.Model):
-    """Plan de almuerzo mensual o por cantidad."""
-
-    class TipoPlan(models.TextChoices):
-        CANTIDAD = "CANTIDAD", "Mensual con cantidad fija"
-        SIN_LIMITE = "SIN_LIMITE", "Mensual sin límite (cuenta corriente)"
-
-    id_plan_almuerzo = models.BigAutoField(primary_key=True)
-    nombre = models.CharField(max_length=100, unique=True)
-    descripcion = models.TextField(blank=True, null=True)
-    tipo = models.CharField(
-        max_length=15, choices=TipoPlan.choices, default=TipoPlan.SIN_LIMITE,
-    )
-    precio_mensual = models.DecimalField(
-        max_digits=12, decimal_places=0,
-        help_text="Precio mensual fijo de referencia en Guaraníes",
-    )
-    cantidad_almuerzos_mes = models.IntegerField(
-        blank=True, null=True,
-        help_text="Solo para tipo=CANTIDAD: máximo de almuerzos por mes",
-    )
-    dias_semana_incluidos = models.CharField(
-        max_length=60,
-        help_text="Días de la semana incluidos (ej: LUN,MAR,MIE,JUE,VIE)",
-    )
-    activo = models.BooleanField(default=True)
-    es_predeterminado = models.BooleanField(
-        default=False,
-        help_text="Plan preseleccionado al dar de alta una suscripción (solo uno puede serlo)",
-    )
-    fecha_creacion = models.DateTimeField(auto_now_add=True)
-
-    class Meta:
-        verbose_name = "Plan de Almuerzo"
-        verbose_name_plural = "Planes de Almuerzo"
-        ordering = ["nombre"]
-
-    def __str__(self):
-        return self.nombre
-
-    def save(self, *args, **kwargs):
-        if self.es_predeterminado:
-            PlanAlmuerzo.objects.filter(es_predeterminado=True).exclude(pk=self.pk).update(
-                es_predeterminado=False
-            )
-        super().save(*args, **kwargs)
-
-
-# ==============================================================================
 # SUSCRIPCIÓN DE ALMUERZO
 # ==============================================================================
 
 class SuscripcionAlmuerzo(models.Model):
-    """Suscripción de un hijo a un plan de almuerzo."""
+    """Habilitación de un hijo para comer en el comedor, con vigencia.
+
+    No tiene un "plan" asociado — el almuerzo se cobra siempre por consumo
+    real (ver AlmuerzoService._debitar_saldo_almuerzo), la suscripción solo
+    controla quién puede registrar un ingreso al comedor y en qué período.
+    """
 
     class Estado(models.TextChoices):
         ACTIVA = "ACTIVA", "Activa"
@@ -175,9 +128,6 @@ class SuscripcionAlmuerzo(models.Model):
     id_suscripcion = models.BigAutoField(primary_key=True)
     hijo = models.ForeignKey(
         "clientes.Hijo", models.PROTECT, related_name="suscripciones_almuerzo"
-    )
-    plan = models.ForeignKey(
-        PlanAlmuerzo, models.PROTECT, related_name="suscripciones"
     )
     fecha_inicio = models.DateField()
     fecha_fin = models.DateField(blank=True, null=True)
@@ -198,7 +148,7 @@ class SuscripcionAlmuerzo(models.Model):
         ]
 
     def __str__(self):
-        return f"{self.hijo} - {self.plan} ({self.get_estado_display()})"
+        return f"{self.hijo} ({self.get_estado_display()})"
 
 
 # ==============================================================================

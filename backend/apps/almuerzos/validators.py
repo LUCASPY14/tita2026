@@ -111,7 +111,6 @@ def resolver_suscripcion_activa(hijo, fecha_consumo):
             fecha_inicio__lte=fecha_consumo,
         )
         .filter(Q(fecha_fin__isnull=True) | Q(fecha_fin__gte=fecha_consumo))
-        .select_related("plan")
         .first()
     )
 

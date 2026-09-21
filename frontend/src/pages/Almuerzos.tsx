@@ -24,7 +24,7 @@ import ModalConfirmarAnular from './almuerzos/ModalConfirmarAnular'
 import {
   extractErrorMessage, formatGs, formatFecha, MESES,
   ESTADO_REGISTRO_COLOR, ESTADO_CUENTA_COLOR, ESTADO_SUSCRIPCION_COLOR,
-  type TabKey, type Hijo, type TipoAlmuerzo, type PlanAlmuerzo, type Suscripcion,
+  type TabKey, type Hijo, type TipoAlmuerzo, type Suscripcion,
   type MenuDiario, type RegistroConsumo, type CuentaMensual,
   type SaldoAlmuerzoItem, type ResumenSaldos, type CargaAlmuerzoTarget, type RecargaPendiente,
 } from './almuerzos/shared'
@@ -37,7 +37,6 @@ export default function Almuerzos() {
   // ── Catálogos ─────────────────────────────────────────────────────
   const [hijos, setHijos] = useState<Hijo[]>([])
   const [tiposAlmuerzo, setTiposAlmuerzo] = useState<TipoAlmuerzo[]>([])
-  const [planes, setPlanes] = useState<PlanAlmuerzo[]>([])
 
   // ── Consumos ─────────────────────────────────────────────────────
   const [registros, setRegistros] = useState<RegistroConsumo[]>([])
@@ -94,11 +93,9 @@ export default function Almuerzos() {
     Promise.all([
       api.get('/clientes/hijos/', { params: { page_size: 500 } }),
       api.get('/almuerzos/tipos-almuerzo/', { params: { page_size: 100 } }),
-      api.get('/almuerzos/planes-almuerzo/', { params: { page_size: 100 } }),
-    ]).then(([hRes, tRes, pRes]) => {
+    ]).then(([hRes, tRes]) => {
       setHijos(hRes.data.results ?? [])
       setTiposAlmuerzo(tRes.data.results ?? [])
-      setPlanes(pRes.data.results ?? [])
     }).catch(() => toast.error('Error al cargar datos iniciales'))
   }, [])
 
@@ -536,11 +533,6 @@ export default function Almuerzos() {
       render: (_, r) => <span className="text-sm font-medium text-slate-800">{r.hijo_nombre}</span>,
     },
     {
-      title: 'Plan',
-      key: 'plan',
-      render: (_, r) => <span className="text-sm text-slate-700">{r.plan_nombre}</span>,
-    },
-    {
       title: 'Inicio',
       key: 'inicio',
       render: (_, r) => <span className="text-sm text-slate-500">{formatFecha(r.fecha_inicio)}</span>,
@@ -900,7 +892,6 @@ export default function Almuerzos() {
       <ModalSuscripcion
         open={suscModalOpen}
         hijos={hijos}
-        planes={planes}
         onClose={() => setSuscModalOpen(false)}
         onSaved={loadSuscripciones}
       />
@@ -919,7 +910,6 @@ export default function Almuerzos() {
       />
       <ModalEditSusc
         susc={editingSusc}
-        planes={planes}
         onClose={() => setEditingSusc(null)}
         onSaved={loadSuscripciones}
       />

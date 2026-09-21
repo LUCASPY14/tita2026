@@ -72,7 +72,7 @@ def rutas_get():
 def familias(db, cliente, usuario_cajero):
     """Familia A (usuario del portal) y familia B (datos marcados con ZZAJENO)."""
     from apps.almuerzos.models import (
-        CuentaAlmuerzoMensual, PlanAlmuerzo, RegistroConsumoAlmuerzo,
+        CuentaAlmuerzoMensual, RegistroConsumoAlmuerzo,
         SaldoAlmuerzo, SuscripcionAlmuerzo,
     )
     from apps.clientes.models import Cliente, Grado, Hijo, RestriccionHijo
@@ -111,9 +111,8 @@ def familias(db, cliente, usuario_cajero):
         hijo=hijo_b, fecha_consumo=date.today(), costo_almuerzo=Decimal("25000"),
         registrado_por=usuario_cajero,
     )
-    plan = PlanAlmuerzo.objects.create(nombre="Plan ISO", activo=True, precio_mensual=Decimal("1"))
     susc_b = SuscripcionAlmuerzo.objects.create(
-        hijo=hijo_b, plan=plan, fecha_inicio=date.today(),
+        hijo=hijo_b, fecha_inicio=date.today(),
         estado=SuscripcionAlmuerzo.Estado.ACTIVA,
     )
     saldo_b = SaldoAlmuerzo.objects.create(hijo=hijo_b, saldo_actual=Decimal("-1234"))

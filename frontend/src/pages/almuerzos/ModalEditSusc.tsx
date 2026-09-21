@@ -2,31 +2,29 @@ import { useState } from 'react'
 import toast from 'react-hot-toast'
 import api from '../../services/api'
 import Modal from '../../components/ui/Modal'
-import { extractErrorMessage, formatGs, type PlanAlmuerzo, type Suscripcion } from './shared'
+import { extractErrorMessage, type Suscripcion } from './shared'
 
 interface Props {
   susc: Suscripcion | null
-  planes: PlanAlmuerzo[]
   onClose: () => void
   onSaved: () => void
 }
 
-export default function ModalEditSusc({ susc, planes, onClose, onSaved }: Props) {
-  const [form, setForm] = useState({ plan: '', fecha_fin: '' })
+export default function ModalEditSusc({ susc, onClose, onSaved }: Props) {
+  const [form, setForm] = useState({ fecha_fin: '' })
   const [saving, setSaving] = useState(false)
 
   const [prevSusc, setPrevSusc] = useState(susc)
   if (susc !== prevSusc) {
     setPrevSusc(susc)
-    if (susc) setForm({ plan: String(susc.plan), fecha_fin: susc.fecha_fin ?? '' })
+    if (susc) setForm({ fecha_fin: susc.fecha_fin ?? '' })
   }
 
   async function handleSave() {
-    if (!susc || !form.plan) { toast.error('Seleccioná un plan'); return }
+    if (!susc) return
     setSaving(true)
     try {
       await api.patch(`/almuerzos/suscripciones/${susc.id_suscripcion}/`, {
-        plan: Number(form.plan),
         fecha_fin: form.fecha_fin || null,
       })
       toast.success('Suscripción actualizada')
@@ -53,15 +51,6 @@ export default function ModalEditSusc({ susc, planes, onClose, onSaved }: Props)
       width={440}
     >
       <div className="space-y-4">
-        <div>
-          <label className={labelClass}>Plan *</label>
-          <select value={form.plan} onChange={e => setForm(f => ({ ...f, plan: e.target.value }))} className={inputClass}>
-            <option value="">Seleccionar...</option>
-            {planes.filter(p => p.activo).map(p => (
-              <option key={p.id_plan_almuerzo} value={p.id_plan_almuerzo}>{p.nombre} — {formatGs(p.precio_mensual)}/mes</option>
-            ))}
-          </select>
-        </div>
         <div>
           <label className={labelClass}>Fecha de Fin (opcional)</label>
           <input

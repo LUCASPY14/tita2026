@@ -49,23 +49,10 @@ def tipo_almuerzo(db):
 
 
 @pytest.fixture
-def plan_almuerzo(db):
-    from apps.almuerzos.models import PlanAlmuerzo
-    return PlanAlmuerzo.objects.create(
-        nombre="Plan Mensual Test",
-        tipo=PlanAlmuerzo.TipoPlan.SIN_LIMITE,
-        precio_mensual=Decimal("200000"),
-        dias_semana_incluidos="LUN,MAR,MIE,JUE,VIE",
-        activo=True,
-    )
-
-
-@pytest.fixture
-def suscripcion(db, hijo_almuerzo, plan_almuerzo):
+def suscripcion(db, hijo_almuerzo):
     from apps.almuerzos.models import SuscripcionAlmuerzo
     return SuscripcionAlmuerzo.objects.create(
         hijo=hijo_almuerzo,
-        plan=plan_almuerzo,
         fecha_inicio=date(2026, 1, 1),
         estado=SuscripcionAlmuerzo.Estado.ACTIVA,
     )
@@ -198,36 +185,13 @@ class TestTipoAlmuerzo:
         assert tipo_almuerzo.es_predeterminado is True
 
 
-# ── PlanAlmuerzo ──────────────────────────────────────────────────────────────
-
-@pytest.mark.django_db
-class TestPlanAlmuerzo:
-
-    def test_str(self, plan_almuerzo):
-        assert "Plan Mensual Test" in str(plan_almuerzo)
-
-    def test_save_es_predeterminado_desactiva_el_anterior(self, plan_almuerzo):
-        from apps.almuerzos.models import PlanAlmuerzo
-        plan_almuerzo.es_predeterminado = True
-        plan_almuerzo.save()
-        nuevo = PlanAlmuerzo.objects.create(
-            nombre="Plan Cantidad Test", tipo=PlanAlmuerzo.TipoPlan.CANTIDAD,
-            precio_mensual=Decimal("150000"), cantidad_almuerzos_mes=20,
-            dias_semana_incluidos="LUN,MAR,MIE,JUE,VIE", activo=True, es_predeterminado=True,
-        )
-        plan_almuerzo.refresh_from_db()
-        assert plan_almuerzo.es_predeterminado is False
-        assert nuevo.es_predeterminado is True
-
-
 # ── SuscripcionAlmuerzo ───────────────────────────────────────────────────────
 
 @pytest.mark.django_db
 class TestSuscripcionAlmuerzo:
 
     def test_str(self, suscripcion):
-        s = str(suscripcion)
-        assert "Plan Mensual Test" in s or "Activa" in s
+        assert "Activa" in str(suscripcion)
 
 
 # ── RegistroConsumoAlmuerzo ───────────────────────────────────────────────────

@@ -1,6 +1,6 @@
 ﻿"""
 Admin para la app almuerzos
-Gestión de precios, planes, suscripciones, consumo y alérgenos
+Gestión de precios, suscripciones, consumo y alérgenos
 """
 
 from django.contrib import admin
@@ -10,7 +10,6 @@ from django.utils.html import format_html
 from .models import (
     PrecioAlmuerzo,
     TipoAlmuerzo,
-    PlanAlmuerzo,
     SuscripcionAlmuerzo,
     RegistroConsumoAlmuerzo,
     CuentaAlmuerzoMensual,
@@ -62,39 +61,6 @@ class TipoAlmuerzoAdmin(admin.ModelAdmin):
 
 
 # ==============================================================================
-# PLAN DE ALMUERZO
-# ==============================================================================
-
-@admin.register(PlanAlmuerzo)
-class PlanAlmuerzoAdmin(admin.ModelAdmin):
-    list_display = [
-        "nombre",
-        "tipo_badge",
-        "precio_mensual_display",
-        "cantidad_almuerzos_mes",
-        "dias_semana_incluidos",
-        "activo",
-        "es_predeterminado",
-    ]
-    list_filter = ["activo", "es_predeterminado", "tipo"]
-    search_fields = ["nombre"]
-
-    def tipo_badge(self, obj):
-        colors = {"CANTIDAD": "#0d6efd", "SIN_LIMITE": "#28a745"}
-        color = colors.get(obj.tipo, "#6c757d")
-        return format_html(
-            '<span style="background:{};color:white;padding:2px 8px;border-radius:3px;font-size:11px;">{}</span>',
-            color,
-            obj.get_tipo_display(),
-        )
-    tipo_badge.short_description = "Tipo"
-
-    def precio_mensual_display(self, obj):
-        return f"₲{obj.precio_mensual:,.0f}"
-    precio_mensual_display.short_description = "Precio Mensual"
-
-
-# ==============================================================================
 # SUSCRIPCIÓN DE ALMUERZO
 # ==============================================================================
 
@@ -103,19 +69,18 @@ class SuscripcionAlmuerzoAdmin(admin.ModelAdmin):
     list_display = [
         "id_suscripcion",
         "hijo_link",
-        "plan_link",
         "fecha_inicio",
         "fecha_fin",
         "estado_badge",
     ]
-    list_filter = ["estado", "plan"]
+    list_filter = ["estado"]
     search_fields = ["hijo__nombre", "hijo__apellido"]
     readonly_fields = ["fecha_creacion"]
-    list_select_related = ["hijo", "plan"]
+    list_select_related = ["hijo"]
     ordering = ["-fecha_inicio"]
     fieldsets = (
         ("Datos de la Suscripción", {
-            "fields": ("hijo", "plan", "estado")
+            "fields": ("hijo", "estado")
         }),
         ("Vigencia", {
             "fields": ("fecha_inicio", "fecha_fin")
@@ -126,11 +91,6 @@ class SuscripcionAlmuerzoAdmin(admin.ModelAdmin):
         url = reverse("admin:clientes_hijo_change", args=[obj.hijo.pk])
         return format_html('<a href="{}">{}</a>', url, obj.hijo.nombre_completo)
     hijo_link.short_description = "Estudiante"
-
-    def plan_link(self, obj):
-        url = reverse("admin:almuerzos_planalmuerzo_change", args=[obj.plan.pk])
-        return format_html('<a href="{}">{}</a>', url, obj.plan.nombre)
-    plan_link.short_description = "Plan"
 
     def estado_badge(self, obj):
         colors = {"ACTIVA": "#28a745", "SUSPENDIDA": "#ffc107", "CANCELADA": "#6c757d"}

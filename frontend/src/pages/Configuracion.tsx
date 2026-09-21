@@ -4,7 +4,7 @@ import toast from 'react-hot-toast'
 import {
   Settings, Tag, ListOrdered, CreditCard, Users,
   GraduationCap, Building2, History,
-  UtensilsCrossed, Calendar, Ruler, AlertTriangle, Percent, Trash2, DollarSign,
+  UtensilsCrossed, Ruler, AlertTriangle, Percent, Trash2, DollarSign,
   MessageCircle, UserX, Bell, Wallet, MapPin, CalendarClock,
 } from 'lucide-react'
 import api from '../services/api'
@@ -20,7 +20,6 @@ import TabGrados from './configuracion/TabGrados'
 import TabDatosEmpresa from './configuracion/TabDatosEmpresa'
 import TabHistorialPrecios from './configuracion/TabHistorialPrecios'
 import TabTiposAlmuerzo from './configuracion/TabTiposAlmuerzo'
-import TabPlanesAlmuerzo from './configuracion/TabPlanesAlmuerzo'
 import TabPreciosAlmuerzo from './configuracion/TabPreciosAlmuerzo'
 import TabUnidadesMedida from './configuracion/TabUnidadesMedida'
 import TabAlergenos from './configuracion/TabAlergenos'
@@ -34,7 +33,7 @@ import TabPromocionAnual from './configuracion/TabPromocionAnual'
 type TabKey =
   | 'categorias' | 'tipos_cliente' | 'listas_precio' | 'medios_pago' | 'cajas'
   | 'grados' | 'datos_empresa' | 'historial_precios' | 'ubicaciones'
-  | 'tipos_almuerzo' | 'planes_almuerzo' | 'precios_almuerzo' | 'unidades_medida' | 'alergenos' | 'impuestos'
+  | 'tipos_almuerzo' | 'precios_almuerzo' | 'unidades_medida' | 'alergenos' | 'impuestos'
   | 'whatsapp' | 'purga_alumnos' | 'notificaciones' | 'anio_lectivo' | 'promocion_anual'
 
 const TABS: { key: TabKey; labelKey: string; icon: typeof Settings }[] = [
@@ -48,7 +47,6 @@ const TABS: { key: TabKey; labelKey: string; icon: typeof Settings }[] = [
   { key: 'datos_empresa',     labelKey: 'settings.company',     icon: Building2 },
   { key: 'historial_precios', labelKey: 'settings.priceHistory',icon: History },
   { key: 'tipos_almuerzo',    labelKey: 'settings.lunchTypes',  icon: UtensilsCrossed },
-  { key: 'planes_almuerzo',   labelKey: 'settings.lunchPlans',  icon: Calendar },
   { key: 'precios_almuerzo',  labelKey: 'settings.lunchPrices', icon: DollarSign },
   { key: 'unidades_medida',   labelKey: 'settings.units',       icon: Ruler },
   { key: 'alergenos',         labelKey: 'settings.allergens',   icon: AlertTriangle },
@@ -118,7 +116,6 @@ export default function Configuracion() {
         {tab === 'ubicaciones'       && <TabUbicaciones     onDelete={confirmDelete} />}
         {tab === 'grados'            && <TabGrados          onDelete={confirmDelete} />}
         {tab === 'tipos_almuerzo'    && <TabTiposAlmuerzo   onDelete={confirmDelete} />}
-        {tab === 'planes_almuerzo'   && <TabPlanesAlmuerzo  onDelete={confirmDelete} />}
         {tab === 'precios_almuerzo'  && <TabPreciosAlmuerzo onDelete={confirmDelete} />}
         {tab === 'unidades_medida'   && <TabUnidadesMedida  onDelete={confirmDelete} />}
         {tab === 'alergenos'         && <TabAlergenos       onDelete={confirmDelete} />}

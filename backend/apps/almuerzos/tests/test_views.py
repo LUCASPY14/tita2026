@@ -1,6 +1,6 @@
 ﻿"""
 Tests de vistas de almuerzos.
-Cubre: PrecioAlmuerzoViewSet, TipoAlmuerzoViewSet, PlanAlmuerzoViewSet,
+Cubre: PrecioAlmuerzoViewSet, TipoAlmuerzoViewSet,
 SuscripcionAlmuerzoViewSet, RegistroConsumoAlmuerzoViewSet (create + validaciones),
 CuentaAlmuerzoMensualViewSet (generar, CLIENTE_WEB filter), PagoCuentaAlmuerzoViewSet,
 AlergenoViewSet, ProductoAlergenoViewSet,
@@ -94,45 +94,21 @@ def tipo_almuerzo(db):
 
 
 @pytest.fixture
-def plan_sin_limite(db):
-    from apps.almuerzos.models import PlanAlmuerzo
-    return PlanAlmuerzo.objects.create(
-        nombre="Plan Libre Views",
-        activo=True,
-        precio_mensual=Decimal("200000"),
-        dias_semana_incluidos="LUN,MAR,MIE,JUE,VIE",
-    )
-
-
-@pytest.fixture
-def plan_con_limite(db):
-    from apps.almuerzos.models import PlanAlmuerzo
-    return PlanAlmuerzo.objects.create(
-        nombre="Plan Limitado Views",
-        activo=True,
-        precio_mensual=Decimal("100000"),
-        dias_semana_incluidos="LUN,MAR,MIE,JUE,VIE",
-    )
-
-
-@pytest.fixture
-def suscripcion_activa(db, hijo_almuerzo, plan_sin_limite):
+def suscripcion_activa(db, hijo_almuerzo):
     from apps.almuerzos.models import SuscripcionAlmuerzo
     return SuscripcionAlmuerzo.objects.create(
         hijo=hijo_almuerzo,
-        plan=plan_sin_limite,
         fecha_inicio=date.today(),
         estado=SuscripcionAlmuerzo.Estado.ACTIVA,
     )
 
 
 @pytest.fixture
-def suscripcion_suspendida(db, hijo_almuerzo, plan_con_limite):
+def suscripcion_suspendida(db, hijo_almuerzo):
     # sin fecha_fin para que el serializer no la rechace por vencida
     from apps.almuerzos.models import SuscripcionAlmuerzo
     return SuscripcionAlmuerzo.objects.create(
         hijo=hijo_almuerzo,
-        plan=plan_con_limite,
         fecha_inicio=date.today() - timedelta(days=60),
         estado=SuscripcionAlmuerzo.Estado.SUSPENDIDA,
     )
@@ -223,10 +199,6 @@ class TestViewSetsSimples:
         resp = api_cajero.get("/api/v1/almuerzos/tipos-almuerzo/")
         assert resp.status_code == 200
 
-    def test_planes_almuerzo_list(self, api_cajero):
-        resp = api_cajero.get("/api/v1/almuerzos/planes-almuerzo/")
-        assert resp.status_code == 200
-
     def test_suscripciones_list(self, api_cajero):
         resp = api_cajero.get("/api/v1/almuerzos/suscripciones/")
         assert resp.status_code == 200
@@ -296,7 +268,7 @@ class TestSuscripcionAlmuerzoAccesoClienteWeb:
             nombre="Ajeno", apellido="Hijo", cliente_responsable=otro_cliente, activo=True,
         )
         otra_suscripcion = SuscripcionAlmuerzo.objects.create(
-            hijo=otro_hijo, plan=suscripcion_activa.plan,
+            hijo=otro_hijo,
             fecha_inicio=suscripcion_activa.fecha_inicio,
             estado=SuscripcionAlmuerzo.Estado.ACTIVA,
         )
@@ -306,9 +278,9 @@ class TestSuscripcionAlmuerzoAccesoClienteWeb:
         ids = [s["id_suscripcion"] for s in resp.data["results"]]
         assert otra_suscripcion.id_suscripcion not in ids
 
-    def test_cliente_web_no_puede_crear_suscripciones(self, api_cliente_web, hijo_almuerzo, plan_sin_limite):
+    def test_cliente_web_no_puede_crear_suscripciones(self, api_cliente_web, hijo_almuerzo):
         resp = api_cliente_web.post("/api/v1/almuerzos/suscripciones/", {
-            "hijo": hijo_almuerzo.id_hijo, "plan": plan_sin_limite.id_plan_almuerzo,
+            "hijo": hijo_almuerzo.id_hijo,
             "fecha_inicio": str(date.today()),
         })
         assert resp.status_code == 403
@@ -326,35 +298,33 @@ class TestSuscripcionAlmuerzoAccesoClienteWeb:
 class TestSuscripcionUnicaActivaPorHijo:
 
     def test_segunda_suscripcion_activa_da_400_legible(
-        self, api_admin, hijo_almuerzo, suscripcion_activa, plan_con_limite
+        self, api_admin, hijo_almuerzo, suscripcion_activa
     ):
         # unique_suscripcion_activa_por_hijo daría un IntegrityError (500) sin
         # la validación explícita del serializer.
         resp = api_admin.post("/api/v1/almuerzos/suscripciones/", {
             "hijo": hijo_almuerzo.id_hijo,
-            "plan": plan_con_limite.id_plan_almuerzo,
             "fecha_inicio": str(date.today()),
         })
         assert resp.status_code == 400
         assert "hijo" in resp.data["field_errors"]
 
     def test_segunda_suscripcion_no_activa_se_permite(
-        self, api_admin, hijo_almuerzo, suscripcion_activa, plan_con_limite
+        self, api_admin, hijo_almuerzo, suscripcion_activa
     ):
         resp = api_admin.post("/api/v1/almuerzos/suscripciones/", {
             "hijo": hijo_almuerzo.id_hijo,
-            "plan": plan_con_limite.id_plan_almuerzo,
             "fecha_inicio": str(date.today()),
             "estado": "CANCELADA",
         })
         assert resp.status_code == 201
 
     def test_activar_suscripcion_cuando_ya_hay_otra_activa_falla(
-        self, api_admin, hijo_almuerzo, suscripcion_activa, plan_con_limite
+        self, api_admin, hijo_almuerzo, suscripcion_activa
     ):
         from apps.almuerzos.models import SuscripcionAlmuerzo
         otra = SuscripcionAlmuerzo.objects.create(
-            hijo=hijo_almuerzo, plan=plan_con_limite,
+            hijo=hijo_almuerzo,
             fecha_inicio=date.today(), estado=SuscripcionAlmuerzo.Estado.CANCELADA,
         )
         resp = api_admin.patch(

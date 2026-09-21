@@ -66,23 +66,10 @@ export interface TipoAlmuerzo {
   es_predeterminado: boolean
 }
 
-export interface PlanAlmuerzo {
-  id_plan_almuerzo: number
-  nombre: string
-  tipo: string
-  precio_mensual: string | number
-  cantidad_almuerzos_mes: number | null
-  dias_semana_incluidos: number[]
-  activo: boolean
-  es_predeterminado: boolean
-}
-
 export interface Suscripcion {
   id_suscripcion: number
   hijo: number
   hijo_nombre: string
-  plan: number
-  plan_nombre: string
   estado: string
   fecha_inicio: string
   fecha_fin: string | null

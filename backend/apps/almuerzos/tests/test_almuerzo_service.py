@@ -69,21 +69,10 @@ def precio_almuerzo(db):
 
 
 @pytest.fixture
-def plan_sin_limite(db):
-    from apps.almuerzos.models import PlanAlmuerzo
-    return PlanAlmuerzo.objects.create(
-        nombre="Plan Sin Límite",
-        activo=True,
-        precio_mensual=Decimal("200000"),
-    )
-
-
-@pytest.fixture
-def suscripcion_activa(db, hijo_almuerzo, plan_sin_limite):
+def suscripcion_activa(db, hijo_almuerzo):
     from apps.almuerzos.models import SuscripcionAlmuerzo
     return SuscripcionAlmuerzo.objects.create(
         hijo=hijo_almuerzo,
-        plan=plan_sin_limite,
         fecha_inicio=HOY,
         estado=SuscripcionAlmuerzo.Estado.ACTIVA,
     )
@@ -244,17 +233,11 @@ class TestRegistrarConsumo:
     def test_suscripcion_suspendida_falla(
         self, hijo_almuerzo, tarjeta_almuerzo, usuario_cajero, precio_almuerzo, db
     ):
-        from apps.almuerzos.models import PlanAlmuerzo, SuscripcionAlmuerzo
+        from apps.almuerzos.models import SuscripcionAlmuerzo
         from apps.almuerzos.services import AlmuerzoService
 
-        plan = PlanAlmuerzo.objects.create(
-            nombre="Plan Inactivo",
-            activo=True,
-            precio_mensual=Decimal("100000"),
-        )
         SuscripcionAlmuerzo.objects.create(
             hijo=hijo_almuerzo,
-            plan=plan,
             fecha_inicio=HOY,
             estado=SuscripcionAlmuerzo.Estado.SUSPENDIDA,
         )

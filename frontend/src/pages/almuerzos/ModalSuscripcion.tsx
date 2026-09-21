@@ -2,36 +2,29 @@ import { useState } from 'react'
 import toast from 'react-hot-toast'
 import api from '../../services/api'
 import Modal from '../../components/ui/Modal'
-import { extractErrorMessage, todayISO, type Hijo, type PlanAlmuerzo } from './shared'
+import { extractErrorMessage, todayISO, type Hijo } from './shared'
 
 interface Props {
   open: boolean
   hijos: Hijo[]
-  planes: PlanAlmuerzo[]
   onClose: () => void
   onSaved: () => void
 }
 
-export default function ModalSuscripcion({ open, hijos, planes, onClose, onSaved }: Props) {
-  const [form, setForm] = useState({ hijo: '', planId: '', fecha_inicio: todayISO() })
+export default function ModalSuscripcion({ open, hijos, onClose, onSaved }: Props) {
+  const [form, setForm] = useState({ hijo: '', fecha_inicio: todayISO() })
   const [saving, setSaving] = useState(false)
 
-  const activos = planes.filter(p => p.activo)
-  const predeterminado = activos.find(p => p.es_predeterminado) ?? activos[0]
-  const planId = form.planId || (predeterminado ? String(predeterminado.id_plan_almuerzo) : '')
-  const plan = activos.find(p => String(p.id_plan_almuerzo) === planId)
-
   async function handleSave() {
-    if (!form.hijo || !plan) { toast.error('Completá todos los campos'); return }
+    if (!form.hijo) { toast.error('Seleccioná un estudiante'); return }
     setSaving(true)
     try {
       await api.post('/almuerzos/suscripciones/', {
         hijo: Number(form.hijo),
-        plan: plan.id_plan_almuerzo,
         fecha_inicio: form.fecha_inicio,
       })
       toast.success('Suscripción creada')
-      setForm({ hijo: '', planId: '', fecha_inicio: todayISO() })
+      setForm({ hijo: '', fecha_inicio: todayISO() })
       onSaved()
       onClose()
     } catch (err) {
@@ -71,27 +64,11 @@ export default function ModalSuscripcion({ open, hijos, planes, onClose, onSaved
             ))}
           </select>
         </div>
-        <div>
-          <label htmlFor="susc-plan" className={labelClass}>Plan *</label>
-          <select
-            id="susc-plan"
-            value={planId}
-            onChange={e => setForm(f => ({ ...f, planId: e.target.value }))}
-            className={inputClass}
-          >
-            <option value="">Seleccionar...</option>
-            {activos.map(p => (
-              <option key={p.id_plan_almuerzo} value={p.id_plan_almuerzo}>{p.nombre}{p.es_predeterminado ? ' (predeterminado)' : ''}</option>
-            ))}
-          </select>
+        <div className="bg-green-50 rounded-xl px-3 py-2.5">
+          <p className="text-xs text-green-700">
+            Habilita al alumno para comer en el comedor. Cada almuerzo registrado descuenta su costo del saldo de almuerzo del alumno.
+          </p>
         </div>
-        {plan && (
-          <div className="bg-green-50 rounded-xl px-3 py-2.5">
-            <p className="text-xs text-green-700">
-              Cada almuerzo registrado en el comedor descuenta el costo del saldo de almuerzo del alumno.
-            </p>
-          </div>
-        )}
         <div>
           <label className={labelClass}>Fecha de Inicio</label>
           <input

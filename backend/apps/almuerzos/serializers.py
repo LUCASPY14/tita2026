@@ -11,7 +11,6 @@ from .models import (
     MenuDiario,
     MovimientoSaldoAlmuerzo,
     PagoCuentaAlmuerzo,
-    PlanAlmuerzo,
     PrecioAlmuerzo,
     ProductoAlergeno,
     RecargaSaldoAlmuerzo,
@@ -45,23 +44,11 @@ class TipoAlmuerzoSerializer(serializers.ModelSerializer):
 
 
 # ==============================================================================
-# PLAN ALMUERZO
-# ==============================================================================
-
-class PlanAlmuerzoSerializer(serializers.ModelSerializer):
-    class Meta:
-        model = PlanAlmuerzo
-        fields = "__all__"
-        read_only_fields = ["fecha_creacion"]
-
-
-# ==============================================================================
 # SUSCRIPCION ALMUERZO
 # ==============================================================================
 
 class SuscripcionAlmuerzoSerializer(serializers.ModelSerializer):
     hijo_nombre = serializers.CharField(source="hijo.nombre_completo", read_only=True)
-    plan_nombre = serializers.CharField(source="plan.nombre", read_only=True)
 
     class Meta:
         model = SuscripcionAlmuerzo

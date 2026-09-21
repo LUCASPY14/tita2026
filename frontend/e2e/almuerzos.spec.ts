@@ -168,21 +168,9 @@ const SUSCRIPCION_MOCK = {
   id_suscripcion: 1,
   hijo: 1,
   hijo_nombre: 'Sofía Torres',
-  plan: 1,
-  plan_nombre: 'Plan Básico',
   estado: 'ACTIVA',
   fecha_inicio: '2026-03-01',
   fecha_fin: null,
-}
-
-const PLAN_MOCK = {
-  id_plan_almuerzo: 1,
-  nombre: 'Plan Básico',
-  tipo: 'MENSUAL',
-  precio_mensual: '150000',
-  cantidad_almuerzos_mes: 20,
-  dias_semana_incluidos: [1, 2, 3, 4, 5],
-  activo: true,
 }
 
 const HIJO_MOCK = {
@@ -201,9 +189,6 @@ async function loginAndSetupAlmuerzos(page: Page) {
   )
   await page.route(/\/api\/v1\/almuerzos\/menu/, (route) =>
     route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ results: [MENU_HOY], count: 1 }) })
-  )
-  await page.route(/\/api\/v1\/almuerzos\/planes-almuerzo/, (route) =>
-    route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ results: [PLAN_MOCK], count: 1 }) })
   )
   await page.route(/\/api\/v1\/clientes\/hijos/, (route) =>
     route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ results: [HIJO_MOCK], count: 1 }) })
@@ -343,7 +328,6 @@ test.describe('Almuerzos — Suscripciones', () => {
 
   test('muestra la suscripción activa de Sofía Torres', async ({ page }) => {
     await expect(page.getByText('Sofía Torres').first()).toBeVisible({ timeout: 6000 })
-    await expect(page.getByText('Plan Básico').first()).toBeVisible()
   })
 
   test('muestra el estado ACTIVA de la suscripción', async ({ page }) => {
@@ -356,22 +340,22 @@ test.describe('Almuerzos — Suscripciones', () => {
     await expect(page.getByText('Nueva Suscripción').first()).toBeVisible()
   })
 
-  test('modal muestra selectores de Estudiante y Plan', async ({ page }) => {
+  test('modal muestra el selector de Estudiante y no pide plan', async ({ page }) => {
     await page.getByRole('button', { name: 'Nueva Suscripción' }).click()
     await expect(page.getByRole('dialog')).toBeVisible({ timeout: 5000 })
     await expect(page.getByLabel(/Estudiante/i)).toBeVisible()
-    await expect(page.getByLabel(/Plan/i)).toBeVisible()
+    await expect(page.getByLabel(/Plan/i)).toHaveCount(0)
   })
 
-  test('Suscribir sin campos muestra toast de error', async ({ page }) => {
+  test('Suscribir sin elegir estudiante muestra toast de error', async ({ page }) => {
     await page.getByRole('button', { name: 'Nueva Suscripción' }).click()
     await expect(page.getByRole('dialog')).toBeVisible({ timeout: 5000 })
     // Click Suscribir sin seleccionar nada
     await page.getByRole('button', { name: 'Suscribir' }).click()
-    await expect(page.getByText('Completá todos los campos')).toBeVisible({ timeout: 5000 })
+    await expect(page.getByText('Seleccioná un estudiante')).toBeVisible({ timeout: 5000 })
   })
 
-  test('flujo completo: seleccionar hijo y plan crea suscripción', async ({ page }) => {
+  test('flujo completo: seleccionar hijo crea suscripción', async ({ page }) => {
     let postCalled = false
     await page.route(/\/api\/v1\/almuerzos\/suscripciones/, (route) => {
       if (route.request().method() === 'POST') {
@@ -385,8 +369,6 @@ test.describe('Almuerzos — Suscripciones', () => {
 
     // Seleccionar estudiante (primera opción disponible)
     await page.getByLabel(/Estudiante/i).selectOption({ index: 1 })
-    // Seleccionar plan
-    await page.getByLabel(/Plan/i).selectOption({ index: 1 })
 
     await page.getByRole('button', { name: 'Suscribir' }).click()
     await expect(async () => {

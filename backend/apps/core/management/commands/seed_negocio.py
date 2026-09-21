@@ -3,9 +3,9 @@ Comando de seed para poblar datos de prueba de negocio.
 Idempotente: puede ejecutarse múltiples veces sin duplicar datos.
 
 Módulos cubiertos:
-  - Tipos y planes de almuerzo
+  - Tipos de almuerzo
   - Precio de almuerzo vigente
-  - Suscripciones de todos los alumnos al plan estándar
+  - Suscripciones de todos los alumnos (habilitación de comedor)
   - Menú diario de la semana actual + siguiente
   - Proveedores de compras
   - Stock inicial de productos
@@ -48,7 +48,7 @@ class Command(BaseCommand):
     # =========================================================================
 
     def _reset(self):
-        from apps.almuerzos.models import SuscripcionAlmuerzo, MenuDiario, PlanAlmuerzo, TipoAlmuerzo, PrecioAlmuerzo
+        from apps.almuerzos.models import SuscripcionAlmuerzo, MenuDiario, TipoAlmuerzo, PrecioAlmuerzo
         from apps.compras.models import Proveedor
         from apps.inventario.models import Stock
 
@@ -57,17 +57,16 @@ class Command(BaseCommand):
         SuscripcionAlmuerzo.objects.all().delete()
         MenuDiario.objects.all().delete()
         PrecioAlmuerzo.objects.all().delete()
-        PlanAlmuerzo.objects.all().delete()
         TipoAlmuerzo.objects.all().delete()
         Proveedor.objects.all().delete()
         Stock.objects.all().delete()
 
     # =========================================================================
-    # ALMUERZO: tipos, planes, precio
+    # ALMUERZO: tipos, precio
     # =========================================================================
 
     def _seed_almuerzo(self):
-        from apps.almuerzos.models import TipoAlmuerzo, PlanAlmuerzo, PrecioAlmuerzo
+        from apps.almuerzos.models import TipoAlmuerzo, PrecioAlmuerzo
 
         self.stdout.write("\n[1/6] Tipos de almuerzo...")
 
@@ -98,35 +97,7 @@ class Command(BaseCommand):
         )
         self._log_created("TipoAlmuerzo", "Almuerzo Simple", created)
 
-        self.stdout.write("\n[2/6] Planes de almuerzo...")
-
-        plan_std, created = PlanAlmuerzo.objects.get_or_create(
-            nombre="Plan Estándar Mensual",
-            defaults={
-                "descripcion": "Almuerzo todos los días de lunes a viernes sin límite de días",
-                "tipo": PlanAlmuerzo.TipoPlan.SIN_LIMITE,
-                "precio_mensual": Decimal("270000"),
-                "dias_semana_incluidos": "1,2,3,4,5",
-                "activo": True,
-                "es_predeterminado": True,
-            },
-        )
-        self._log_created("PlanAlmuerzo", "Plan Estándar Mensual", created)
-
-        plan_basico, created = PlanAlmuerzo.objects.get_or_create(
-            nombre="Plan Básico 20 días",
-            defaults={
-                "descripcion": "Hasta 20 almuerzos por mes",
-                "tipo": PlanAlmuerzo.TipoPlan.CANTIDAD,
-                "precio_mensual": Decimal("240000"),
-                "cantidad_almuerzos_mes": 20,
-                "dias_semana_incluidos": "1,2,3,4,5",
-                "activo": False,
-            },
-        )
-        self._log_created("PlanAlmuerzo", "Plan Básico 20 días", created)
-
-        self.stdout.write("\n[3/6] Precio de almuerzo vigente...")
+        self.stdout.write("\n[2/6] Precio de almuerzo vigente...")
 
         precio, created = PrecioAlmuerzo.objects.get_or_create(
             fecha_inicio_vigencia=date(2026, 1, 1),
@@ -137,8 +108,6 @@ class Command(BaseCommand):
             },
         )
         self._log_created("PrecioAlmuerzo", "Gs 15.000 desde 01/01/2026", created)
-
-        self._plan_std = plan_std
 
     # =========================================================================
     # MENÚS DIARIOS
@@ -200,7 +169,6 @@ class Command(BaseCommand):
 
         self.stdout.write("\n[5/6] Suscripciones de alumnos...")
 
-        plan = self._plan_std
         hoy = date.today()
         inicio_ciclo = date(hoy.year, 2, 1)  # Ciclo escolar desde febrero
         fin_ciclo = date(hoy.year, 11, 30)
@@ -209,7 +177,6 @@ class Command(BaseCommand):
         for hijo in Hijo.objects.filter(activo=True):
             _, created = SuscripcionAlmuerzo.objects.get_or_create(
                 hijo=hijo,
-                plan=plan,
                 estado=SuscripcionAlmuerzo.Estado.ACTIVA,
                 defaults={
                     "fecha_inicio": inicio_ciclo,
