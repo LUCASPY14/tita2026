@@ -79,6 +79,13 @@ function gs(n: number | string | null | undefined) {
   return Math.round(num).toLocaleString('es-PY') + ' Gs.'
 }
 
+function periodoCuenta(c: CuentaMensual) {
+  if (c.es_arrastre) {
+    return `Antes de ${c.arrastre_hasta_mes != null ? MESES[c.arrastre_hasta_mes] : ''} ${c.arrastre_hasta_anio ?? ''}`
+  }
+  return `${c.mes != null ? MESES[c.mes] : ''} ${c.anio}`
+}
+
 // ─── Reporte de Ventas ────────────────────────────────────────────────────────
 
 interface VentaTipo { tipo: string; cantidad: number; monto: number }
@@ -202,9 +209,11 @@ export interface CuentaMensual {
   hijo_nombre: string
   hijo_grado?: string
   nro_tarjeta?: string
-  anio: number; mes: number
+  anio: number; mes: number | null
+  es_arrastre: boolean
+  arrastre_hasta_anio: number | null; arrastre_hasta_mes: number | null
   cantidad_almuerzos: number; monto_total: string | number
-  monto_pagado: string | number; saldo_pendiente: string | number; estado: string
+  monto_pagado: string | number; saldo_pendiente: string | number | null; estado: string | null
 }
 
 export interface RegistroConsumoDetalle {
@@ -298,7 +307,7 @@ export function exportarCuentasMensualesPDF(
         const meta: string[] = []
         if (c.hijo_grado) meta.push(c.hijo_grado)
         if (c.nro_tarjeta) meta.push(`Tarjeta: ${c.nro_tarjeta}`)
-        meta.push(`${MESES[c.mes]} ${c.anio}`)
+        meta.push(periodoCuenta(c))
         doc.text(meta.join('  ·  '), W - 14, y + 2, { align: 'right' })
         y += 10
 
@@ -337,9 +346,9 @@ export function exportarCuentasMensualesPDF(
           `${c.cantidad_almuerzos} almuerzos  ·  Total: ${gs(c.monto_total)}  ·  Pagado: ${gs(c.monto_pagado)}  ·  Saldo: ${gs(c.saldo_pendiente)}`,
           16, y + 5,
         )
-        const estadoColor = ESTADO_COLOR[c.estado] ?? GRAY
+        const estadoColor = c.estado ? (ESTADO_COLOR[c.estado] ?? GRAY) : GRAY
         doc.setTextColor(...estadoColor)
-        doc.text(c.estado, W - 14, y + 5, { align: 'right' })
+        doc.text(c.estado ?? 'Histórico', W - 14, y + 5, { align: 'right' })
         y += 14
 
         // Separador entre alumnos (excepto el último)
@@ -366,12 +375,12 @@ export function exportarCuentasMensualesPDF(
         head: [['Estudiante', 'Período', 'Almuerzos', 'Total', 'Pagado', 'Saldo', 'Estado']],
         body: cuentas.map(c => [
           c.hijo_nombre,
-          `${MESES[c.mes]} ${c.anio}`,
+          periodoCuenta(c),
           c.cantidad_almuerzos,
           gs(c.monto_total),
           gs(c.monto_pagado),
           gs(c.saldo_pendiente),
-          c.estado,
+          c.estado ?? 'Histórico',
         ]),
         styles: { fontSize: 8, cellPadding: 2 },
         headStyles: { fillColor: BRAND_COLOR, textColor: [255, 255, 255], fontStyle: 'bold' },
@@ -380,7 +389,7 @@ export function exportarCuentasMensualesPDF(
         didParseCell: (data) => {
           if (data.column.index === 6 && data.section === 'body') {
             const estado = cuentas[data.row.index]?.estado
-            data.cell.styles.textColor = ESTADO_COLOR[estado] ?? GRAY
+            data.cell.styles.textColor = (estado && ESTADO_COLOR[estado]) ?? GRAY
             data.cell.styles.fontStyle = 'bold'
           }
         },

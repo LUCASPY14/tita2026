@@ -9,6 +9,7 @@ MenuDiarioViewSet (hoy), DetalleMenuDiarioViewSet, ReporteAlmuerzosView.
 import pytest
 from datetime import date, timedelta
 from decimal import Decimal
+from freezegun import freeze_time
 from rest_framework.test import APIClient
 
 
@@ -822,6 +823,137 @@ class TestEstadoCuentaAlmuerzo:
     def test_requiere_permiso_staff(self, api_cliente_web):
         resp = api_cliente_web.get("/api/v1/almuerzos/estado-cuenta/", {"anio": 2026})
         assert resp.status_code == 403
+
+
+# ── EstadoCuentaAlmuerzoView — arrastre real desde la billetera ──────────────
+
+@pytest.mark.django_db
+class TestEstadoCuentaAlmuerzoArrastre:
+
+    @pytest.fixture
+    def suscripcion_activa(self, db, hijo_almuerzo):
+        from apps.almuerzos.models import SuscripcionAlmuerzo
+        return SuscripcionAlmuerzo.objects.create(
+            hijo=hijo_almuerzo, fecha_inicio=date(2026, 1, 1),
+            estado=SuscripcionAlmuerzo.Estado.ACTIVA,
+        )
+
+    @pytest.fixture
+    def precio_fijo(self, db):
+        from apps.almuerzos.models import PrecioAlmuerzo
+        return PrecioAlmuerzo.objects.create(
+            precio_unitario=Decimal("25000"), fecha_inicio_vigencia=date(2026, 1, 1), activo=True,
+        )
+
+    def _comer(self, hijo, tarjeta, usuario, fecha):
+        from apps.almuerzos.services import AlmuerzoService
+        with freeze_time(fecha):
+            AlmuerzoService.registrar_consumo(
+                hijo=hijo, fecha_consumo=fecha, nro_tarjeta=tarjeta, registrado_por=usuario,
+            )
+
+    def _recargar(self, hijo, monto, fecha):
+        from apps.almuerzos.services import AlmuerzoService
+        with freeze_time(fecha):
+            AlmuerzoService.recargar_saldo(hijo=hijo, monto=Decimal(str(monto)))
+
+    def test_arrastre_real_mes_a_mes_por_la_billetera(
+        self, api_admin, hijo_almuerzo, tarjeta_almuerzo, usuario_cajero, suscripcion_activa, precio_fijo,
+    ):
+        # Mayo: recarga 100.000, come 2 veces (50.000) -> saldo final 50.000.
+        self._recargar(hijo_almuerzo, 100000, date(2026, 5, 1))
+        self._comer(hijo_almuerzo, tarjeta_almuerzo, usuario_cajero, date(2026, 5, 10))
+        self._comer(hijo_almuerzo, tarjeta_almuerzo, usuario_cajero, date(2026, 5, 20))
+        # Junio: come 1 vez (25.000), sin recargar -> saldo final 25.000.
+        self._comer(hijo_almuerzo, tarjeta_almuerzo, usuario_cajero, date(2026, 6, 5))
+        # Julio: come 2 veces (50.000), sin recargar -> saldo final -25.000 (deuda).
+        self._comer(hijo_almuerzo, tarjeta_almuerzo, usuario_cajero, date(2026, 7, 3))
+        self._comer(hijo_almuerzo, tarjeta_almuerzo, usuario_cajero, date(2026, 7, 15))
+
+        resp = api_admin.get("/api/v1/almuerzos/estado-cuenta/", {"anio": 2026})
+        assert resp.status_code == 200
+        filas = {f["mes"]: f for f in resp.data["results"]}
+        assert set(filas) == {5, 6, 7}
+
+        assert filas[5]["saldo_inicial"] == 0
+        assert filas[5]["saldo_final"] == 50000
+        assert filas[5]["estado"] == "PAGADO"
+
+        assert filas[6]["saldo_inicial"] == 50000
+        assert filas[6]["saldo_final"] == 25000
+        assert filas[6]["estado"] == "PAGADO"
+
+        # El saldo_inicial de julio es el saldo_final de junio: el arrastre
+        # se encadena mes a mes.
+        assert filas[7]["saldo_inicial"] == 25000
+        assert filas[7]["saldo_final"] == -25000
+        assert filas[7]["estado"] == "PENDIENTE"
+        assert not any(f["es_arrastre"] for f in filas.values())
+
+    def test_meses_anteriores_al_primer_movimiento_se_agrupan_en_arrastre(
+        self, api_admin, hijo_almuerzo, tarjeta_almuerzo, usuario_cajero, suscripcion_activa, precio_fijo,
+    ):
+        from apps.almuerzos.models import RegistroConsumoAlmuerzo
+        # Marzo: consumo cargado directo (como en el sistema viejo), sin
+        # pasar por el servicio -> no genera movimiento de billetera.
+        RegistroConsumoAlmuerzo.objects.create(
+            hijo=hijo_almuerzo, fecha_consumo=date(2026, 3, 10),
+            costo_almuerzo=Decimal("15000"), ya_cobrado=True, registrado_por=usuario_cajero,
+        )
+        # Agosto: primer consumo real por el servicio -> primer movimiento de billetera.
+        self._comer(hijo_almuerzo, tarjeta_almuerzo, usuario_cajero, date(2026, 8, 5))
+
+        resp = api_admin.get("/api/v1/almuerzos/estado-cuenta/", {"anio": 2026})
+        assert resp.status_code == 200
+        assert resp.data["count"] == 2
+
+        arrastre = next(f for f in resp.data["results"] if f["es_arrastre"])
+        assert arrastre["mes"] is None
+        assert arrastre["cantidad_almuerzos"] == 1
+        assert arrastre["monto_total"] == 15000
+        assert arrastre["saldo_inicial"] is None and arrastre["saldo_final"] is None
+        assert arrastre["arrastre_hasta_anio"] == 2026 and arrastre["arrastre_hasta_mes"] == 8
+
+        agosto = next(f for f in resp.data["results"] if f["mes"] == 8)
+        assert agosto["es_arrastre"] is False
+        assert agosto["saldo_inicial"] == 0
+        assert agosto["saldo_final"] == -25000
+        assert agosto["estado"] == "PENDIENTE"
+
+    def test_arrastre_aparece_al_final_del_orden(
+        self, api_admin, hijo_almuerzo, tarjeta_almuerzo, usuario_cajero, suscripcion_activa, precio_fijo,
+    ):
+        from apps.almuerzos.models import RegistroConsumoAlmuerzo
+        RegistroConsumoAlmuerzo.objects.create(
+            hijo=hijo_almuerzo, fecha_consumo=date(2026, 3, 10),
+            costo_almuerzo=Decimal("15000"), ya_cobrado=True, registrado_por=usuario_cajero,
+        )
+        self._comer(hijo_almuerzo, tarjeta_almuerzo, usuario_cajero, date(2026, 8, 5))
+
+        resp = api_admin.get("/api/v1/almuerzos/estado-cuenta/", {"anio": 2026})
+        assert resp.data["results"][-1]["es_arrastre"] is True
+
+    def test_sin_movimientos_usa_el_saldo_de_hoy_en_todas_las_filas(
+        self, api_admin, hijo_almuerzo, usuario_cajero,
+    ):
+        from apps.almuerzos.models import RegistroConsumoAlmuerzo, SaldoAlmuerzo
+        RegistroConsumoAlmuerzo.objects.create(
+            hijo=hijo_almuerzo, fecha_consumo=date(2026, 3, 10),
+            costo_almuerzo=Decimal("15000"), ya_cobrado=True, registrado_por=usuario_cajero,
+        )
+        RegistroConsumoAlmuerzo.objects.create(
+            hijo=hijo_almuerzo, fecha_consumo=date(2026, 4, 10),
+            costo_almuerzo=Decimal("15000"), ya_cobrado=True, registrado_por=usuario_cajero,
+        )
+        SaldoAlmuerzo.objects.create(hijo=hijo_almuerzo, saldo_actual=Decimal("-30000"))
+
+        resp = api_admin.get("/api/v1/almuerzos/estado-cuenta/", {"anio": 2026})
+        assert resp.data["count"] == 2
+        for fila in resp.data["results"]:
+            assert fila["es_arrastre"] is False
+            assert fila["saldo_inicial"] is None
+            assert fila["saldo_final"] == -30000
+            assert fila["estado"] == "PENDIENTE"
 
 
 # ── PagoCuentaAlmuerzoViewSet ─────────────────────────────────────────────────

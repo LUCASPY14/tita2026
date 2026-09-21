@@ -103,12 +103,17 @@ export interface CuentaMensual {
   hijo_grado: string
   nro_tarjeta: string
   anio: number
-  mes: number
+  mes: number | null
+  es_arrastre: boolean
+  arrastre_hasta_anio: number | null
+  arrastre_hasta_mes: number | null
   cantidad_almuerzos: number
   monto_total: string | number
   monto_pagado: string | number
-  saldo_pendiente: string | number
-  estado: string
+  saldo_inicial: number | null
+  saldo_final: number | null
+  saldo_pendiente: number | null
+  estado: string | null
 }
 
 export interface SaldoAlmuerzoItem {

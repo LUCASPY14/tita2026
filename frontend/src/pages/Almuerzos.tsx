@@ -327,12 +327,24 @@ export default function Almuerzos() {
   // ── Stats ─────────────────────────────────────────────────────────
   const mesActual = new Date().getMonth() + 1
   const anioActual = new Date().getFullYear()
-  const stats = useMemo(() => ({
-    consumosHoy,
-    // Alumnos distintos con deuda: cada alumno tiene una fila por mes en que comió.
-    cuentasPendientes: new Set(cuentas.filter(c => c.estado === 'PENDIENTE').map(c => c.hijo)).size,
-    facturadoMes: cuentas.filter(c => c.mes === mesActual && c.anio === anioActual).reduce((s, c) => s + (Number(c.monto_total) || 0), 0),
-  }), [consumosHoy, cuentas, mesActual, anioActual])
+  const stats = useMemo(() => {
+    // "Estado" ahora es el saldo al cierre de CADA mes, no el de hoy — para
+    // saber quién debe hoy hay que mirar la fila más reciente de cada alumno
+    // (la de arrastre no cuenta: no tiene saldo propio).
+    const ultimaPorHijo = new Map<number, CuentaMensual>()
+    for (const c of cuentas) {
+      if (c.es_arrastre || c.mes === null) continue
+      const actual = ultimaPorHijo.get(c.hijo)
+      if (!actual || c.anio > actual.anio || (c.anio === actual.anio && c.mes > (actual.mes ?? 0))) {
+        ultimaPorHijo.set(c.hijo, c)
+      }
+    }
+    return {
+      consumosHoy,
+      cuentasPendientes: [...ultimaPorHijo.values()].filter(c => c.estado === 'PENDIENTE').length,
+      facturadoMes: cuentas.filter(c => c.mes === mesActual && c.anio === anioActual).reduce((s, c) => s + (Number(c.monto_total) || 0), 0),
+    }
+  }, [consumosHoy, cuentas, mesActual, anioActual])
 
   // ── Columnas ──────────────────────────────────────────────────────
   const colsRegistros: Column<RegistroConsumo>[] = [
@@ -412,7 +424,13 @@ export default function Almuerzos() {
     {
       title: 'Período',
       key: 'periodo',
-      render: (_, r) => <span className="text-sm text-slate-600">{MESES[r.mes]} {r.anio}</span>,
+      render: (_, r) => r.es_arrastre ? (
+        <span className="text-sm text-slate-500 italic">
+          Antes de {r.arrastre_hasta_mes !== null ? MESES[r.arrastre_hasta_mes] : ''} {r.arrastre_hasta_anio}
+        </span>
+      ) : (
+        <span className="text-sm text-slate-600">{r.mes !== null ? MESES[r.mes] : ''} {r.anio}</span>
+      ),
     },
     {
       title: 'Almuerzos',
@@ -430,15 +448,26 @@ export default function Almuerzos() {
       render: (_, r) => <span className="tabular-nums text-emerald-700">{formatGs(r.monto_pagado)}</span>,
     },
     {
-      title: 'Deuda actual',
-      hint: 'Lo que el alumno debe HOY en total (saldo de almuerzo), no solo lo de este mes. Se repite en todas las filas del mismo alumno: no la sumes.',
+      title: 'Saldo inicial',
+      hint: 'Saldo con el que arrancó el mes — es el saldo al cierre del mes anterior.',
+      key: 'saldo_inicial',
+      render: (_, r) => r.saldo_inicial === null ? (
+        <span className="text-sm text-slate-300">—</span>
+      ) : (
+        <span className="tabular-nums text-sm text-slate-500">{formatGs(r.saldo_inicial)}</span>
+      ),
+    },
+    {
+      title: 'Saldo al cierre',
+      hint: 'Saldo del alumno al cerrar ESE mes (no el de hoy) — es el que se arrastra como saldo inicial del mes siguiente.',
       key: 'saldo',
       render: (_, r) => {
-        const n = Number(r.saldo_pendiente) || 0
+        if (r.saldo_final === null) return <span className="text-sm text-slate-300">—</span>
+        const n = Number(r.saldo_final) || 0
         return (
           <span
-            title="Deuda total actual del alumno, no la de este mes"
-            className={`tabular-nums font-semibold text-sm ${n > 0 ? 'text-red-600' : 'text-slate-400'}`}
+            title="Saldo del alumno al cerrar este mes"
+            className={`tabular-nums font-semibold text-sm ${n < 0 ? 'text-red-600' : n > 0 ? 'text-emerald-700' : 'text-slate-400'}`}
           >
             {formatGs(n)}
           </span>
@@ -448,18 +477,18 @@ export default function Almuerzos() {
     {
       title: 'Estado',
       key: 'estado',
-      render: (_, r) => <Badge color={ESTADO_CUENTA_COLOR[r.estado] ?? 'default'}>{r.estado}</Badge>,
+      render: (_, r) => r.estado ? <Badge color={ESTADO_CUENTA_COLOR[r.estado] ?? 'default'}>{r.estado}</Badge> : <span className="text-slate-300 text-sm">—</span>,
     },
     {
       title: '',
       key: 'acc',
       width: 130,
-      render: (_, r) => (
+      render: (_, r) => r.es_arrastre ? null : (
         <Button size="sm" variant="primary" onClick={() => setPagoCuenta({
           hijo: r.hijo,
           hijo_nombre: r.hijo_nombre,
           monto_sugerido: Number(r.saldo_pendiente) || 0,
-          detalle: `${MESES[r.mes]} ${r.anio} — ${r.cantidad_almuerzos} almuerzos, total ${formatGs(r.monto_total)}`,
+          detalle: `${r.mes !== null ? MESES[r.mes] : ''} ${r.anio} — ${r.cantidad_almuerzos} almuerzos, total ${formatGs(r.monto_total)}`,
         })}>
           <Banknote className="w-3.5 h-3.5" />
           Cargar saldo
@@ -744,7 +773,8 @@ export default function Almuerzos() {
             <div>
               <h2 className="text-sm font-semibold text-slate-800">Cuentas Mensuales de Almuerzos</h2>
               <p className="text-xs text-slate-400 mt-0.5">
-                Consumo por alumno y mes. "Deuda actual" es el saldo total del alumno hoy (se repite en cada mes); el detalle de cobranza está en el tab Saldos.
+                Consumo por alumno y mes, con el arrastre real de saldo mes a mes. Los meses de antes de tener billetera de almuerzo
+                se agrupan en una fila aparte. El detalle de cobranza está en el tab Saldos.
               </p>
             </div>
             <div className="flex flex-wrap items-center gap-2">

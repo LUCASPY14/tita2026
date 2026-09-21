@@ -472,22 +472,34 @@ class CuentaAlmuerzoMensualViewSet(viewsets.ModelViewSet):
 class EstadoCuentaAlmuerzoView(APIView):
     """
     GET /api/v1/almuerzos/estado-cuenta/?anio=2026&mes=9 (mes opcional)
-    Reemplaza a CuentaAlmuerzoMensualViewSet como fuente del tab "Cuentas
-    Mensuales" del staff — calculado en vivo, sin tabla intermedia:
+    Fuente del tab "Cuentas Mensuales" del staff, calculado en vivo:
       - cantidad_almuerzos / monto_total: RegistroConsumoAlmuerzo del mes.
       - monto_pagado: recargas de saldo CONFIRMADAS de ese mismo mes.
-      - saldo_pendiente / estado: SaldoAlmuerzo actual (cuenta corriente, no
-        cortada por mes) — "Pagado" si está al día, "Pendiente" si debe.
-    Una fila por hijo que tuvo consumo en el período — sin mes, una fila por
-    cada mes del año en que comió.
+      - saldo_inicial / saldo_final: arrastre real, reconstruido desde el
+        historial de la billetera (MovimientoSaldoAlmuerzo) — el saldo_final
+        de un mes es el saldo_inicial del siguiente. estado se calcula sobre
+        el saldo_final de ESE mes, no sobre el saldo de hoy (antes de este
+        cambio, la deuda mostrada era siempre la de hoy repetida en cada fila).
+      - Si el alumno no tiene ningún movimiento de billetera (cuenta vieja
+        sin historial, o un fixture de test con saldo cargado a mano), no hay
+        arrastre que reconstruir: saldo_final usa el saldo de hoy en todas
+        sus filas, igual que el comportamiento anterior.
+      - Los meses anteriores al primer movimiento de billetera del alumno
+        (de cuando el cobro era solo por CuentaAlmuerzoMensual, antes de que
+        existiera SaldoAlmuerzo) se agrupan en una única fila "arrastre" con
+        lo que costaron y se pagó en conjunto — no queda rastro para
+        reconstruirlos mes a mes, y por eso no llevan saldo propio.
+    Una fila por hijo y mes con consumo en el período, más la fila de
+    arrastre si corresponde.
     """
     permission_classes = [IsStaffUser]
 
     def get(self, request):
+        from collections import defaultdict
         from django.db.models import Count, Sum
         from django.db.models.functions import ExtractMonth
         from apps.clientes.models import Hijo
-        from .models import RecargaSaldoAlmuerzo, SaldoAlmuerzo
+        from .models import MovimientoSaldoAlmuerzo, RecargaSaldoAlmuerzo, SaldoAlmuerzo
 
         anio_raw = request.query_params.get("anio")
         if not anio_raw:
@@ -511,6 +523,8 @@ class EstadoCuentaAlmuerzoView(APIView):
             .annotate(cantidad=Count("id_registro_consumo"), monto=Sum("costo_almuerzo"))
         )
         hijo_ids = {a["hijo_id"] for a in agregados}
+        if not hijo_ids:
+            return Response({"count": 0, "results": []})
 
         hijos_map = {
             h.id_hijo: h
@@ -531,34 +545,109 @@ class EstadoCuentaAlmuerzoView(APIView):
                 .annotate(total=Sum("monto_cargado"))
             )
         }
-        saldo_por_hijo = dict(
+        saldo_actual_por_hijo = dict(
             SaldoAlmuerzo.objects.filter(hijo_id__in=hijo_ids).values_list("hijo_id", "saldo_actual")
         )
 
-        filas = []
+        movimientos_por_hijo = defaultdict(list)
+        for m in (
+            MovimientoSaldoAlmuerzo.objects
+            .filter(saldo__hijo_id__in=hijo_ids)
+            .order_by("saldo__hijo_id", "fecha")
+            .values("saldo__hijo_id", "fecha", "saldo_resultante")
+        ):
+            movimientos_por_hijo[m["saldo__hijo_id"]].append((m["fecha"], m["saldo_resultante"]))
+
+        meses_por_hijo = defaultdict(list)
         for a in agregados:
-            hijo = hijos_map.get(a["hijo_id"])
+            meses_por_hijo[a["hijo_id"]].append(a)
+        for lista in meses_por_hijo.values():
+            lista.sort(key=lambda a: a["mes_c"])
+
+        filas = []
+        for hijo_id, meses in meses_por_hijo.items():
+            hijo = hijos_map.get(hijo_id)
             if not hijo:
                 continue
             tarjeta = getattr(hijo, "tarjeta", None)
-            saldo_actual = int(saldo_por_hijo.get(hijo.id_hijo, 0) or 0)
-            saldo_pendiente = max(0, -saldo_actual)
-            filas.append({
-                "id": f"{hijo.id_hijo}-{anio}-{a['mes_c']}",
-                "hijo": hijo.id_hijo,
-                "hijo_nombre": hijo.nombre_completo,
-                "hijo_grado": hijo.grado.nombre if hijo.grado else "",
-                "nro_tarjeta": tarjeta.nro_tarjeta if tarjeta else "",
-                "anio": anio,
-                "mes": a["mes_c"],
-                "cantidad_almuerzos": a["cantidad"],
-                "monto_total": int(a["monto"] or 0),
-                "monto_pagado": int(recargas_por_hijo_mes.get((hijo.id_hijo, a["mes_c"]), 0) or 0),
-                "saldo_pendiente": saldo_pendiente,
-                "estado": "PENDIENTE" if saldo_pendiente > 0 else "PAGADO",
-            })
+            movimientos = movimientos_por_hijo.get(hijo_id, [])
+            saldo_actual = int(saldo_actual_por_hijo.get(hijo_id, 0) or 0)
 
-        filas.sort(key=lambda f: (-f["anio"], -f["mes"]))
+            arrastre_cantidad = arrastre_monto = arrastre_pagado = 0
+
+            for a in meses:
+                mes_c = a["mes_c"]
+                primer_dia = date(anio, mes_c, 1)
+                primer_dia_sig = date(anio + 1, 1, 1) if mes_c == 12 else date(anio, mes_c + 1, 1)
+                pagado_mes = int(recargas_por_hijo_mes.get((hijo_id, mes_c), 0) or 0)
+
+                if not movimientos:
+                    # Sin ningún movimiento de billetera: no hay arrastre que
+                    # reconstruir — se usa el saldo de hoy, como antes.
+                    saldo_final = saldo_actual
+                    saldo_inicial = None
+                else:
+                    anterior = hasta = None
+                    for fecha_mov, saldo_res in movimientos:
+                        fecha_mov_date = fecha_mov.date()
+                        if fecha_mov_date >= primer_dia_sig:
+                            break
+                        if fecha_mov_date < primer_dia:
+                            anterior = saldo_res
+                        hasta = saldo_res
+                    if hasta is None:
+                        # Todo el mes es anterior al primer movimiento real —
+                        # se junta en la fila de arrastre, sin saldo propio.
+                        arrastre_cantidad += a["cantidad"]
+                        arrastre_monto += int(a["monto"] or 0)
+                        arrastre_pagado += pagado_mes
+                        continue
+                    saldo_inicial = anterior if anterior is not None else 0
+                    saldo_final = hasta
+
+                filas.append({
+                    "id": f"{hijo_id}-{anio}-{mes_c}",
+                    "hijo": hijo_id,
+                    "hijo_nombre": hijo.nombre_completo,
+                    "hijo_grado": hijo.grado.nombre if hijo.grado else "",
+                    "nro_tarjeta": tarjeta.nro_tarjeta if tarjeta else "",
+                    "anio": anio,
+                    "mes": mes_c,
+                    "es_arrastre": False,
+                    "arrastre_hasta_anio": None,
+                    "arrastre_hasta_mes": None,
+                    "cantidad_almuerzos": a["cantidad"],
+                    "monto_total": int(a["monto"] or 0),
+                    "monto_pagado": pagado_mes,
+                    "saldo_inicial": saldo_inicial,
+                    "saldo_final": saldo_final,
+                    "saldo_pendiente": max(0, -saldo_final),
+                    "estado": "PENDIENTE" if saldo_final < 0 else "PAGADO",
+                })
+
+            if arrastre_cantidad:
+                primer_mov_fecha = movimientos[0][0]
+                filas.append({
+                    "id": f"{hijo_id}-{anio}-arrastre",
+                    "hijo": hijo_id,
+                    "hijo_nombre": hijo.nombre_completo,
+                    "hijo_grado": hijo.grado.nombre if hijo.grado else "",
+                    "nro_tarjeta": tarjeta.nro_tarjeta if tarjeta else "",
+                    "anio": anio,
+                    "mes": None,
+                    "es_arrastre": True,
+                    "arrastre_hasta_anio": primer_mov_fecha.year,
+                    "arrastre_hasta_mes": primer_mov_fecha.month,
+                    "cantidad_almuerzos": arrastre_cantidad,
+                    "monto_total": arrastre_monto,
+                    "monto_pagado": arrastre_pagado,
+                    "saldo_inicial": None,
+                    "saldo_final": None,
+                    "saldo_pendiente": None,
+                    "estado": None,
+                })
+
+        filas.sort(key=lambda f: (-f["anio"], -(f["mes"] or -1)))
         return Response({"count": len(filas), "results": filas})
 
 

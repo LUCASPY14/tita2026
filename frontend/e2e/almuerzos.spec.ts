@@ -129,10 +129,15 @@ const CUENTA_MOCK = {
   hijo_nombre: 'Sofía Torres',
   anio: 2026,
   mes: 5,
+  es_arrastre: false,
+  arrastre_hasta_anio: null,
+  arrastre_hasta_mes: null,
   cantidad_almuerzos: 3,
   monto_total: '45000',
   monto_pagado: '0',
-  saldo_pendiente: '45000',
+  saldo_inicial: 0,
+  saldo_final: -45000,
+  saldo_pendiente: 45000,
   estado: 'PENDIENTE',
 }
 
@@ -241,11 +246,26 @@ test.describe('Almuerzos — Cuentas Mensuales', () => {
     await expect(tarjeta.getByText('1', { exact: true })).toBeVisible({ timeout: 6000 })
   })
 
-  test('la columna se llama Deuda actual y aclara que no es solo del mes', async ({ page }) => {
+  test('muestra el saldo inicial y el saldo al cierre de ese mes', async ({ page }) => {
     await page.getByRole('button', { name: 'Cuentas Mensuales' }).click()
-    const th = page.getByRole('columnheader', { name: 'Deuda actual' })
-    await expect(th).toBeVisible({ timeout: 6000 })
-    await expect(th).toHaveAttribute('title', /no solo lo de este mes/)
+    await expect(page.getByRole('columnheader', { name: 'Saldo inicial' })).toBeVisible({ timeout: 6000 })
+    await expect(page.getByRole('columnheader', { name: 'Saldo al cierre' })).toBeVisible()
+    // saldo_final = -45000 del mock.
+    await expect(page.getByText('45.000').first()).toBeVisible()
+  })
+
+  test('una fila de arrastre no tiene botón Cargar saldo ni saldo propio', async ({ page }) => {
+    const arrastre = {
+      ...CUENTA_MOCK, id: '1-2026-arrastre', mes: null, es_arrastre: true,
+      arrastre_hasta_anio: 2026, arrastre_hasta_mes: 8,
+      saldo_inicial: null, saldo_final: null, saldo_pendiente: null, estado: null,
+    }
+    await page.route(/\/api\/v1\/almuerzos\/estado-cuenta/, (route) =>
+      route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ results: [arrastre], count: 1 }) })
+    )
+    await page.getByRole('button', { name: 'Cuentas Mensuales' }).click()
+    await expect(page.getByText('Antes de Agosto 2026')).toBeVisible({ timeout: 6000 })
+    await expect(page.getByRole('button', { name: /Cargar saldo/i })).toHaveCount(0)
   })
 
   test('Consumos Hoy viene del resumen del backend', async ({ page }) => {
