@@ -130,6 +130,7 @@ export interface ProductoProveedorRecord {
   producto_nombre: string
   precio_compra: number
   fecha_ultima_compra: string | null
+  preferido: boolean
 }
 
 export interface ItemForm {

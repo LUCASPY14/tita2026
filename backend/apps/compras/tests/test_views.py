@@ -999,3 +999,57 @@ class TestCompraAnular:
         assert "pagos" in resp.data["error"].lower()
         compra_credito.refresh_from_db()
         assert compra_credito.estado_pago == "PAGADO"
+
+
+# ── ProductoProveedorViewSet.preferido ────────────────────────────────────────
+
+@pytest.fixture
+def proveedor_2(db):
+    from apps.compras.models import Proveedor
+    return Proveedor.objects.create(ruc="80002002-3", razon_social="Prov. View Test 2")
+
+
+@pytest.mark.django_db
+class TestProductoProveedorPreferidoView:
+
+    def test_patch_marca_preferido_y_expone_el_campo(self, api_admin, proveedor, producto):
+        from apps.compras.models import ProductoProveedor
+        pp = ProductoProveedor.objects.create(proveedor=proveedor, producto=producto, precio_compra=Decimal("3000"))
+
+        resp = api_admin.patch(
+            f"/api/v1/compras/productos-proveedor/{pp.pk}/", {"preferido": True}, format="json",
+        )
+
+        assert resp.status_code == 200
+        assert resp.data["preferido"] is True
+        pp.refresh_from_db()
+        assert pp.preferido is True
+
+    def test_patch_preferido_desmarca_a_otro_proveedor_del_mismo_producto(
+        self, api_admin, proveedor, proveedor_2, producto
+    ):
+        from apps.compras.models import ProductoProveedor
+        pp1 = ProductoProveedor.objects.create(
+            proveedor=proveedor, producto=producto, precio_compra=Decimal("3000"), preferido=True,
+        )
+        pp2 = ProductoProveedor.objects.create(
+            proveedor=proveedor_2, producto=producto, precio_compra=Decimal("2800"),
+        )
+
+        resp = api_admin.patch(
+            f"/api/v1/compras/productos-proveedor/{pp2.pk}/", {"preferido": True}, format="json",
+        )
+
+        assert resp.status_code == 200
+        pp1.refresh_from_db()
+        assert pp1.preferido is False
+
+    def test_list_incluye_el_campo_preferido(self, api_admin, proveedor, producto):
+        from apps.compras.models import ProductoProveedor
+        ProductoProveedor.objects.create(
+            proveedor=proveedor, producto=producto, precio_compra=Decimal("3000"), preferido=True,
+        )
+        resp = api_admin.get("/api/v1/compras/productos-proveedor/")
+        assert resp.status_code == 200
+        resultados = resp.data.get("results", resp.data)
+        assert any(r["preferido"] is True for r in resultados)

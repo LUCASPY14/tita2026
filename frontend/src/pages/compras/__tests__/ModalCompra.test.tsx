@@ -27,7 +27,7 @@ beforeEach(() => {
   vi.mocked(api.get).mockImplementation((url: string) => {
     if (url === '/compras/productos-proveedor/') {
       return Promise.resolve({
-        data: { results: [{ id_producto_proveedor: 1, proveedor: 1, proveedor_nombre: 'Distribuidora El Sol', producto: 10, producto_nombre: 'Agua mineral', precio_compra: 3000, fecha_ultima_compra: null }] },
+        data: { results: [{ id_producto_proveedor: 1, proveedor: 1, proveedor_nombre: 'Distribuidora El Sol', producto: 10, producto_nombre: 'Agua mineral', precio_compra: 3000, fecha_ultima_compra: null, preferido: true }] },
       })
     }
     return Promise.resolve({ data: { results: [] } })
@@ -78,5 +78,19 @@ describe('ModalCompra — margen costo vs. venta (Bloque 1)', () => {
     await userEvent.clear(ventaInput)
 
     await waitFor(() => expect(screen.getByText('Sin precio de venta')).toBeInTheDocument())
+  })
+})
+
+describe('ModalCompra — indicador de proveedor preferido (Bloque 2)', () => {
+  it('marca con una estrella la opción del producto cuyo proveedor es el preferido', async () => {
+    renderModal()
+    await userEvent.click(screen.getByPlaceholderText('Buscar proveedor...'))
+    await userEvent.click(await screen.findByRole('option', { name: 'Distribuidora El Sol' }))
+    await waitFor(() => expect(api.get).toHaveBeenCalledWith(
+      '/compras/productos-proveedor/', { params: { proveedor: 1, page_size: 500 } },
+    ))
+
+    await userEvent.click(screen.getByPlaceholderText('Producto...'))
+    expect(await screen.findByRole('option', { name: /^★ Agua mineral/ })).toBeInTheDocument()
   })
 })

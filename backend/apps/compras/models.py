@@ -581,6 +581,10 @@ class ProductoProveedor(models.Model):
         blank=True,
         help_text="Fecha de la última compra confirmada",
     )
+    preferido = models.BooleanField(
+        default=False,
+        help_text="Proveedor preferido para este producto (uno solo por producto).",
+    )
 
     class Meta:
         verbose_name = "Producto de Proveedor"
@@ -594,3 +598,13 @@ class ProductoProveedor(models.Model):
 
     def __str__(self):
         return f"{self.producto} — {self.proveedor} @ ₲{self.precio_compra:,.0f}"
+
+    def save(self, *args, **kwargs):
+        if self.preferido:
+            with transaction.atomic():
+                ProductoProveedor.objects.filter(producto_id=self.producto_id).exclude(pk=self.pk).update(
+                    preferido=False
+                )
+                super().save(*args, **kwargs)
+        else:
+            super().save(*args, **kwargs)

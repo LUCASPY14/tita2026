@@ -1,9 +1,10 @@
 import { render, screen, waitFor } from '@testing-library/react'
+import userEvent from '@testing-library/user-event'
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import TabProductosProveedor from '../TabProductosProveedor'
 
 vi.mock('../../../services/api', () => ({
-  default: { get: vi.fn(), post: vi.fn(), put: vi.fn(), delete: vi.fn() },
+  default: { get: vi.fn(), post: vi.fn(), put: vi.fn(), patch: vi.fn(), delete: vi.fn() },
 }))
 
 vi.mock('react-hot-toast', () => ({
@@ -21,9 +22,9 @@ function mockVinculos() {
   vi.mocked(api.get).mockResolvedValue({
     data: {
       results: [
-        { id_producto_proveedor: 1, proveedor: 1, proveedor_nombre: 'Distribuidora El Sol', producto: 10, producto_nombre: 'Agua mineral', precio_compra: 3000, fecha_ultima_compra: null },
-        { id_producto_proveedor: 2, proveedor: 1, proveedor_nombre: 'Distribuidora El Sol', producto: 11, producto_nombre: 'Yogur bebible', precio_compra: 2500, fecha_ultima_compra: null },
-        { id_producto_proveedor: 3, proveedor: 1, proveedor_nombre: 'Distribuidora El Sol', producto: 12, producto_nombre: 'Producto sin lista', precio_compra: 1000, fecha_ultima_compra: null },
+        { id_producto_proveedor: 1, proveedor: 1, proveedor_nombre: 'Distribuidora El Sol', producto: 10, producto_nombre: 'Agua mineral', precio_compra: 3000, fecha_ultima_compra: null, preferido: true },
+        { id_producto_proveedor: 2, proveedor: 1, proveedor_nombre: 'Distribuidora El Sol', producto: 11, producto_nombre: 'Yogur bebible', precio_compra: 2500, fecha_ultima_compra: null, preferido: false },
+        { id_producto_proveedor: 3, proveedor: 1, proveedor_nombre: 'Distribuidora El Sol', producto: 12, producto_nombre: 'Producto sin lista', precio_compra: 1000, fecha_ultima_compra: null, preferido: false },
       ],
       count: 3,
     },
@@ -45,5 +46,37 @@ describe('TabProductosProveedor — columna Margen (Bloque 1)', () => {
     expect(screen.getByText('-25%')).toBeInTheDocument()
     // Producto sin lista de precio: sin venta configurada → '—'
     expect(screen.getByText('—')).toBeInTheDocument()
+  })
+})
+
+describe('TabProductosProveedor — toggle de proveedor preferido (Bloque 2)', () => {
+  it('marca como preferido al hacer clic en la estrella de una fila sin marcar', async () => {
+    mockVinculos()
+    vi.mocked(api.patch).mockResolvedValue({ data: {} })
+    render(<TabProductosProveedor proveedores={[PROVEEDOR]} productos={[PRODUCTO_MARGEN_ALTO, PRODUCTO_PERDIDA, PRODUCTO_SIN_VENTA]} />)
+
+    await waitFor(() => expect(screen.getByText('Yogur bebible')).toBeInTheDocument())
+    const filaYogur = screen.getByText('Yogur bebible').closest('tr')!
+    const estrella = filaYogur.querySelector('button')!
+    await userEvent.click(estrella)
+
+    await waitFor(() => expect(api.patch).toHaveBeenCalledWith(
+      '/compras/productos-proveedor/2/', { preferido: true },
+    ))
+  })
+
+  it('desmarca como preferido al hacer clic en la estrella de una fila ya marcada', async () => {
+    mockVinculos()
+    vi.mocked(api.patch).mockResolvedValue({ data: {} })
+    render(<TabProductosProveedor proveedores={[PROVEEDOR]} productos={[PRODUCTO_MARGEN_ALTO, PRODUCTO_PERDIDA, PRODUCTO_SIN_VENTA]} />)
+
+    await waitFor(() => expect(screen.getByText('Agua mineral')).toBeInTheDocument())
+    const filaAgua = screen.getByText('Agua mineral').closest('tr')!
+    const estrella = filaAgua.querySelector('button')!
+    await userEvent.click(estrella)
+
+    await waitFor(() => expect(api.patch).toHaveBeenCalledWith(
+      '/compras/productos-proveedor/1/', { preferido: false },
+    ))
   })
 })

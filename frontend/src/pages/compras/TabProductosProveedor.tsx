@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import toast from 'react-hot-toast'
-import { Edit2, Trash2, Plus, Search } from 'lucide-react'
+import { Edit2, Trash2, Plus, Search, Star } from 'lucide-react'
 import api from '../../services/api'
 import Button from '../../components/ui/Button'
 import Modal from '../../components/ui/Modal'
@@ -25,11 +25,13 @@ export default function TabProductosProveedor({ proveedores, productos }: { prov
 
   const [modal, setModal] = useState(false)
   const [editing, setEditing] = useState<ProductoProveedorRecord | null>(null)
-  const [form, setForm] = useState({ proveedor: '', producto: '', precio_compra: '' })
+  const [form, setForm] = useState({ proveedor: '', producto: '', precio_compra: '', preferido: false })
   const [saving, setSaving] = useState(false)
 
   const [deleting, setDeleting] = useState<ProductoProveedorRecord | null>(null)
   const [removing, setRemoving] = useState(false)
+
+  const [marcandoPreferido, setMarcandoPreferido] = useState<number | null>(null)
 
   const precioVentaPorProducto = useMemo(() => {
     const map: Record<number, number> = {}
@@ -59,8 +61,8 @@ export default function TabProductosProveedor({ proveedores, productos }: { prov
   const open = useCallback((r?: ProductoProveedorRecord) => {
     setEditing(r ?? null)
     setForm(r
-      ? { proveedor: String(r.proveedor), producto: String(r.producto), precio_compra: String(r.precio_compra) }
-      : { proveedor: filterProveedor || '', producto: '', precio_compra: '' })
+      ? { proveedor: String(r.proveedor), producto: String(r.producto), precio_compra: String(r.precio_compra), preferido: r.preferido }
+      : { proveedor: filterProveedor || '', producto: '', precio_compra: '', preferido: false })
     setModal(true)
   }, [filterProveedor])
 
@@ -73,6 +75,7 @@ export default function TabProductosProveedor({ proveedores, productos }: { prov
         proveedor: Number(form.proveedor),
         producto: Number(form.producto),
         precio_compra: Number(form.precio_compra) || 0,
+        preferido: form.preferido,
       }
       if (editing) {
         await api.put(`/compras/productos-proveedor/${editing.id_producto_proveedor}/`, payload)
@@ -87,6 +90,15 @@ export default function TabProductosProveedor({ proveedores, productos }: { prov
     finally { setSaving(false) }
   }, [form, editing, load, search, filterProveedor, page])
 
+  const marcarPreferido = useCallback(async (r: ProductoProveedorRecord) => {
+    setMarcandoPreferido(r.id_producto_proveedor)
+    try {
+      await api.patch(`/compras/productos-proveedor/${r.id_producto_proveedor}/`, { preferido: !r.preferido })
+      load(search, filterProveedor, page)
+    } catch (err) { toast.error(extractErrorMessage(err)) }
+    finally { setMarcandoPreferido(null) }
+  }, [load, search, filterProveedor, page])
+
   const remove = useCallback(async () => {
     if (!deleting) return
     setRemoving(true)
@@ -100,6 +112,19 @@ export default function TabProductosProveedor({ proveedores, productos }: { prov
   }, [deleting, load, search, filterProveedor, page])
 
   const columns: Column<ProductoProveedorRecord>[] = [
+    {
+      title: 'Preferido', key: 'preferido', width: 90,
+      render: (_, r) => (
+        <button
+          onClick={() => marcarPreferido(r)}
+          disabled={marcandoPreferido === r.id_producto_proveedor}
+          title={r.preferido ? 'Proveedor preferido para este producto — clic para quitar' : 'Marcar como proveedor preferido para este producto'}
+          className="mx-auto flex items-center justify-center disabled:opacity-40 cursor-pointer"
+        >
+          <Star className={`w-4.5 h-4.5 ${r.preferido ? 'fill-amber-400 text-amber-400' : 'text-slate-300 hover:text-amber-300'}`} />
+        </button>
+      ),
+    },
     { title: 'Proveedor', key: 'proveedor', render: (_, r) => <span className="text-sm font-medium text-slate-800">{r.proveedor_nombre}</span> },
     { title: 'Producto', key: 'producto', render: (_, r) => <span className="text-sm text-slate-700">{r.producto_nombre}</span> },
     { title: 'Precio de Compra', key: 'precio', render: (_, r) => <span className="tabular-nums text-sm font-medium text-slate-800">{formatGs(r.precio_compra)}</span> },
@@ -171,6 +196,18 @@ export default function TabProductosProveedor({ proveedores, productos }: { prov
             <label className={labelClass}>Precio de Compra (Gs.)</label>
             <input type="number" min={0} step={100} value={form.precio_compra} onChange={e => setForm(f => ({ ...f, precio_compra: e.target.value }))} className={inputClass} />
           </div>
+          <label className="flex items-center gap-2 text-sm text-slate-700 cursor-pointer">
+            <input
+              type="checkbox"
+              checked={form.preferido}
+              onChange={e => setForm(f => ({ ...f, preferido: e.target.checked }))}
+              className="w-4 h-4 rounded border-slate-300 text-amber-500 focus:ring-amber-400"
+            />
+            Proveedor preferido para este producto
+          </label>
+          {form.preferido && (
+            <p className="text-xs text-slate-400">Al guardar, se desmarca automáticamente como preferido cualquier otro proveedor de este mismo producto.</p>
+          )}
           {editing && (
             <p className="text-xs text-slate-400">La fecha de última compra se actualiza sola cuando se registra una Compra real — no se edita a mano.</p>
           )}

@@ -215,3 +215,59 @@ class TestOtrosStr:
     def test_detalle_nc_str(self, detalle_nc):
         s = str(detalle_nc)
         assert "Agua mineral" in s or "NC" in s
+
+
+# ── ProductoProveedor.preferido ──────────────────────────────────────────────────
+
+@pytest.mark.django_db
+class TestProductoProveedorPreferido:
+
+    @pytest.fixture
+    def proveedor_2(self, db):
+        from apps.compras.models import Proveedor
+        return Proveedor.objects.create(ruc="80000002-0", razon_social="Dist. Otro S.A.")
+
+    def test_por_defecto_no_es_preferido(self, proveedor, producto):
+        from apps.compras.models import ProductoProveedor
+        pp = ProductoProveedor.objects.create(proveedor=proveedor, producto=producto, precio_compra=Decimal("3000"))
+        assert pp.preferido is False
+
+    def test_marcar_preferido_desmarca_a_los_demas_proveedores_del_mismo_producto(self, proveedor, proveedor_2, producto):
+        from apps.compras.models import ProductoProveedor
+        pp1 = ProductoProveedor.objects.create(
+            proveedor=proveedor, producto=producto, precio_compra=Decimal("3000"), preferido=True,
+        )
+        pp2 = ProductoProveedor.objects.create(
+            proveedor=proveedor_2, producto=producto, precio_compra=Decimal("2800"), preferido=True,
+        )
+        pp1.refresh_from_db()
+        assert pp2.preferido is True
+        assert pp1.preferido is False
+
+    def test_no_afecta_el_preferido_de_otro_producto(self, proveedor, proveedor_2, producto):
+        from apps.productos.models import Producto
+        from apps.compras.models import ProductoProveedor
+        otro_producto = Producto.objects.create(
+            descripcion="Jugo de naranja", categoria=producto.categoria, unidad_medida=producto.unidad_medida,
+        )
+        pp_otro_producto = ProductoProveedor.objects.create(
+            proveedor=proveedor, producto=otro_producto, precio_compra=Decimal("4000"), preferido=True,
+        )
+        ProductoProveedor.objects.create(
+            proveedor=proveedor_2, producto=producto, precio_compra=Decimal("2800"), preferido=True,
+        )
+        pp_otro_producto.refresh_from_db()
+        assert pp_otro_producto.preferido is True
+
+    def test_desmarcar_preferido_no_afecta_a_otros(self, proveedor, proveedor_2, producto):
+        from apps.compras.models import ProductoProveedor
+        pp1 = ProductoProveedor.objects.create(
+            proveedor=proveedor, producto=producto, precio_compra=Decimal("3000"), preferido=True,
+        )
+        pp2 = ProductoProveedor.objects.create(
+            proveedor=proveedor_2, producto=producto, precio_compra=Decimal("2800"), preferido=False,
+        )
+        pp1.preferido = False
+        pp1.save()
+        pp2.refresh_from_db()
+        assert pp2.preferido is False

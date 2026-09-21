@@ -77,7 +77,8 @@ export default function ModalOC({ open, editingOC, proveedores, productos, onClo
     const provProds = listaProdProveedor.map(pp => {
       const prod = productos.find(p => p.id_producto === pp.producto)
       if (!prod) return null
-      return { value: prod.id_producto, label: `${prod.descripcion} — ${Number(pp.precio_compra).toLocaleString('es-PY')} Gs.`, data: prod }
+      const estrella = pp.preferido ? '★ ' : ''
+      return { value: prod.id_producto, label: `${estrella}${prod.descripcion} — ${Number(pp.precio_compra).toLocaleString('es-PY')} Gs.`, data: prod }
     }).filter(Boolean) as { value: number; label: string; data: Producto }[]
     const otros = productos.filter(p => !idsProveedor.has(p.id_producto)).map(p => ({ value: p.id_producto, label: p.descripcion, data: p }))
     return [...provProds, ...otros]
