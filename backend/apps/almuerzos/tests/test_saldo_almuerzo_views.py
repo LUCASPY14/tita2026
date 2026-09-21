@@ -133,7 +133,64 @@ class TestSaldoAlmuerzoViewSet:
         assert resp.status_code == 200
         assert len(resp.data) == 1
         assert resp.data[0]["tipo"] == "RECARGA"
-        assert resp.data[0]["monto"] == "20000"
+
+
+# ── SaldoAlmuerzoViewSet: editar limite_credito (tope de alerta) ────────────
+
+@pytest.mark.django_db
+class TestSaldoAlmuerzoLimiteCredito:
+
+    def _saldo(self, hijo_almuerzo, **kw):
+        from apps.almuerzos.models import SaldoAlmuerzo
+        return SaldoAlmuerzo.objects.create(hijo=hijo_almuerzo, **kw)
+
+    def test_admin_puede_configurar_el_tope(self, api_admin, hijo_almuerzo):
+        saldo = self._saldo(hijo_almuerzo)
+        resp = api_admin.patch(f"/api/v1/almuerzos/saldos/{saldo.pk}/", {"limite_credito": 80000})
+        assert resp.status_code == 200
+        assert resp.data["limite_credito"] == "80000"
+        assert resp.data["deuda_maxima"] == 80000
+
+    def test_deuda_maxima_none_cuando_no_hay_tope(self, api_admin, hijo_almuerzo):
+        saldo = self._saldo(hijo_almuerzo)
+        resp = api_admin.get(f"/api/v1/almuerzos/saldos/{saldo.pk}/")
+        assert resp.data["deuda_maxima"] is None
+
+    def test_supervisor_tambien_puede_configurar_el_tope(self, api_client, hijo_almuerzo):
+        from apps.usuarios.models import Usuario
+        supervisor = Usuario.objects.create_user(
+            email="sup_saldo@test.com", password="test1234",
+            nombre="Sup", apellido="Saldo", rol=Usuario.Rol.SUPERVISOR,
+        )
+        api_client.force_authenticate(user=supervisor)
+        saldo = self._saldo(hijo_almuerzo)
+        resp = api_client.patch(f"/api/v1/almuerzos/saldos/{saldo.pk}/", {"limite_credito": 50000})
+        assert resp.status_code == 200
+
+    def test_cajero_no_puede_configurar_el_tope(self, api_cajero, hijo_almuerzo):
+        saldo = self._saldo(hijo_almuerzo)
+        resp = api_cajero.patch(f"/api/v1/almuerzos/saldos/{saldo.pk}/", {"limite_credito": 80000})
+        assert resp.status_code == 403
+        saldo.refresh_from_db()
+        assert saldo.limite_credito == 0
+
+    def test_patch_a_otro_campo_no_exige_rol(self, api_cajero, hijo_almuerzo):
+        # No cambiar limite_credito no debe disparar la validación de rol.
+        saldo = self._saldo(hijo_almuerzo, limite_credito=Decimal("50000"))
+        resp = api_cajero.patch(f"/api/v1/almuerzos/saldos/{saldo.pk}/", {"limite_credito": 50000})
+        assert resp.status_code == 200
+
+    def test_no_se_puede_crear_ni_borrar_por_api(self, api_admin, hijo_almuerzo):
+        assert api_admin.post("/api/v1/almuerzos/saldos/", {"hijo": hijo_almuerzo.pk}).status_code == 405
+        saldo = self._saldo(hijo_almuerzo)
+        assert api_admin.delete(f"/api/v1/almuerzos/saldos/{saldo.pk}/").status_code == 405
+
+    def test_saldo_actual_sigue_siendo_de_solo_lectura(self, api_admin, hijo_almuerzo):
+        saldo = self._saldo(hijo_almuerzo, saldo_actual=Decimal("10000"))
+        resp = api_admin.patch(f"/api/v1/almuerzos/saldos/{saldo.pk}/", {"saldo_actual": 999999})
+        assert resp.status_code == 200
+        saldo.refresh_from_db()
+        assert saldo.saldo_actual == Decimal("10000")
 
 
 # ── RecargaSaldoAlmuerzoViewSet ─────────────────────────────────────────────

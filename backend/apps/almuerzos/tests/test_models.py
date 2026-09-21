@@ -194,6 +194,22 @@ class TestSuscripcionAlmuerzo:
         assert "Activa" in str(suscripcion)
 
 
+# ── SaldoAlmuerzo.deuda_maxima ────────────────────────────────────────────────
+
+@pytest.mark.django_db
+class TestSaldoAlmuerzoDeudaMaxima:
+
+    def test_sin_limite_configurado_es_sin_tope(self, hijo_almuerzo):
+        from apps.almuerzos.models import SaldoAlmuerzo
+        saldo = SaldoAlmuerzo.objects.create(hijo=hijo_almuerzo)
+        assert saldo.deuda_maxima is None
+
+    def test_con_limite_configurado_es_ese_tope(self, hijo_almuerzo):
+        from apps.almuerzos.models import SaldoAlmuerzo
+        saldo = SaldoAlmuerzo.objects.create(hijo=hijo_almuerzo, limite_credito=Decimal("80000"))
+        assert saldo.deuda_maxima == Decimal("80000")
+
+
 # ── RegistroConsumoAlmuerzo ───────────────────────────────────────────────────
 
 @pytest.mark.django_db

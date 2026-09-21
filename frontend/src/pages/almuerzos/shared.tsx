@@ -118,6 +118,8 @@ export interface SaldoAlmuerzoItem {
   hijo_grado: string | null
   nro_tarjeta: string
   saldo_actual: string | number
+  limite_credito: string | number
+  deuda_maxima: number | null
   fecha_actualizacion: string
 }
 

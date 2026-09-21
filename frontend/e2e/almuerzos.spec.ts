@@ -143,6 +143,8 @@ const SALDO_MOCK = {
   hijo_grado: '2° B',
   nro_tarjeta: '99887766',
   saldo_actual: '-45000',
+  limite_credito: '0',
+  deuda_maxima: null,
   fecha_actualizacion: '2026-05-20T10:00:00Z',
 }
 
@@ -309,6 +311,26 @@ test.describe('Almuerzos — Saldos', () => {
     await page.getByRole('button', { name: /Cargar saldo/i }).first().click()
     await expect(page.getByText('Cargar Saldo de Almuerzo')).toBeVisible({ timeout: 5000 })
     await expect(page.locator('input[type="number"]').first()).toHaveValue('45000')
+  })
+
+  test('muestra "Sin tope" cuando el alumno no tiene tope configurado', async ({ page }) => {
+    await expect(page.getByText('Sin tope')).toBeVisible({ timeout: 6000 })
+  })
+
+  test('ADMIN puede configurar el tope de deuda de almuerzo', async ({ page }) => {
+    let enviado: Record<string, unknown> | null = null
+    await page.route(/\/api\/v1\/almuerzos\/saldos\/1\/$/, (route) => {
+      enviado = route.request().postDataJSON()
+      return route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ ...SALDO_MOCK, limite_credito: '80000', deuda_maxima: 80000 }) })
+    })
+    await page.getByRole('button', { name: 'Configurar tope de deuda' }).click()
+    await expect(page.getByText('Tope de deuda de almuerzo')).toBeVisible({ timeout: 5000 })
+    const input = page.getByPlaceholder('0')
+    await input.fill('80000')
+    await page.getByRole('button', { name: 'Guardar' }).click()
+
+    await expect.poll(() => enviado).toEqual({ limite_credito: 80000 })
+    await expect(page.getByText('Tope actualizado')).toBeVisible({ timeout: 5000 })
   })
 })
 

@@ -119,6 +119,47 @@ class TestAlertarSaldoAlmuerzoNegativo:
         result = alertar_saldo_almuerzo_negativo()
         assert result["alertados"] == 1  # el alumno cuenta igual, aunque no haya a quién notificar
 
+    def test_con_tope_propio_avisa_al_80_por_ciento_del_tope(self, hijo_t, usuario_admin):
+        """Con limite_credito=50000, el umbral es min(100000, 40000) = 40000."""
+        from apps.almuerzos.models import SaldoAlmuerzo
+        from apps.almuerzos.tasks import alertar_saldo_almuerzo_negativo
+        SaldoAlmuerzo.objects.create(hijo=hijo_t, saldo_actual=Decimal("-40000"), limite_credito=Decimal("50000"))
+        result = alertar_saldo_almuerzo_negativo()
+        assert result["alertados"] == 1
+
+    def test_con_tope_propio_no_avisa_antes_del_80_por_ciento(self, hijo_t, usuario_admin):
+        from apps.almuerzos.models import SaldoAlmuerzo
+        from apps.almuerzos.tasks import alertar_saldo_almuerzo_negativo
+        SaldoAlmuerzo.objects.create(hijo=hijo_t, saldo_actual=Decimal("-39999"), limite_credito=Decimal("50000"))
+        result = alertar_saldo_almuerzo_negativo()
+        assert result["alertados"] == 0
+
+    def test_con_tope_propio_mayor_al_general_no_reduce_el_umbral(self, hijo_t, usuario_admin):
+        """Un tope de 500000 (80% = 400000) no baja el umbral general de 100000."""
+        from apps.almuerzos.models import SaldoAlmuerzo
+        from apps.almuerzos.tasks import alertar_saldo_almuerzo_negativo
+        SaldoAlmuerzo.objects.create(hijo=hijo_t, saldo_actual=Decimal("-150000"), limite_credito=Decimal("500000"))
+        result = alertar_saldo_almuerzo_negativo()
+        assert result["alertados"] == 1
+
+    def test_mensaje_incluye_el_tope_configurado(self, hijo_t, usuario_admin):
+        from apps.notificaciones.models import Notificacion
+        from apps.almuerzos.models import SaldoAlmuerzo
+        from apps.almuerzos.tasks import alertar_saldo_almuerzo_negativo
+        SaldoAlmuerzo.objects.create(hijo=hijo_t, saldo_actual=Decimal("-40000"), limite_credito=Decimal("50000"))
+        alertar_saldo_almuerzo_negativo()
+        notif = Notificacion.objects.get(usuario=usuario_admin)
+        assert "tope Gs. 50,000" in notif.mensaje
+
+    def test_mensaje_sin_tope_dice_sin_tope(self, hijo_t, usuario_admin):
+        from apps.notificaciones.models import Notificacion
+        from apps.almuerzos.models import SaldoAlmuerzo
+        from apps.almuerzos.tasks import alertar_saldo_almuerzo_negativo
+        SaldoAlmuerzo.objects.create(hijo=hijo_t, saldo_actual=Decimal("-150000"))
+        alertar_saldo_almuerzo_negativo()
+        notif = Notificacion.objects.get(usuario=usuario_admin)
+        assert "sin tope" in notif.mensaje
+
 
 # ── cerrar_cuentas_mes_anterior ───────────────────────────────────────────────
 

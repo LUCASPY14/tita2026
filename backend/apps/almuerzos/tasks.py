@@ -166,31 +166,35 @@ def avisar_deuda_almuerzo():
 def alertar_saldo_almuerzo_negativo():
     """
     Avisa a ADMIN cuando la deuda de saldo de almuerzo de un alumno supera
-    _MONTO_ALERTA_SALDO_ALMUERZO. No deduplica entre corridas — mientras
-    la deuda siga superando el umbral, vuelve a notificar cada día
-    (mismo criterio que apps.clientes.tasks.alertar_saldo_negativo_prolongado).
+    _MONTO_ALERTA_SALDO_ALMUERZO, o el 80% de su tope propio (limite_credito)
+    si ese tope es menor — mismo criterio que
+    apps.core.tasks.alertar_saldo_tarjeta_negativo. No deduplica entre
+    corridas: mientras la deuda siga superando el umbral, vuelve a notificar
+    cada día (igual que apps.clientes.tasks.alertar_saldo_negativo_prolongado).
 
     No reemplaza a avisar_deuda_almuerzo (aviso semanal a los padres por
     cualquier saldo negativo) — esta tarea es la visibilidad para admin.
     """
+    from decimal import Decimal
+
     from apps.almuerzos.models import SaldoAlmuerzo
     from apps.notificaciones.models import Notificacion
     from apps.usuarios.models import Usuario
 
-    saldos_en_alerta = SaldoAlmuerzo.objects.filter(
-        saldo_actual__lte=-_MONTO_ALERTA_SALDO_ALMUERZO,
-    ).select_related("hijo__cliente_responsable")
-
     admins = list(Usuario.objects.filter(rol=Usuario.Rol.ADMIN, is_active=True))
     alertados = 0
-    for saldo in saldos_en_alerta:
+    for saldo in SaldoAlmuerzo.objects.filter(saldo_actual__lt=0).select_related("hijo__cliente_responsable"):
         hijo = saldo.hijo
         deuda = -saldo.saldo_actual
-        msg = (
-            f"Deuda de almuerzo de {hijo.nombre_completo}: "
-            f"Gs. {deuda:,.0f} — supera el umbral de alerta "
-            f"(Gs. {_MONTO_ALERTA_SALDO_ALMUERZO:,.0f})."
-        )
+        tope = saldo.deuda_maxima
+        umbral = Decimal(_MONTO_ALERTA_SALDO_ALMUERZO)
+        if tope:
+            umbral = min(umbral, tope * Decimal("0.8"))
+        if deuda < umbral:
+            continue
+
+        tope_txt = "sin tope" if tope is None else f"tope Gs. {tope:,.0f}"
+        msg = f"Deuda de almuerzo de {hijo.nombre_completo}: Gs. {deuda:,.0f} ({tope_txt})."
 
         try:
             for admin in admins:

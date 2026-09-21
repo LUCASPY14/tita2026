@@ -21,6 +21,7 @@ import ModalMenu from './almuerzos/ModalMenu'
 import ModalEditMenu from './almuerzos/ModalEditMenu'
 import ModalConfirmarEliminar from './almuerzos/ModalConfirmarEliminar'
 import ModalConfirmarAnular from './almuerzos/ModalConfirmarAnular'
+import ModalTopeAlmuerzo from './almuerzos/ModalTopeAlmuerzo'
 import {
   extractErrorMessage, formatGs, formatFecha, MESES,
   ESTADO_REGISTRO_COLOR, ESTADO_CUENTA_COLOR, ESTADO_SUSCRIPCION_COLOR,
@@ -31,7 +32,10 @@ import {
 
 export default function Almuerzos() {
   const { t } = useTranslation()
-  const isAdmin = useAuthStore(s => s.user?.rol === 'ADMIN')
+  const rolActual = useAuthStore(s => s.user?.rol)
+  const isAdmin = rolActual === 'ADMIN'
+  const puedeConfigurarTope = rolActual === 'ADMIN' || rolActual === 'SUPERVISOR'
+  const [topeAlmuerzo, setTopeAlmuerzo] = useState<SaldoAlmuerzoItem | null>(null)
   const [tab, setTab] = useState<TabKey>('consumos')
 
   // ── Catálogos ─────────────────────────────────────────────────────
@@ -501,6 +505,15 @@ export default function Almuerzos() {
       },
     },
     {
+      title: 'Tope',
+      key: 'tope',
+      render: (_, r) => (
+        <span className="text-sm text-slate-500">
+          {r.deuda_maxima === null ? 'Sin tope' : formatGs(r.deuda_maxima)}
+        </span>
+      ),
+    },
+    {
       title: 'Últ. movimiento',
       key: 'fecha',
       render: (_, r) => <span className="text-sm text-slate-500">{formatFecha(r.fecha_actualizacion.slice(0, 10))}</span>,
@@ -508,19 +521,26 @@ export default function Almuerzos() {
     {
       title: '',
       key: 'acc',
-      width: 130,
+      width: 200,
       render: (_, r) => {
         const n = Number(r.saldo_actual) || 0
         return (
-          <Button size="sm" variant="primary" onClick={() => setPagoCuenta({
-            hijo: r.hijo,
-            hijo_nombre: r.hijo_nombre,
-            monto_sugerido: n < 0 ? -n : 0,
-            detalle: n < 0 ? `Deuda actual: ${formatGs(-n)}` : `Saldo actual: ${formatGs(n)}`,
-          })}>
-            <Banknote className="w-3.5 h-3.5" />
-            Cargar saldo
-          </Button>
+          <div className="flex gap-1.5">
+            <Button size="sm" variant="primary" onClick={() => setPagoCuenta({
+              hijo: r.hijo,
+              hijo_nombre: r.hijo_nombre,
+              monto_sugerido: n < 0 ? -n : 0,
+              detalle: n < 0 ? `Deuda actual: ${formatGs(-n)}` : `Saldo actual: ${formatGs(n)}`,
+            })}>
+              <Banknote className="w-3.5 h-3.5" />
+              Cargar saldo
+            </Button>
+            {puedeConfigurarTope && (
+              <Button size="sm" variant="secondary" onClick={() => setTopeAlmuerzo(r)} title="Configurar tope de deuda">
+                <Edit2 className="w-3.5 h-3.5" />
+              </Button>
+            )}
+          </div>
         )
       },
     },
@@ -906,6 +926,11 @@ export default function Almuerzos() {
       <ModalConfirmarRecarga
         recarga={confirmarRecarga}
         onClose={() => setConfirmarRecarga(null)}
+        onSaved={() => loadSaldos(searchSaldos, soloDeuda, pageSaldos)}
+      />
+      <ModalTopeAlmuerzo
+        saldo={topeAlmuerzo}
+        onClose={() => setTopeAlmuerzo(null)}
         onSaved={() => loadSaldos(searchSaldos, soloDeuda, pageSaldos)}
       />
       <ModalEditSusc

@@ -4,6 +4,8 @@ Serializers para la app almuerzos
 
 from rest_framework import serializers
 
+from common.permissions import ROLES_AUTORIZADORES, exigir_rol
+
 from .models import (
     Alergeno,
     CuentaAlmuerzoMensual,
@@ -164,10 +166,33 @@ class SaldoAlmuerzoSerializer(serializers.ModelSerializer):
     hijo_nombre = serializers.CharField(source="hijo.nombre_completo", read_only=True)
     hijo_grado = serializers.CharField(source="hijo.grado.nombre", read_only=True, default=None)
     nro_tarjeta = serializers.SerializerMethodField()
+    deuda_maxima = serializers.SerializerMethodField()
+
+    # Campo con impacto de control: solo ADMIN/SUPERVISOR puede cambiarlo
+    # (mismo criterio que TarjetaSerializer.CAMPOS_SENSIBLES).
+    CAMPOS_SENSIBLES = {"limite_credito": 0}
 
     def get_nro_tarjeta(self, obj):
         tarjeta = getattr(obj.hijo, "tarjeta", None)
         return tarjeta.nro_tarjeta if tarjeta else ""
+
+    def get_deuda_maxima(self, obj):
+        return int(obj.deuda_maxima) if obj.deuda_maxima is not None else None
+
+    def validate(self, attrs):
+        request = self.context.get("request")
+        if request is None:
+            return attrs
+        for campo, sin_autorizacion in self.CAMPOS_SENSIBLES.items():
+            if campo not in attrs:
+                continue
+            actual = getattr(self.instance, campo) if self.instance else sin_autorizacion
+            if attrs[campo] != actual:
+                exigir_rol(
+                    request.user, ROLES_AUTORIZADORES,
+                    "Solo un administrador o supervisor puede cambiar el tope de deuda de almuerzo.",
+                )
+        return attrs
 
     class Meta:
         model = SaldoAlmuerzo

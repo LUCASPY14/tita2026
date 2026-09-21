@@ -597,7 +597,12 @@ class SaldoAlmuerzo(models.Model):
     """
     Saldo corriente de almuerzo de un hijo. Independiente del saldo de la
     tarjeta de cantina (Tarjeta.saldo_actual) — puede quedar negativo, nunca
-    bloquea el ingreso al comedor.
+    bloquea el ingreso al comedor (el almuerzo se registra siempre).
+
+    limite_credito es un tope de control/alerta, no de bloqueo (a diferencia
+    de Tarjeta): al superarlo se avisa a ADMIN (alertar_saldo_almuerzo_negativo)
+    pero el comedor sigue registrando almuerzos igual. 0 = sin tope, misma
+    convención que Tarjeta.limite_credito y Cliente.limite_credito.
     """
 
     id_saldo_almuerzo = models.BigAutoField(primary_key=True)
@@ -605,6 +610,10 @@ class SaldoAlmuerzo(models.Model):
         "clientes.Hijo", models.PROTECT, related_name="saldo_almuerzo"
     )
     saldo_actual = models.DecimalField(max_digits=12, decimal_places=0, default=0)
+    limite_credito = models.DecimalField(
+        max_digits=12, decimal_places=0, default=0,
+        help_text="Tope de deuda para la alerta a ADMIN. 0 = sin tope.",
+    )
     fecha_actualizacion = models.DateTimeField(auto_now=True)
     fecha_creacion = models.DateTimeField(auto_now_add=True)
 
@@ -614,6 +623,11 @@ class SaldoAlmuerzo(models.Model):
 
     def __str__(self):
         return f"{self.hijo} - ₲{self.saldo_actual:,.0f}"
+
+    @property
+    def deuda_maxima(self):
+        """Tope de deuda configurado, o None si no tiene (0 = sin tope)."""
+        return self.limite_credito or None
 
 
 class RecargaSaldoAlmuerzo(models.Model):

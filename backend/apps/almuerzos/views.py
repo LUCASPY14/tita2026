@@ -599,10 +599,13 @@ MONTO_MIN_CARGA_CAJA = 5_000
 MONTO_MAX_CARGA_CAJA = 5_000_000
 
 
-class SaldoAlmuerzoViewSet(viewsets.ReadOnlyModelViewSet):
-    """Saldo corriente de almuerzo por hijo. Solo lectura — se modifica vía
-    RecargaSaldoAlmuerzoViewSet y RegistroConsumoAlmuerzoViewSet."""
+class SaldoAlmuerzoViewSet(viewsets.ModelViewSet):
+    """Saldo corriente de almuerzo por hijo. El saldo en sí se modifica vía
+    RecargaSaldoAlmuerzoViewSet y RegistroConsumoAlmuerzoViewSet — lo único
+    editable acá es limite_credito (tope de alerta), y solo ADMIN/SUPERVISOR
+    (ver SaldoAlmuerzoSerializer.validate)."""
 
+    http_method_names = ["get", "patch", "head", "options"]
     queryset = SaldoAlmuerzo.objects.select_related(
         "hijo__grado", "hijo__cliente_responsable", "hijo__tarjeta",
     ).all()
