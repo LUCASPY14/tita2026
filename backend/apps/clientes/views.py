@@ -3,7 +3,6 @@ Views para la app clientes
 """
 
 import csv
-from datetime import date
 from decimal import Decimal
 
 from django.db.models import DecimalField, Q, Sum, Value
@@ -640,7 +639,7 @@ class ReporteCuentaCorrienteView(APIView):
     permission_classes = [IsStaffUser]
 
     def get(self, request):
-        hoy = date.today()
+        hoy = timezone.localdate()
 
         from django.db.models import OuterRef, Subquery
         from apps.core.models import MovimientoTarjeta, Tarjeta
