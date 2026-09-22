@@ -282,3 +282,45 @@ test.describe('Comedor — acceso por rol', () => {
     await expect(page).not.toHaveURL('/comedor')
   })
 })
+
+// ── Comedor: puerta de acceso dedicada (PC fija del comedor) ─────────────────
+
+test.describe('Comedor — puerta de acceso dedicada', () => {
+  test('/comedor-acceso muestra el badge "Comedor"', async ({ page }) => {
+    await page.goto('/comedor-acceso')
+    await expect(page.getByText('Comedor', { exact: true })).toBeVisible()
+  })
+
+  test('login exitoso desde /comedor-acceso entra directo a /comedor (sin pasar por el dashboard)', async ({ page }) => {
+    await page.route(/\/api\/v1\//, (route) =>
+      route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ results: [], count: 0 }) })
+    )
+    await page.route(/\/api\/v1\/usuarios\/usuarios\/me/, (route) =>
+      route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(COCINA) })
+    )
+    await page.route(/\/api\/token/, (route) =>
+      route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ access: 'tok', refresh: 'ref', user: COCINA }) })
+    )
+    await setupComedor(page)
+
+    await page.goto('/comedor-acceso')
+    await page.getByPlaceholder('Tu CI o RUC').fill('1234567')
+    await page.getByPlaceholder('••••••••').fill('password123')
+    await page.getByRole('button', { name: 'Iniciar Sesión' }).click()
+
+    await expect(page).toHaveURL('/comedor')
+  })
+
+  test('muestra "Atendiendo" con el responsable logueado, y "Cambiar" vuelve a la puerta del comedor', async ({ page }) => {
+    await loginAs(page, COCINA)
+    await setupComedor(page)
+    await page.goto('/comedor')
+    await expect(page).toHaveURL('/comedor')
+
+    await expect(page.getByText('Atendiendo:')).toBeVisible()
+    await expect(page.getByText('Chef Tita')).toBeVisible()
+
+    await page.getByRole('button', { name: /Cambiar/ }).click()
+    await expect(page).toHaveURL('/comedor-acceso')
+  })
+})

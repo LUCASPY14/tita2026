@@ -26,7 +26,7 @@ vi.mock('react-hot-toast', () => ({
 
 import Login from '../Login'
 
-function renderLogin(variant?: 'admin' | 'pos' | 'cobranzas') {
+function renderLogin(variant?: 'admin' | 'pos' | 'cobranzas' | 'comedor') {
   return render(
     <MemoryRouter>
       <Login variant={variant} />
@@ -36,6 +36,7 @@ function renderLogin(variant?: 'admin' | 'pos' | 'cobranzas') {
 
 beforeEach(() => {
   vi.clearAllMocks()
+  localStorage.clear()
 })
 
 // ─── render ───────────────────────────────────────────────────────────────────
@@ -76,6 +77,25 @@ describe('Login — variant', () => {
   it('variant="cobranzas" muestra el badge "Cobranzas"', () => {
     renderLogin('cobranzas')
     expect(screen.getByText('Cobranzas')).toBeInTheDocument()
+  })
+
+  it('variant="comedor" muestra el badge "Comedor"', () => {
+    renderLogin('comedor')
+    expect(screen.getByText('Comedor')).toBeInTheDocument()
+  })
+})
+
+// ─── puerta recordada (para volver acá si la sesión se cierra sola) ──────────
+
+describe('Login — puerta recordada', () => {
+  it('recuerda la puerta "admin" en localStorage al montar sin variant', () => {
+    renderLogin()
+    expect(localStorage.getItem('auth_door')).toBe('admin')
+  })
+
+  it('recuerda la puerta "comedor" en localStorage al montar con variant="comedor"', () => {
+    renderLogin('comedor')
+    expect(localStorage.getItem('auth_door')).toBe('comedor')
   })
 })
 
@@ -136,6 +156,18 @@ describe('Login — submit exitoso', () => {
 
     await waitFor(() => {
       expect(mockNavigate).toHaveBeenCalledWith('/dashboard')
+    })
+  })
+
+  it('variant="comedor" navega directo a /comedor tras login exitoso (sin pasar por el dashboard)', async () => {
+    mockLogin.mockResolvedValueOnce(true)
+    renderLogin('comedor')
+    await userEvent.type(screen.getByLabelText(/ci\/ruc/i), '2447330')
+    await userEvent.type(screen.getByLabelText(/contraseña/i), 'secreto123')
+    await userEvent.click(screen.getByRole('button', { name: /iniciar sesión/i }))
+
+    await waitFor(() => {
+      expect(mockNavigate).toHaveBeenCalledWith('/comedor')
     })
   })
 

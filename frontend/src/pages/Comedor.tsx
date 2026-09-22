@@ -4,11 +4,13 @@ import toast from 'react-hot-toast'
 import {
   CheckCircle, XCircle, UtensilsCrossed, Clock,
   Download, Maximize2, Minimize2, List, RefreshCw,
-  AlertTriangle, Loader2,
+  AlertTriangle, Loader2, LogOut,
 } from 'lucide-react'
 import api from '../services/api'
 import { exportarIngresosComedorPDF } from '../utils/pdf'
 import { useOfflineQueue } from '../hooks/useOfflineQueue'
+import { useAuthStore } from '../store/authStore'
+import { setAuthDoor } from '../lib/authDoor'
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -153,6 +155,7 @@ interface RegistroReciente {
 
 export default function Comedor() {
   const { t } = useTranslation()
+  const { user, logout } = useAuthStore()
   const { isOnline, pendingCount, syncing, syncNow } = useOfflineQueue()
   const inputRef = useRef<HTMLInputElement>(null)
   const countdownRef = useRef<ReturnType<typeof setInterval>>(undefined)
@@ -184,6 +187,12 @@ export default function Comedor() {
     link?.setAttribute('href', '/comedor-manifest.webmanifest')
     return () => { link?.setAttribute('href', prev) }
   }, [])
+
+  // Marca esta PC como "puerta comedor": si la sesión se cierra sola más
+  // tarde (timeout de inactividad, sesión reemplazada desde otro dispositivo)
+  // o con "Cambiar de responsable", AuthMonitor (App.tsx) vuelve acá en vez
+  // de al login genérico — sin importar por cuál puerta se entró esta vez.
+  useEffect(() => { setAuthDoor('comedor') }, [])
 
   // reloj
   useEffect(() => {
@@ -495,6 +504,13 @@ export default function Comedor() {
     return () => window.removeEventListener('keydown', handler)
   }, [clearResult])
 
+  function cambiarResponsable() {
+    // No navega manualmente: logout() dispara 'auth:logout', y AuthMonitor
+    // (App.tsx) redirige solo a la puerta recordada — ya marcada como
+    // "comedor" por el efecto de arriba.
+    logout()
+  }
+
   function exportarPDF() {
     if (!recientes.length) { toast.error('Sin ingresos registrados aún'); return }
     exportarIngresosComedorPDF(
@@ -528,6 +544,22 @@ export default function Comedor() {
           </div>
         </div>
         <div className="flex items-center gap-3">
+          {user && (
+            <div className="flex items-center gap-2 bg-teal-50 border border-teal-100 rounded-xl pl-3 pr-1.5 py-1.5">
+              <span className="text-sm text-teal-700">
+                <span className="text-teal-500">Atendiendo:</span>{' '}
+                <span className="font-bold">{user.nombre} {user.apellido}</span>
+              </span>
+              <button
+                onClick={e => { e.stopPropagation(); cambiarResponsable() }}
+                title="Cambiar de responsable"
+                className="flex items-center gap-1 px-2.5 py-1.5 bg-white hover:bg-teal-100 border border-teal-200 rounded-lg text-xs font-bold text-teal-700 transition-colors cursor-pointer"
+              >
+                <LogOut className="w-3.5 h-3.5" />
+                Cambiar
+              </button>
+            </div>
+          )}
           <div className="flex items-center gap-2 text-slate-500 bg-slate-50 border border-slate-200 rounded-xl px-3 py-2">
             <Clock className="w-4 h-4" />
             <span className="text-base tabular-nums font-medium">{clock}</span>

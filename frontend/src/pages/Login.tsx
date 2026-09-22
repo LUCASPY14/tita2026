@@ -1,18 +1,27 @@
-import { useState, useRef } from 'react'
+import { useState, useRef, useEffect } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import toast from 'react-hot-toast'
 import { Eye, EyeOff, ShieldCheck, ArrowLeft } from 'lucide-react'
 import { useAuthStore } from '../store/authStore'
+import { setAuthDoor } from '../lib/authDoor'
 import Input from '../components/ui/Input'
 import Button from '../components/ui/Button'
 import AuthShell from '../components/AuthShell'
 
-type LoginVariant = 'admin' | 'pos' | 'cobranzas'
+type LoginVariant = 'admin' | 'pos' | 'cobranzas' | 'comedor'
 
 const VARIANTES: Record<LoginVariant, { text: string; className: string }> = {
   admin:     { text: 'Administración', className: 'bg-orange-100 text-orange-700' },
   pos:       { text: 'Caja / POS',     className: 'bg-amber-100 text-amber-700' },
   cobranzas: { text: 'Cobranzas',      className: 'bg-blue-100 text-blue-700' },
+  comedor:   { text: 'Comedor',        className: 'bg-teal-100 text-teal-700' },
+}
+
+// A dónde ir tras un login exitoso desde cada puerta. Las que no figuran acá
+// van al Dashboard general (comportamiento por defecto); Comedor es un
+// puesto de trabajo único, así que entra directo sin pasar por el menú.
+const POST_LOGIN_ROUTE: Partial<Record<LoginVariant, string>> = {
+  comedor: '/comedor',
 }
 
 interface Props {
@@ -21,6 +30,11 @@ interface Props {
 
 export default function Login({ variant = 'admin' }: Props) {
   const badge = VARIANTES[variant]
+  const destino = POST_LOGIN_ROUTE[variant] ?? '/dashboard'
+
+  // Recuerda esta puerta para que, si la sesión se cierra sola más tarde
+  // (timeout, sesión reemplazada), vuelva acá y no al login genérico.
+  useEffect(() => { setAuthDoor(variant) }, [variant])
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [loading, setLoading] = useState(false)
@@ -52,7 +66,7 @@ export default function Login({ variant = 'admin' }: Props) {
     try {
       const done = await login(email, password)
       if (done) {
-        navigate('/dashboard')
+        navigate(destino)
         queueMicrotask(() => toast.success('¡Bienvenido a La Cantina de Tita!'))
         // component unmounts — don't call setLoading(false)
       } else {
@@ -75,7 +89,7 @@ export default function Login({ variant = 'admin' }: Props) {
     setLoading(true)
     try {
       await verify2FA(trimmed)
-      navigate('/dashboard')
+      navigate(destino)
       queueMicrotask(() => toast.success('¡Bienvenido a La Cantina de Tita!'))
     } catch {
       setErrors({ codigo: 'Código inválido o expirado' })

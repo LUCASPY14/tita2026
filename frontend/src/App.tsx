@@ -6,6 +6,7 @@ import PortalLayout from './components/PortalLayout'
 import Spinner from './components/ui/Spinner'
 import { useAuthStore } from './store/authStore'
 import { usePushNotifications } from './hooks/usePushNotifications'
+import { getAuthDoorRoute } from './lib/authDoor'
 
 // ── Eager: rutas públicas y estructurales ─────────────────────────────────────
 import Landing from './pages/Landing'
@@ -96,7 +97,7 @@ function PrivateRoute({ children, roles }: { children: React.ReactNode; roles?: 
   const { isAuthenticated, user } = useAuthStore()
   const location = useLocation()
   if (!isAuthenticated) {
-    const dest = location.pathname.startsWith('/portal') ? '/portal/login' : '/login'
+    const dest = location.pathname.startsWith('/portal') ? '/portal/login' : getAuthDoorRoute()
     return <Navigate to={dest} replace />
   }
   if (roles && user && !roles.includes(user.rol)) return <Navigate to="/dashboard" replace />
@@ -126,7 +127,7 @@ function AuthMonitor() {
     const handle = () => {
       const isPortal = user?.rol === 'CLIENTE_WEB'
       logout()
-      navigate(isPortal ? '/portal/login' : '/login', { replace: true })
+      navigate(isPortal ? '/portal/login' : getAuthDoorRoute(), { replace: true })
     }
     window.addEventListener('auth:logout', handle)
     return () => window.removeEventListener('auth:logout', handle)
@@ -194,6 +195,7 @@ export default function App() {
             <Route path="/login"              element={<Login variant="admin" />} />
             <Route path="/pos"                element={<Login variant="pos" />} />
             <Route path="/cobranzas"          element={<Login variant="cobranzas" />} />
+            <Route path="/comedor-acceso"     element={<Login variant="comedor" />} />
             <Route path="/recuperar-password" element={<RecuperarPassword />} />
             <Route path="/reset-password"     element={<RestablecerPassword />} />
             <Route element={

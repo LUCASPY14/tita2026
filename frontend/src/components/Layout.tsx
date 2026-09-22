@@ -2,6 +2,7 @@ import { useState, useRef, useEffect } from 'react'
 import { Outlet, useNavigate, useLocation } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
 import { useAuthStore } from '../store/authStore'
+import { getAuthDoorRoute } from '../lib/authDoor'
 import LanguageSwitcher from './ui/LanguageSwitcher'
 import {
   LayoutDashboard,
@@ -95,7 +96,7 @@ export default function AppLayout() {
 
   const handleLogout = () => {
     logout()
-    navigate('/login')
+    navigate(getAuthDoorRoute())
   }
 
   useEffect(() => {

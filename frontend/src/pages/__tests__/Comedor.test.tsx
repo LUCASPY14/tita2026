@@ -22,6 +22,12 @@ vi.mock('../../hooks/useOfflineQueue', () => ({
   useOfflineQueue: () => mockUseOfflineQueue(),
 }))
 
+const mockLogout = vi.fn()
+const mockUseAuthStore = vi.fn()
+vi.mock('../../store/authStore', () => ({
+  useAuthStore: () => mockUseAuthStore(),
+}))
+
 import api from '../../services/api'
 import { exportarIngresosComedorPDF } from '../../utils/pdf'
 
@@ -94,6 +100,10 @@ beforeEach(() => {
   // Estado por defecto de la cola offline — online, sin pendientes
   mockUseOfflineQueue.mockReturnValue({
     isOnline: true, pendingCount: 0, syncing: false, syncNow: vi.fn(), enqueue: vi.fn(),
+  })
+  // Responsable logueado por defecto (puede sobreescribirse por test)
+  mockUseAuthStore.mockReturnValue({
+    user: { nombre: 'María', apellido: 'López' }, logout: mockLogout,
   })
 })
 
@@ -408,5 +418,31 @@ describe('Comedor — modo lista', () => {
         expect.anything(),
       )
     })
+  })
+})
+
+describe('Comedor — responsable del puesto (PC dedicada)', () => {
+  it('muestra "Atendiendo: <nombre>" con el usuario logueado', async () => {
+    await renderReady()
+    expect(screen.getByText('Atendiendo:')).toBeInTheDocument()
+    expect(screen.getByText('María López')).toBeInTheDocument()
+  })
+
+  it('"Cambiar" cierra sesión (AuthMonitor global se encarga de volver a la puerta correcta)', async () => {
+    await renderReady()
+    await userEvent.click(screen.getByRole('button', { name: /Cambiar/i }))
+    expect(mockLogout).toHaveBeenCalled()
+  })
+
+  it('sin usuario logueado, no muestra el bloque de responsable', async () => {
+    mockUseAuthStore.mockReturnValue({ user: null, logout: mockLogout })
+    await renderReady()
+    expect(screen.queryByText('Atendiendo:')).not.toBeInTheDocument()
+  })
+
+  it('al entrar, marca esta PC como "puerta comedor" — así un cierre de sesión posterior (timeout, sesión reemplazada) vuelve acá', async () => {
+    localStorage.clear()
+    await renderReady()
+    expect(localStorage.getItem('auth_door')).toBe('comedor')
   })
 })
