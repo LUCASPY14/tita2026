@@ -1,16 +1,17 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
+import { useNavigate } from 'react-router-dom'
 import toast from 'react-hot-toast'
 import {
   Package, Plus, CheckCircle, XCircle,
-  TrendingUp, TrendingDown, Bell,
+  TrendingUp, TrendingDown, Bell, ShoppingCart,
 } from 'lucide-react'
 import api from '../services/api'
 import Badge from '../components/ui/Badge'
 import Button from '../components/ui/Button'
 import Table, { type Column } from '../components/ui/Table'
 import {
-  formatFecha,
+  formatFecha, formatGs,
   type Producto, type AjusteInventario, type MovimientoStock,
   type AlertaStock, type TabKey,
   ESTADO_COLOR, TIPO_AJUSTE_COLOR, TIPO_MOV_COLOR, ALERTA_COLOR,
@@ -32,6 +33,7 @@ function toApiPath(absoluteUrl: string | null | undefined): string | null {
 
 export default function Inventario() {
   const { t } = useTranslation()
+  const navigate = useNavigate()
   const [tab, setTab] = useState<TabKey>('ajustes')
 
   const [productos, setProductos] = useState<Producto[]>([])
@@ -279,6 +281,37 @@ export default function Inventario() {
     {
       title: 'Generada', key: 'fecha_generada',
       render: (_, r) => <span className="text-sm text-slate-400">{formatFecha(r.fecha_generada)}</span>,
+    },
+    {
+      title: 'Proveedor sugerido', key: 'proveedor_preferido',
+      render: (_, r) => r.proveedor_preferido_nombre
+        ? (
+          <div>
+            <p className="text-sm text-slate-700">{r.proveedor_preferido_nombre}</p>
+            <p className="text-xs text-slate-400">{formatGs(r.precio_compra_preferido)}</p>
+          </div>
+        )
+        : <span className="text-xs text-slate-400">Sin proveedor preferido</span>,
+    },
+    {
+      title: '', key: 'acc', width: 140,
+      render: (_, r) => r.proveedor_preferido_id
+        ? (
+          <Button
+            size="sm" variant="secondary"
+            onClick={() => navigate(`/compras?nueva_compra=1&proveedor=${r.proveedor_preferido_id}&producto=${r.producto}`)}
+          >
+            <ShoppingCart className="w-3.5 h-3.5" /> Generar compra
+          </Button>
+        )
+        : (
+          <button
+            onClick={() => navigate('/compras?tab=vinculos')}
+            className="text-xs text-emerald-600 hover:underline cursor-pointer"
+          >
+            Configurar proveedor →
+          </button>
+        ),
     },
   ]
 

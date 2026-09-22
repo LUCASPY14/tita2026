@@ -166,6 +166,44 @@ test.describe('Inventario', () => {
     }
   })
 
+  test('"Generar compra" navega a Compras con proveedor y producto precargados (Bloque 3)', async ({ page }) => {
+    await page.route(/\/api\/v1\/inventario\/alertas/, (route) =>
+      route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify({
+          results: [
+            {
+              id: 1,
+              tipo: 'STOCK_CERO',
+              producto: 20,
+              producto_nombre: 'Yogur bebible',
+              stock_actual: 0,
+              stock_minimo: 10,
+              activa: true,
+              fecha_generada: new Date().toISOString(),
+              proveedor_preferido_id: 5,
+              proveedor_preferido_nombre: 'Distribuidora El Sol',
+              precio_compra_preferido: '2500',
+            },
+          ],
+          count: 1,
+          next: null,
+          previous: null,
+        }),
+      })
+    )
+    await page.route(/\/api\/v1\/compras\//, (route) =>
+      route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ results: [], count: 0 }) })
+    )
+
+    await page.getByRole('button', { name: /alerta/i }).first().click()
+    await expect(page.getByText('Distribuidora El Sol')).toBeVisible({ timeout: 6000 })
+
+    await page.getByRole('button', { name: /Generar compra/ }).click()
+    await expect(page).toHaveURL(/\/compras\?nueva_compra=1&proveedor=5&producto=20/)
+  })
+
   test('error 500 del servidor no rompe la página con error boundary', async ({ page }) => {
     await page.route(/\/api\/v1\/inventario\/ajustes/, (route) =>
       route.fulfill({ status: 500, contentType: 'application/json', body: '{"detail":"Internal Server Error"}' })

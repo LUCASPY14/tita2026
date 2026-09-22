@@ -208,6 +208,11 @@ class AlertaStockViewSet(viewsets.ViewSet):
                 "notificacion_enviada": False,
                 "fecha_generada": ahora,
                 "fecha_resuelta": None,
+                "proveedor_preferido_id": a["proveedor_preferido_id"],
+                "proveedor_preferido_nombre": a["proveedor_preferido_nombre"],
+                "precio_compra_preferido": (
+                    str(a["precio_compra_preferido"]) if a["precio_compra_preferido"] is not None else None
+                ),
             }
             for a in alertas
         ]

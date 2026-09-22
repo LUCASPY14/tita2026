@@ -49,6 +49,9 @@ export interface MovimientoStock {
 export interface AlertaStock {
   id: number; producto: number; producto_nombre: string; tipo: string
   stock_actual: string | number; stock_minimo: string | number; activa: boolean; fecha_generada: string
+  proveedor_preferido_id: number | null
+  proveedor_preferido_nombre: string | null
+  precio_compra_preferido: string | number | null
 }
 
 export const ESTADO_COLOR: Record<string, BadgeColor> = {
@@ -60,6 +63,10 @@ export const TIPO_MOV_COLOR: Record<string, BadgeColor> = {
 }
 export const ALERTA_COLOR: Record<string, BadgeColor> = {
   STOCK_CERO: 'red', STOCK_CRITICO: 'orange', STOCK_MINIMO: 'yellow',
+}
+
+export function formatGs(n: number | string | null | undefined): string {
+  return (Number(n) || 0).toLocaleString('es-PY') + ' Gs.'
 }
 
 export type TabKey = 'ajustes' | 'movimientos' | 'alertas'

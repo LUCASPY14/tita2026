@@ -94,3 +94,28 @@ describe('ModalCompra — indicador de proveedor preferido (Bloque 2)', () => {
     expect(await screen.findByRole('option', { name: /^★ Agua mineral/ })).toBeInTheDocument()
   })
 })
+
+describe('ModalCompra — preselección desde alerta de stock bajo (Bloque 3)', () => {
+  it('precarga proveedor, producto y costo cuando se abre con preseleccion', async () => {
+    const { rerender } = render(
+      <ModalCompra
+        open={false} editingCompra={null} proveedores={[PROVEEDOR]} productos={[PRODUCTO]}
+        preseleccion={{ proveedorId: 1, productoId: 10 }}
+        onClose={vi.fn()} onSaved={vi.fn()}
+      />,
+    )
+    // Igual que en la app real: el modal nace cerrado y se abre después
+    // (deep-link desde "Generar compra" en la alerta de stock bajo).
+    rerender(
+      <ModalCompra
+        open={true} editingCompra={null} proveedores={[PROVEEDOR]} productos={[PRODUCTO]}
+        preseleccion={{ proveedorId: 1, productoId: 10 }}
+        onClose={vi.fn()} onSaved={vi.fn()}
+      />,
+    )
+
+    await waitFor(() => expect(screen.getByPlaceholderText('Buscar proveedor...')).toHaveValue('Distribuidora El Sol'))
+    await waitFor(() => expect(screen.getByPlaceholderText('Costo')).toHaveValue(3000))
+    expect(screen.getByPlaceholderText('Producto...')).toHaveValue('★ Agua mineral — 3.000 Gs.')
+  })
+})

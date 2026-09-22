@@ -84,6 +84,47 @@ class TestViewSetsSimples:
         assert resp.status_code in (401, 403)
 
 
+# ── AlertaStockViewSet — proveedor preferido (Bloque 3) ───────────────────────
+
+@pytest.fixture
+def producto_bajo_stock(db, categoria, unidad_medida):
+    from apps.productos.models import Producto
+    from apps.inventario.models import Stock
+    prod = Producto.objects.create(
+        descripcion="Producto bajo stock test", categoria=categoria, unidad_medida=unidad_medida,
+        requiere_stock=True, activo=True, stock_minimo=Decimal("5"),
+    )
+    Stock.objects.create(producto=prod, cantidad=Decimal("0"))
+    return prod
+
+
+@pytest.mark.django_db
+class TestAlertaStockProveedorPreferido:
+
+    def test_sin_proveedor_preferido_retorna_none(self, api_cajero, producto_bajo_stock):
+        resp = api_cajero.get("/api/v1/inventario/alertas-stock/")
+        assert resp.status_code == 200
+        alerta = resp.data["results"][0]
+        assert alerta["proveedor_preferido_id"] is None
+        assert alerta["proveedor_preferido_nombre"] is None
+        assert alerta["precio_compra_preferido"] is None
+
+    def test_con_proveedor_preferido_incluye_datos(self, api_cajero, producto_bajo_stock):
+        from apps.compras.models import Proveedor, ProductoProveedor
+        proveedor = Proveedor.objects.create(ruc="80009003-3", razon_social="Dist. Reposición S.A.")
+        ProductoProveedor.objects.create(
+            proveedor=proveedor, producto=producto_bajo_stock, precio_compra=Decimal("4200"), preferido=True,
+        )
+
+        resp = api_cajero.get("/api/v1/inventario/alertas-stock/")
+
+        assert resp.status_code == 200
+        alerta = resp.data["results"][0]
+        assert alerta["proveedor_preferido_id"] == proveedor.pk
+        assert alerta["proveedor_preferido_nombre"] == "Dist. Reposición S.A."
+        assert alerta["precio_compra_preferido"] == "4200"
+
+
 # ── MovimientoStockViewSet — export CSV ───────────────────────────────────────
 
 @pytest.mark.django_db

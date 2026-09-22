@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
+import { useSearchParams } from 'react-router-dom'
 import toast from 'react-hot-toast'
 import {
   AlertTriangle, ArrowRightCircle, Building2, CheckCircle, ClipboardList,
@@ -48,7 +49,8 @@ export default function Compras() {
   const { t } = useTranslation()
   const { user } = useAuthStore()
   const canApprove = user?.rol === 'ADMIN' || user?.rol === 'SUPERVISOR'
-  const [tab, setTab] = useState<TabKey>('compras')
+  const [searchParams] = useSearchParams()
+  const [tab, setTab] = useState<TabKey>(() => (searchParams.get('tab') === 'vinculos' ? 'vinculos' : 'compras'))
   const getProductos = useCatalogoStore(state => state.getProductos)
   const getMediosPago = useCatalogoStore(state => state.getMediosPago)
 
@@ -111,6 +113,7 @@ export default function Compras() {
   const [provModal, setProvModal] = useState<{ open: boolean; prov: Proveedor | null }>({ open: false, prov: null })
   const [ccProveedor, setCcProveedor] = useState<Proveedor | null>(null)
   const [compraModal, setCompraModal] = useState<{ open: boolean; compra: Compra | null }>({ open: false, compra: null })
+  const [preseleccionCompra, setPreseleccionCompra] = useState<{ proveedorId: number; productoId: number } | null>(null)
   const [detailCompra, setDetailCompra] = useState<Compra | null>(null)
   const [pagoModal, setPagoModal] = useState<{ open: boolean; compra: Compra | null }>({ open: false, compra: null })
   const [ocModal, setOcModal] = useState<{ open: boolean; oc: OrdenCompra | null }>({ open: false, oc: null })
@@ -130,6 +133,19 @@ export default function Compras() {
     api.get('/clientes/departamentos/', { params: { page_size: 200 } }).then(({ data }) => setDepartamentos(data.results ?? data)).catch(() => toast.error('Error al cargar departamentos'))
     api.get('/clientes/ciudades/', { params: { page_size: 200 } }).then(({ data }) => setCiudades(data.results ?? data)).catch(() => toast.error('Error al cargar ciudades'))
   }, [getProductos, getMediosPago])
+
+  // Deep-link desde la alerta de stock bajo (Inventario): /compras?nueva_compra=1&proveedor=&producto=
+  useEffect(() => {
+    const nueva = searchParams.get('nueva_compra')
+    const proveedorId = searchParams.get('proveedor')
+    const productoId = searchParams.get('producto')
+    if (nueva === '1' && proveedorId && productoId) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
+      setPreseleccionCompra({ proveedorId: Number(proveedorId), productoId: Number(productoId) })
+      setCompraModal({ open: true, compra: null })
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
 
   // ── Load functions ───────────────────────────────────────────────
   const loadCompras = useCallback(async (search: string, estado: string, tipo: string, prov: string, entrega: string, p: number) => {
@@ -657,7 +673,8 @@ export default function Compras() {
         editingCompra={compraModal.compra}
         proveedores={proveedores}
         productos={productos}
-        onClose={() => setCompraModal({ open: false, compra: null })}
+        preseleccion={preseleccionCompra}
+        onClose={() => { setCompraModal({ open: false, compra: null }); setPreseleccionCompra(null) }}
         onSaved={() => { setPageCompras(1); loadCompras(searchCompras, filterEstado, filterTipo, filterProveedor, filterEntrega, 1) }}
       />
       <ModalCompraDetail

@@ -17,11 +17,13 @@ interface Props {
   editingCompra: Compra | null
   proveedores: Proveedor[]
   productos: Producto[]
+  /** Precarga proveedor + producto (ej. desde "Generar compra" en una alerta de stock bajo). */
+  preseleccion?: { proveedorId: number; productoId: number } | null
   onClose: () => void
   onSaved: () => void
 }
 
-export default function ModalCompra({ open, editingCompra, proveedores, productos, onClose, onSaved }: Props) {
+export default function ModalCompra({ open, editingCompra, proveedores, productos, preseleccion, onClose, onSaved }: Props) {
   const [items, setItems] = useState<ItemForm[]>([{ ...ITEM_EMPTY }])
   const [saving, setSaving] = useState(false)
   const [barcodeInput, setBarcodeInput] = useState('')
@@ -51,6 +53,12 @@ export default function ModalCompra({ open, editingCompra, proveedores, producto
               }))
             : [{ ...ITEM_EMPTY }]
         )
+      } else if (preseleccion) {
+        reset({ proveedor_id: preseleccion.proveedorId, tipo_pago: 'CONTADO', nro_factura: '' })
+        const prod = productos.find(p => p.id_producto === preseleccion.productoId)
+        setItems([prod
+          ? { producto: prod, cantidad: 1, costo_unitario: 0, subtotal: 0, precio_venta: Number(prod.precio_actual) || 0 }
+          : { ...ITEM_EMPTY }])
       } else {
         reset({ proveedor_id: '', tipo_pago: 'CONTADO', nro_factura: '' })
         setItems([{ ...ITEM_EMPTY }])
@@ -62,6 +70,19 @@ export default function ModalCompra({ open, editingCompra, proveedores, producto
   useEffect(() => {
     if (open) setTimeout(() => barcodeRef.current?.focus(), 100)
   }, [open])
+
+  // Si `productos` todavía no había cargado cuando se abrió con preselección
+  // (deep-link desde "Generar compra"), completa el ítem apenas llegue.
+  useEffect(() => {
+    if (!open || !preseleccion) return
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    setItems(prev => {
+      if (prev.length !== 1 || prev[0].producto) return prev
+      const prod = productos.find(p => p.id_producto === preseleccion.productoId)
+      if (!prod) return prev
+      return [{ producto: prod, cantidad: 1, costo_unitario: 0, subtotal: 0, precio_venta: Number(prod.precio_actual) || 0 }]
+    })
+  }, [productos, preseleccion, open])
 
   // Carga de precios/productos del proveedor al cambiar `proveedorId`: limpiar
   // sincrónicamente cuando no hay proveedor seleccionado es intencional.
@@ -78,6 +99,20 @@ export default function ModalCompra({ open, editingCompra, proveedores, producto
       })
       .catch(() => { setPreciosProveedor({}); setListaProdProveedor([]) })
   }, [proveedorId])
+
+  // Completa el costo del ítem precargado por preselección en cuanto se conoce
+  // el precio de ese proveedor para ese producto (llega en la respuesta de arriba).
+  useEffect(() => {
+    if (!preseleccion) return
+    const conocido = preciosProveedor[preseleccion.productoId]
+    if (!conocido) return
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    setItems(prev => prev.map(it =>
+      it.producto?.id_producto === preseleccion.productoId && it.costo_unitario === 0
+        ? { ...it, costo_unitario: conocido, subtotal: it.cantidad * conocido }
+        : it
+    ))
+  }, [preciosProveedor, preseleccion])
 
   const opcionesProducto = useMemo(() => {
     const idsProveedor = new Set(listaProdProveedor.map(pp => pp.producto))

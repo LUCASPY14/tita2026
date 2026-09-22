@@ -350,6 +350,16 @@ class StockService:
         if search:
             stocks = stocks.filter(producto__descripcion__icontains=search)
 
+        stocks = list(stocks)
+        from apps.compras.models import ProductoProveedor  # importación lazy: evita import circular con compras
+
+        preferidos = {
+            pp.producto_id: pp
+            for pp in ProductoProveedor.objects.filter(
+                producto_id__in=[s.producto_id for s in stocks], preferido=True,
+            ).select_related("proveedor")
+        }
+
         alertas = []
         for i, s in enumerate(stocks):
             minimo = s.producto.stock_minimo
@@ -360,6 +370,8 @@ class StockService:
             else:
                 tipo = TipoAlertaStock.STOCK_MINIMO
 
+            preferido = preferidos.get(s.producto_id)
+
             alertas.append({
                 "id": i + 1,
                 "producto": s.producto_id,
@@ -367,5 +379,8 @@ class StockService:
                 "tipo": tipo,
                 "stock_actual": s.cantidad,
                 "stock_minimo": minimo,
+                "proveedor_preferido_id": preferido.proveedor_id if preferido else None,
+                "proveedor_preferido_nombre": preferido.proveedor.razon_social if preferido else None,
+                "precio_compra_preferido": preferido.precio_compra if preferido else None,
             })
         return alertas

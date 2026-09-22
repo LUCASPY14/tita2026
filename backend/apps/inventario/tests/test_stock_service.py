@@ -333,6 +333,49 @@ class TestCalcularAlertasStock:
         assert len(StockService.calcular_alertas_stock(search="Sin stock")) == 1
         assert StockService.calcular_alertas_stock(search="Inexistente") == []
 
+    def test_sin_proveedor_preferido_los_campos_quedan_en_none(self, db, producto_sin_stock):
+        from apps.inventario.models import Stock
+        from apps.inventario.services import StockService
+
+        Stock.objects.create(producto=producto_sin_stock, cantidad=Decimal("0"))
+        alertas = StockService.calcular_alertas_stock()
+
+        assert alertas[0]["proveedor_preferido_id"] is None
+        assert alertas[0]["proveedor_preferido_nombre"] is None
+        assert alertas[0]["precio_compra_preferido"] is None
+
+    def test_con_proveedor_preferido_incluye_nombre_y_precio(self, db, producto_sin_stock):
+        from apps.inventario.models import Stock
+        from apps.inventario.services import StockService
+        from apps.compras.models import Proveedor, ProductoProveedor
+
+        Stock.objects.create(producto=producto_sin_stock, cantidad=Decimal("0"))
+        proveedor = Proveedor.objects.create(ruc="80009001-1", razon_social="Dist. Preferido S.A.")
+        ProductoProveedor.objects.create(
+            proveedor=proveedor, producto=producto_sin_stock, precio_compra=Decimal("3500"), preferido=True,
+        )
+
+        alertas = StockService.calcular_alertas_stock()
+
+        assert alertas[0]["proveedor_preferido_id"] == proveedor.pk
+        assert alertas[0]["proveedor_preferido_nombre"] == "Dist. Preferido S.A."
+        assert alertas[0]["precio_compra_preferido"] == Decimal("3500")
+
+    def test_proveedor_no_preferido_no_aparece(self, db, producto_sin_stock):
+        from apps.inventario.models import Stock
+        from apps.inventario.services import StockService
+        from apps.compras.models import Proveedor, ProductoProveedor
+
+        Stock.objects.create(producto=producto_sin_stock, cantidad=Decimal("0"))
+        proveedor = Proveedor.objects.create(ruc="80009002-2", razon_social="Dist. No Preferido S.A.")
+        ProductoProveedor.objects.create(
+            proveedor=proveedor, producto=producto_sin_stock, precio_compra=Decimal("3500"), preferido=False,
+        )
+
+        alertas = StockService.calcular_alertas_stock()
+
+        assert alertas[0]["proveedor_preferido_id"] is None
+
 
 # ── Edge cases para cobertura 100% ────────────────────────────────────────────
 
