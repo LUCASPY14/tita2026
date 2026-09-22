@@ -103,6 +103,14 @@ export default function ModalOC({ open, editingOC, proveedores, productos, onClo
         await api.post('/compras/ordenes/', payload)
         toast.success('Orden de Compra creada en Borrador')
       }
+      const conPerdida = ocItems.filter(i => {
+        const m = calcularMargen(i.costo_unitario, Number(i.producto!.precio_actual) || 0)
+        return m.pct !== null && m.pct < 0
+      })
+      if (conPerdida.length > 0) {
+        const nombres = conPerdida.map(i => i.producto!.descripcion).join(', ')
+        toast(`Margen negativo vs. el precio de venta actual: ${nombres}`, { icon: '⚠️', duration: 6000 })
+      }
       onSaved()
       onClose()
     } catch (err) {

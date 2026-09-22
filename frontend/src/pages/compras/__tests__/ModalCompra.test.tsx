@@ -7,11 +7,13 @@ vi.mock('../../../services/api', () => ({
   default: { get: vi.fn(), post: vi.fn(), put: vi.fn() },
 }))
 
-vi.mock('react-hot-toast', () => ({
-  default: { error: vi.fn(), success: vi.fn() },
-}))
+vi.mock('react-hot-toast', () => {
+  const toastFn = Object.assign(vi.fn(), { error: vi.fn(), success: vi.fn() })
+  return { default: toastFn }
+})
 
 import api from '../../../services/api'
+import toast from 'react-hot-toast'
 
 const PROVEEDOR = { id_proveedor: 1, razon_social: 'Distribuidora El Sol', ruc: '1', telefono: null, email: null, direccion: null, ciudad: null, ciudad_nombre: null, activo: true, saldo_cuenta_corriente: 0 }
 const PRODUCTO = { id_producto: 10, descripcion: 'Agua mineral', precio_actual: 5000, codigo_barra: null, codigo: null }
@@ -32,6 +34,7 @@ beforeEach(() => {
     }
     return Promise.resolve({ data: { results: [] } })
   })
+  vi.mocked(api.post).mockResolvedValue({ data: {} })
 })
 
 async function seleccionarProveedorYProducto() {
@@ -117,5 +120,38 @@ describe('ModalCompra — preselección desde alerta de stock bajo (Bloque 3)', 
     await waitFor(() => expect(screen.getByPlaceholderText('Buscar proveedor...')).toHaveValue('Distribuidora El Sol'))
     await waitFor(() => expect(screen.getByPlaceholderText('Costo')).toHaveValue(3000))
     expect(screen.getByPlaceholderText('Producto...')).toHaveValue('★ Agua mineral — 3.000 Gs.')
+  })
+})
+
+describe('ModalCompra — alerta de margen negativo al registrar (Bloque 4)', () => {
+  it('avisa (sin bloquear) si un producto queda con margen negativo al guardar', async () => {
+    renderModal()
+    await seleccionarProveedorYProducto()
+
+    const costoInput = screen.getByPlaceholderText('Costo')
+    await userEvent.clear(costoInput)
+    await userEvent.type(costoInput, '6000')
+    await waitFor(() => expect(screen.getByText('-20% margen')).toBeInTheDocument())
+
+    await userEvent.click(screen.getByRole('button', { name: 'Registrar' }))
+
+    await waitFor(() => expect(api.post).toHaveBeenCalledWith('/compras/compras/', expect.anything()))
+    expect(toast).toHaveBeenCalledWith(
+      expect.stringContaining('Agua mineral'),
+      expect.objectContaining({ icon: '⚠️' }),
+    )
+    // No bloqueante: la compra se registró igual.
+    expect(toast.success).toHaveBeenCalledWith(expect.stringContaining('Compra registrada'))
+  })
+
+  it('no avisa si el margen es positivo', async () => {
+    renderModal()
+    await seleccionarProveedorYProducto()
+    await waitFor(() => expect(screen.getByText('+40% margen')).toBeInTheDocument())
+
+    await userEvent.click(screen.getByRole('button', { name: 'Registrar' }))
+
+    await waitFor(() => expect(api.post).toHaveBeenCalledWith('/compras/compras/', expect.anything()))
+    expect(toast).not.toHaveBeenCalled()
   })
 })

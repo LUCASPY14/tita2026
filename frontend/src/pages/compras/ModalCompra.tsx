@@ -231,6 +231,12 @@ export default function ModalCompra({ open, editingCompra, proveedores, producto
         await Promise.allSettled(actualizaciones)
         toast.success(`Precios de venta actualizados (${actualizaciones.length} producto${actualizaciones.length > 1 ? 's' : ''})`)
       }
+      const conPerdida = items.filter(i => calcularMargen(i.costo_unitario, i.precio_venta).pct !== null
+        && (calcularMargen(i.costo_unitario, i.precio_venta).pct as number) < 0)
+      if (conPerdida.length > 0) {
+        const nombres = conPerdida.map(i => i.producto!.descripcion).join(', ')
+        toast(`Quedaron con margen negativo (se vende más barato de lo que costó): ${nombres}`, { icon: '⚠️', duration: 6000 })
+      }
       onSaved()
       onClose()
     } catch (err) {
