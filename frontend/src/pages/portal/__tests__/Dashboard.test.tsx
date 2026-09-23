@@ -300,6 +300,21 @@ describe('PortalDashboard — tabs', () => {
     expect(screen.getAllByText('Gs. 25.000').length).toBeGreaterThan(0)
   })
 
+  it('tab Almuerzos → muestra la fecha del consumo sin corrimiento de un día (bug de UTC)', async () => {
+    setupPortal({}, {
+      total: 1, monto_total: 25000,
+      consumos: [{ id_registro_consumo: 1, fecha_consumo: '2026-09-23', costo_almuerzo: '25000' }],
+    })
+    renderDashboard()
+    await screen.findByText('Juan García')
+
+    await userEvent.click(screen.getByRole('tab', { name: /Almuerzos/i }))
+
+    // new Date('2026-09-23') sin hora se interpreta como UTC medianoche; en
+    // Paraguay (UTC-3) eso mostraba "22/09/26" en vez de "23/09/26".
+    await screen.findByText('23/09/26')
+  })
+
   it('tab Almuerzos → con saldo de almuerzo en deuda, muestra el saldo real en rojo', async () => {
     setupPortal({}, {
       total: 1, monto_total: 25000, saldo_almuerzo: -125000,

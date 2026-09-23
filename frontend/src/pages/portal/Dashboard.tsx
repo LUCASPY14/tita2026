@@ -120,7 +120,10 @@ function formatGs(n: number) {
 }
 
 function formatFecha(iso: string) {
-  return new Date(iso).toLocaleDateString('es-PY', { day: '2-digit', month: '2-digit', year: '2-digit' })
+  // iso es fecha sin hora ("2026-09-23") — new Date(iso) sola la interpreta
+  // como medianoche UTC, y en Paraguay (UTC-3) eso muestra un día menos.
+  // Agregar hora fuerza a que se parsee en hora local.
+  return new Date(iso + 'T00:00:00').toLocaleDateString('es-PY', { day: '2-digit', month: '2-digit', year: '2-digit' })
 }
 
 function formatVeces(n: number) {
