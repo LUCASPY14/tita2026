@@ -22,7 +22,7 @@ from rest_framework.response import Response
 from rest_framework.views import APIView
 
 from common.permissions import (
-    IsAdminOrReadOnly, IsCajeroOrAdmin, IsCajeroCobradorOrAdmin,
+    IsAdminOrReadOnly, IsCajeroOrAdmin, IsCajeroCobradorOrAdmin, IsCajeroCocinaSupervisorOrAdmin,
     IsStaffOrClienteWeb, IsStaffUser,
 )
 from common.utils.medios_pago import resolver_medio_pago
@@ -183,7 +183,11 @@ class RegistroConsumoAlmuerzoViewSet(viewsets.ModelViewSet):
 
     def get_permissions(self):
         if self.action in ("create", "update", "partial_update", "destroy", "anular"):
-            return [IsCajeroOrAdmin()]
+            # Cocina y Supervisor gestionan el comedor (/comedor) y almuerzos
+            # (/almuerzos) en el frontend — el permiso debe alinearse con eso,
+            # no restringirse a Cajero/Admin. "destroy" además tiene su propio
+            # chequeo de solo-ADMIN dentro del método (ver destroy() abajo).
+            return [IsCajeroCocinaSupervisorOrAdmin()]
         if self.action == "resumen_hoy":
             return [IsStaffUser()]
         return [IsStaffOrClienteWeb()]

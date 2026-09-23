@@ -44,6 +44,16 @@ class IsCajeroOrAdmin(permissions.BasePermission):
         )
 
 
+class IsCajeroCocinaSupervisorOrAdmin(permissions.BasePermission):
+    """Operadores de comedor/almuerzo: cajeros, cocina, supervisores y administradores."""
+    def has_permission(self, request, view):
+        return bool(
+            request.user and
+            request.user.is_authenticated and
+            request.user.rol in {"ADMIN", "CAJERO", "COCINA", "SUPERVISOR"}
+        )
+
+
 class IsCajeroCobradorOrAdmin(permissions.BasePermission):
     """Cajeros, cobradores y administradores — operaciones de cobranza presencial."""
     def has_permission(self, request, view):

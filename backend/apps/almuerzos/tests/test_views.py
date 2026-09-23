@@ -404,6 +404,28 @@ class TestRegistroConsumoDestroy:
         assert resp.status_code == 403  # solo ADMIN puede eliminar
 
 
+@pytest.fixture
+def api_cocina_consumo(api_client):
+    from apps.usuarios.models import Usuario
+    cocina = Usuario.objects.create_user(
+        email="cocina-consumo@test.com", password="test1234",
+        nombre="Cocina", apellido="Consumo", rol=Usuario.Rol.COCINA,
+    )
+    api_client.force_authenticate(user=cocina)
+    return api_client
+
+
+@pytest.fixture
+def api_supervisor_consumo(api_client):
+    from apps.usuarios.models import Usuario
+    supervisor = Usuario.objects.create_user(
+        email="supervisor-consumo@test.com", password="test1234",
+        nombre="Supervisor", apellido="Consumo", rol=Usuario.Rol.SUPERVISOR,
+    )
+    api_client.force_authenticate(user=supervisor)
+    return api_client
+
+
 @pytest.mark.django_db
 class TestRegistroConsumoCreate:
 
@@ -420,6 +442,51 @@ class TestRegistroConsumoCreate:
         assert resp.status_code == 201
         assert resp.data["ya_cobrado"] is True
         assert resp.data["costo_almuerzo"] == "15000"
+
+    def test_cocina_puede_registrar(
+        self, api_cocina_consumo, hijo_almuerzo, tarjeta_almuerzo, precio_almuerzo, suscripcion_activa,
+    ):
+        # Bug real reportado en producción: la pantalla /comedor es para
+        # COCINA, pero el permiso estaba restringido a Cajero/Admin (403
+        # "Usted no tiene permiso para realizar esta acción").
+        resp = api_cocina_consumo.post(
+            "/api/v1/almuerzos/registros-consumo/",
+            {
+                "hijo": hijo_almuerzo.pk,
+                "fecha_consumo": str(date.today()),
+                "nro_tarjeta": tarjeta_almuerzo.pk,
+            },
+            format="json",
+        )
+        assert resp.status_code == 201
+
+    def test_supervisor_puede_registrar(
+        self, api_supervisor_consumo, hijo_almuerzo, tarjeta_almuerzo, precio_almuerzo, suscripcion_activa,
+    ):
+        resp = api_supervisor_consumo.post(
+            "/api/v1/almuerzos/registros-consumo/",
+            {
+                "hijo": hijo_almuerzo.pk,
+                "fecha_consumo": str(date.today()),
+                "nro_tarjeta": tarjeta_almuerzo.pk,
+            },
+            format="json",
+        )
+        assert resp.status_code == 201
+
+    def test_cliente_web_no_puede_registrar(
+        self, api_cliente_web, hijo_almuerzo, tarjeta_almuerzo, precio_almuerzo, suscripcion_activa,
+    ):
+        resp = api_cliente_web.post(
+            "/api/v1/almuerzos/registros-consumo/",
+            {
+                "hijo": hijo_almuerzo.pk,
+                "fecha_consumo": str(date.today()),
+                "nro_tarjeta": tarjeta_almuerzo.pk,
+            },
+            format="json",
+        )
+        assert resp.status_code == 403
 
     def test_client_request_id_repetido_no_duplica_el_registro(
         self, api_cajero, hijo_almuerzo, tarjeta_almuerzo, precio_almuerzo, suscripcion_activa,
@@ -1437,6 +1504,15 @@ class TestRegistroConsumoAnular:
         assert resp.status_code == 403
         registro.refresh_from_db()
         assert registro.estado == "REGISTRADO"
+
+    def test_cocina_puede_anular(
+        self, api_cocina_consumo, hijo_almuerzo, tarjeta_almuerzo, usuario_cajero
+    ):
+        registro = self._registro(hijo_almuerzo, tarjeta_almuerzo, usuario_cajero, ya_cobrado=False, costo="0")
+        resp = api_cocina_consumo.post(f"/api/v1/almuerzos/registros-consumo/{registro.pk}/anular/")
+        assert resp.status_code == 200
+        registro.refresh_from_db()
+        assert registro.estado == "ANULADO"
 
     def test_no_registrado_falla(self, api_cajero, hijo_almuerzo, tarjeta_almuerzo, usuario_cajero):
         registro = self._registro(hijo_almuerzo, tarjeta_almuerzo, usuario_cajero, estado="ANULADO")
