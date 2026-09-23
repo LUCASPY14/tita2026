@@ -25,8 +25,11 @@ export function formatGs(n: number | string | null | undefined): string {
   return (Number(n) || 0).toLocaleString('es-PY') + ' Gs.'
 }
 
+// Fecha local (no UTC): toISOString() convierte a UTC, y Paraguay está en
+// UTC-3 — pasadas las 21:00 locales eso ya cae en el día siguiente en UTC.
 export function todayISO() {
-  return new Date().toISOString().split('T')[0]
+  const d = new Date()
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
 }
 
 export function formatFecha(iso: string | null | undefined): string {

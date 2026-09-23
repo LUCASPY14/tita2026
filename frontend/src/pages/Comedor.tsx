@@ -14,7 +14,13 @@ import { setAuthDoor } from '../lib/authDoor'
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
-function todayISO() { return new Date().toISOString().split('T')[0] }
+// Fecha local (no UTC): toISOString() convierte a UTC, y Paraguay está en
+// UTC-3 — pasadas las 21:00 locales eso ya cae en el día siguiente en UTC,
+// archivando el registro bajo la fecha equivocada.
+function todayISO() {
+  const d = new Date()
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
+}
 
 function formatGs(n: number | string | null | undefined) {
   return (Number(n) || 0).toLocaleString('es-PY') + ' Gs.'

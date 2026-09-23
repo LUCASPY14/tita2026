@@ -27,9 +27,16 @@ function formatFecha(iso: string | null | undefined) {
   return `${d}/${m}/${y}`
 }
 
+// Fecha local (no UTC): toISOString() convierte a UTC, y Paraguay está en
+// UTC-3 — pasadas las 21:00 locales eso ya cae en el día siguiente en UTC.
+function todayISO() {
+  const d = new Date()
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
+}
+
 const emptyForm = {
   precio_unitario: '',
-  fecha_inicio_vigencia: new Date().toISOString().split('T')[0],
+  fecha_inicio_vigencia: todayISO(),
   fecha_fin_vigencia: '',
   descripcion: '',
   activo: true,
