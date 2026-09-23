@@ -27,7 +27,22 @@ if (SENTRY_DSN) {
 
 // Service Worker — offline support (ModoRecreo POS + Portal de Padres)
 if ('serviceWorker' in navigator && import.meta.env.PROD) {
-  navigator.serviceWorker.register('/sw.js', { scope: '/' }).catch(() => {})
+  // El navegador chequea actualizaciones del SW por su cuenta, pero con
+  // timing variable (a veces recién a las 24h) — se fuerza el chequeo acá.
+  navigator.serviceWorker.register('/sw.js', { scope: '/' })
+    .then(reg => reg.update().catch(() => {}))
+    .catch(() => {})
+
+  // Cuando el SW nuevo (con skipWaiting + clients.claim) toma el control,
+  // recargar una vez para que esta pestaña ya sirva desde el SW nuevo — sin
+  // esto, alguien puede recargar varias veces y seguir viendo datos viejos
+  // (caché del portal, catálogo, etc.) hasta la próxima navegación completa.
+  let refrescando = false
+  navigator.serviceWorker.addEventListener('controllerchange', () => {
+    if (refrescando) return
+    refrescando = true
+    window.location.reload()
+  })
 }
 
 // Capturar el prompt de instalación PWA antes de que el browser lo descarte
