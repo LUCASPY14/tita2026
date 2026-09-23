@@ -6,6 +6,10 @@
  *     (catálogo actualizado en background; siempre responde rápido)
  *   - GET /api/v1/core/tarjetas/                         → NetworkFirst con fallback a cache
  *     (saldo real si hay red; cache si offline — usado por ModoRecreo y Comedor)
+ *   - GET /api/v1/usuarios/portal/*                      → NetworkFirst con fallback a cache
+ *     (saldo, historial de almuerzo/cantina/recargas: es lo que un padre entra
+ *     a revisar específicamente para ver "hoy" — StaleWhileRevalidate mostraba
+ *     la foto de la visita anterior sin avisar, ni un F5 lo corregía)
  *   - POST /api/v1/ventas/ventas/                        → NetworkOnly con BackgroundSync
  *   - POST /api/v1/almuerzos/registros-consumo/          → NetworkOnly con BackgroundSync
  *     (se encolan en IndexedDB si falla la red; se reintentan solos al reconectar —
@@ -14,7 +18,7 @@
  *   - Todo lo demás                                      → NetworkOnly (sin cache)
  */
 
-const CACHE_NAME     = 'cantina-v2'
+const CACHE_NAME     = 'cantina-v3'
 const SYNC_TAG       = 'sync-ventas'
 const IDB_DB         = 'cantina-offline'
 const IDB_STORE      = 'pending-ventas'  // cola genérica de POST pendientes (ventas + registros de consumo)
@@ -26,14 +30,14 @@ const CATALOG_PATTERNS = [
 ]
 const TARJETA_PATTERN = /\/api\/v1\/core\/tarjetas\//
 
-// Datos financieros del portal — NetworkFirst (saldo siempre fresco)
+// Todo el portal de padres — NetworkFirst (saldo e historiales siempre frescos;
+// es información que la familia entra a chequear puntualmente por "hoy").
 const PORTAL_SALDO_PATTERNS = [
-  /\/api\/v1\/usuarios\/portal\/mi-hijo\//,
+  /\/api\/v1\/usuarios\/portal\//,
 ]
 
-// Resto del portal — StaleWhileRevalidate (historial, notificaciones; aceptable algo de lag)
+// Catálogo/listas genéricas del portal — StaleWhileRevalidate (aceptable algo de lag)
 const PORTAL_PATTERNS = [
-  /\/api\/v1\/usuarios\/portal\/(?!mi-hijo)/,
   /\/api\/v1\/almuerzos\/suscripciones\//,
   /\/api\/v1\/notificaciones\/notificaciones\//,
 ]
@@ -83,13 +87,13 @@ self.addEventListener('fetch', event => {
     return
   }
 
-  // GET mi-hijo (saldo) → NetworkFirst: datos financieros siempre frescos
+  // GET portal de padres (saldo, historial) → NetworkFirst: siempre fresco
   if (request.method === 'GET' && PORTAL_SALDO_PATTERNS.some(p => p.test(url))) {
     event.respondWith(networkFirst(request))
     return
   }
 
-  // GET portal (historial, notificaciones, etc.) → StaleWhileRevalidate
+  // GET catálogo genérico del portal (suscripciones, notificaciones) → StaleWhileRevalidate
   if (request.method === 'GET' && PORTAL_PATTERNS.some(p => p.test(url))) {
     event.respondWith(staleWhileRevalidate(request))
     return
