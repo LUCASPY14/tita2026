@@ -119,10 +119,16 @@ function formatGs(n: number) {
   return 'Gs. ' + (Number(n) || 0).toLocaleString('es-PY')
 }
 
+// Para DateTimeField (Venta.fecha, recarga.fecha): ya viene con hora y
+// offset explícitos ("...T14:30:00-03:00"), new Date(iso) sola es correcta.
 function formatFecha(iso: string) {
-  // iso es fecha sin hora ("2026-09-23") — new Date(iso) sola la interpreta
-  // como medianoche UTC, y en Paraguay (UTC-3) eso muestra un día menos.
-  // Agregar hora fuerza a que se parsee en hora local.
+  return new Date(iso).toLocaleDateString('es-PY', { day: '2-digit', month: '2-digit', year: '2-digit' })
+}
+
+// Para DateField (fecha_consumo: "2026-09-23", sin hora): new Date(iso) sola
+// la interpreta como medianoche UTC, y en Paraguay (UTC-3) eso muestra un
+// día menos. Agregar hora fuerza a que se parsee en hora local.
+function formatFechaSolo(iso: string) {
   return new Date(iso + 'T00:00:00').toLocaleDateString('es-PY', { day: '2-digit', month: '2-digit', year: '2-digit' })
 }
 
@@ -421,7 +427,7 @@ function AlmuerzosTab({
                     </div>
                     <div>
                       <p className="text-sm font-medium text-slate-800">Almuerzo</p>
-                      <p className="text-sm text-slate-400">{formatFecha(c.fecha_consumo)}</p>
+                      <p className="text-sm text-slate-400">{formatFechaSolo(c.fecha_consumo)}</p>
                     </div>
                   </div>
                   <p className="text-sm font-semibold text-slate-800 tabular-nums">

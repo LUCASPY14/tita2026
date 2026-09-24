@@ -405,6 +405,42 @@ describe('PortalDashboard — tabs', () => {
     expect(screen.getAllByText('Cantina').length).toBeGreaterThan(0)
     expect(screen.getByText('Almuerzo')).toBeInTheDocument()
     expect(screen.getByText('Gs. 100.000')).toBeInTheDocument()
+    // recarga.fecha es DateTimeField (con hora) — parsear con new Date(iso)
+    // + 'T00:00:00' (el fix para fecha_consumo) rompería esto con "Invalid Date"
+    expect(screen.getByText(/10\/07\/26/)).toBeInTheDocument()
+    expect(screen.queryByText(/Invalid Date/i)).not.toBeInTheDocument()
+  })
+
+  it('tab Cantina → muestra la fecha de la compra sin "Invalid Date" (fecha es DateTimeField, con hora y offset)', async () => {
+    setupPortal({ hijos: [HIJO_CON_CUENTA] })
+    vi.mocked(api.get).mockImplementation((url: string) => {
+      if (url === '/usuarios/portal/mi-hijo/') return Promise.resolve({ data: PORTAL_DATA })
+      if (url === '/usuarios/portal/historial-cantina/') {
+        return Promise.resolve({
+          data: {
+            results: [{
+              id_venta: 1,
+              fecha: '2026-09-23T14:30:00-03:00',
+              monto_total: 15000,
+              detalles: [{ producto_nombre: 'Sandwich', cantidad: 1, precio_unitario: 15000, subtotal: 15000 }],
+            }],
+            next: null,
+          },
+        })
+      }
+      if (url === '/usuarios/portal/historial-recargas/') return Promise.resolve({ data: { count: 0, next: false, results: [] } })
+      if (url === '/usuarios/portal/historial-consumos/') {
+        return Promise.resolve({ data: { anio: 2026, mes: 7, consumos: [], saldo_almuerzo: 0, total: 0, monto_total: 0 } })
+      }
+      return Promise.resolve({ data: {} })
+    })
+    renderDashboard()
+    await screen.findByText('Juan García')
+
+    await userEvent.click(screen.getByRole('tab', { name: /Cantina/i }))
+
+    await screen.findByText('23/09/26')
+    expect(screen.queryByText(/Invalid Date/i)).not.toBeInTheDocument()
   })
 
   it('tab Historial → "Ver más" pide la página siguiente', async () => {
