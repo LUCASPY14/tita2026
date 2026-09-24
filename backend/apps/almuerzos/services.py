@@ -3,10 +3,10 @@ Servicios de negocio para almuerzos
 """
 
 import logging
-from datetime import date
 from decimal import Decimal
 
 from django.db import models, transaction
+from django.utils import timezone
 
 from rest_framework.exceptions import ValidationError
 
@@ -30,7 +30,7 @@ class AlmuerzoService:
     def get_precio_activo(fecha=None):
         """Retorna el precio de almuerzo vigente para una fecha."""
         if fecha is None:
-            fecha = date.today()
+            fecha = timezone.localdate()
         return (
             PrecioAlmuerzo.objects.filter(
                 fecha_inicio_vigencia__lte=fecha,
@@ -78,7 +78,7 @@ class AlmuerzoService:
         exigir_hijo_operativo(hijo)
 
         # No permitir consumos en fecha futura
-        if fecha_consumo > date.today():
+        if fecha_consumo > timezone.localdate():
             raise ValidationError({"error": "No se puede registrar un consumo en fecha futura."})
 
         # Suscripción obligatoria — a lo sumo hay una ACTIVA por hijo

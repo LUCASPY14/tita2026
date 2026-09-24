@@ -7,6 +7,7 @@ import pytest
 from decimal import Decimal
 from datetime import date, timedelta
 from freezegun import freeze_time
+from django.test import override_settings
 from rest_framework.exceptions import ValidationError
 
 # Fecha fija para todos los tests — evita fragilidad en inicio/fin de mes
@@ -192,6 +193,26 @@ class TestRegistrarConsumo:
                 nro_tarjeta=tarjeta_almuerzo,
                 registrado_por=usuario_cajero,
             )
+
+    def test_fecha_de_hoy_no_es_futura_pasada_la_medianoche_utc(
+        self, hijo_almuerzo, tarjeta_almuerzo, usuario_cajero, precio_almuerzo, suscripcion_activa
+    ):
+        """
+        A las 22:00 en Paraguay ya es "mañana" en UTC. Si la validación de
+        fecha futura usara date.today() (reloj UTC del contenedor) en vez de
+        timezone.localdate(), rechazaría por error un consumo del día actual.
+        """
+        from apps.almuerzos.services import AlmuerzoService
+
+        with override_settings(TIME_ZONE="America/Asuncion"):
+            with freeze_time("2026-07-16 01:00:00"):  # 22:00 del 15/07 en Paraguay
+                registro = AlmuerzoService.registrar_consumo(
+                    hijo=hijo_almuerzo,
+                    fecha_consumo=HOY,
+                    nro_tarjeta=tarjeta_almuerzo,
+                    registrado_por=usuario_cajero,
+                )
+        assert registro.fecha_consumo == HOY
 
     def test_sin_tarjeta_falla(self, hijo_almuerzo, usuario_cajero):
         from apps.almuerzos.services import AlmuerzoService

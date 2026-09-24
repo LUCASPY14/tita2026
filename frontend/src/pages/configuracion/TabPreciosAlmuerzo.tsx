@@ -2,6 +2,7 @@ import { useCallback, useEffect, useState } from 'react'
 import toast from 'react-hot-toast'
 import { Plus, Edit2, Trash2, CheckCircle } from 'lucide-react'
 import api from '../../services/api'
+import { todayISO } from '../../lib/fecha'
 import Badge from '../../components/ui/Badge'
 import Button from '../../components/ui/Button'
 import Table, { type Column } from '../../components/ui/Table'
@@ -25,13 +26,6 @@ function formatFecha(iso: string | null | undefined) {
   if (!iso) return '—'
   const [y, m, d] = iso.split('-')
   return `${d}/${m}/${y}`
-}
-
-// Fecha local (no UTC): toISOString() convierte a UTC, y Paraguay está en
-// UTC-3 — pasadas las 21:00 locales eso ya cae en el día siguiente en UTC.
-function todayISO() {
-  const d = new Date()
-  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
 }
 
 const emptyForm = {

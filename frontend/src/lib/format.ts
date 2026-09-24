@@ -13,16 +13,6 @@ export function formatCurrency(amount: number): string {
   return amount.toLocaleString(LOCALE) + CURRENCY_SUFFIX
 }
 
-/** Formats an ISO date string: "2026-06-22T..." → "22/06/2026" */
-export function formatDate(iso: string | null | undefined): string {
-  if (!iso) return '—'
-  return new Date(iso).toLocaleDateString(LOCALE, {
-    day: '2-digit',
-    month: '2-digit',
-    year: 'numeric',
-  })
-}
-
 /**
  * Formats a calendar date ("2026-11-30" → "30/11/2026") WITHOUT timezone
  * conversion. `new Date("2026-11-30")` is midnight UTC, which in Paraguay
@@ -46,8 +36,3 @@ export function formatDateTime(iso: string | null | undefined): string {
   })
 }
 
-/** Short date for compact displays: "2026-06-22" → "22 jun." */
-export function formatDateShort(iso: string | null | undefined): string {
-  if (!iso) return '—'
-  return new Date(iso).toLocaleDateString(LOCALE, { day: 'numeric', month: 'short' })
-}

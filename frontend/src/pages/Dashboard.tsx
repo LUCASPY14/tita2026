@@ -14,6 +14,7 @@ import toast from 'react-hot-toast'
 import api from '../services/api'
 import { useAuthStore } from '../store/authStore'
 import { useDashboardKPI } from '../hooks/useDashboardKPI'
+import { todayISO, isoDiasDesdeHoy } from '../lib/fecha'
 import Badge from '../components/ui/Badge'
 import Spinner from '../components/ui/Spinner'
 
@@ -40,11 +41,7 @@ interface TendenciaPoint {
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
 function getWeekRange() {
-  const hoy = new Date()
-  const desde = new Date(hoy)
-  desde.setDate(hoy.getDate() - 6)
-  const fmt = (d: Date) => d.toISOString().slice(0, 10)
-  return { desde: fmt(desde), hasta: fmt(hoy) }
+  return { desde: isoDiasDesdeHoy(6), hasta: todayISO() }
 }
 
 function formatGs(n: number) {

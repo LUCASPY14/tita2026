@@ -19,7 +19,7 @@ def generar_resumen_diario_ventas():
     """Registra en log el resumen de ventas del día anterior."""
     from apps.ventas.models import Venta
 
-    ayer = (timezone.now() - timedelta(days=1)).date()
+    ayer = timezone.localdate() - timedelta(days=1)
 
     ventas = Venta.objects.filter(fecha__date=ayer)
     total = ventas.aggregate(
@@ -49,7 +49,7 @@ def cerrar_cajas_automatico():
     from apps.contabilidad.models import CierreCaja, MovimientoCaja
     from django.db import models as m
 
-    hoy = timezone.now().date()
+    hoy = timezone.localdate()
 
     # Obtener IDs sin bloqueo — el lock se adquiere por fila dentro de cada transacción.
     pks_abiertos = list(

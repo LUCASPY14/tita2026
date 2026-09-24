@@ -57,6 +57,21 @@ jobs:
         working-directory: backend
         run: ruff check apps/ --output-format=github
 
+      - name: Chequeo de fechas — no date.today() ni timezone.now().date()
+        working-directory: backend
+        run: |
+          # date.today() usa el reloj del SO (UTC en la mayoría de contenedores
+          # Docker), no el TIME_ZONE de Django ("America/Asuncion") — y
+          # timezone.now().date() tiene el mismo problema aunque parezca
+          # timezone-aware, porque .date() extrae el día en UTC. Ambos
+          # provocan que "hoy" se calcule mal entre las 21:00 y 23:59 hora
+          # Paraguay. Usar siempre timezone.localdate().
+          if grep -rnE "date\.today\(\)|timezone\.now\(\)\.date\(\)" apps/ \
+              --include="*.py" | grep -v "/tests/\|/migrations/"; then
+            echo "::error::Se encontró date.today()/timezone.now().date() fuera de tests. Usar timezone.localdate()."
+            exit 1
+          fi
+
       - name: Security scan (Bandit)
         working-directory: backend
         run: |

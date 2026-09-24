@@ -1,5 +1,13 @@
 import { test, expect, type Page } from '@playwright/test'
 
+// Fecha local (no UTC): toISOString() convierte a UTC, y en Paraguay (UTC-3)
+// eso corre la fecha un día cerca de medianoche, haciendo flaky el mock.
+function isoLocal(diasAtras = 0) {
+  const d = new Date()
+  d.setDate(d.getDate() - diasAtras)
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
+}
+
 const ADMIN = { id_usuario: 1, email: 'admin@cantina.com', nombre: 'Admin', apellido: 'Tita', rol: 'ADMIN' }
 
 const PROVEEDOR_MOCK = {
@@ -17,7 +25,7 @@ const COMPRAS_LIST = {
       id_compra: 50,
       proveedor: 1,
       proveedor_nombre: 'Distribuidora El Sol',
-      fecha: new Date().toISOString().split('T')[0],
+      fecha: isoLocal(),
       numero_factura: 'F001-0000050',
       monto_total: 350000,
       estado: 'REGISTRADA',
@@ -26,7 +34,7 @@ const COMPRAS_LIST = {
       id_compra: 49,
       proveedor: 1,
       proveedor_nombre: 'Distribuidora El Sol',
-      fecha: new Date(Date.now() - 86400000).toISOString().split('T')[0],
+      fecha: isoLocal(1),
       numero_factura: 'F001-0000049',
       monto_total: 120000,
       estado: 'REGISTRADA',

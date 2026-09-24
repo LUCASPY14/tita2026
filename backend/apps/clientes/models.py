@@ -334,8 +334,7 @@ class Hijo(models.Model):
     @property
     def edad(self):
         if self.fecha_nacimiento:
-            from datetime import date
-            today = date.today()
+            today = timezone.localdate()
             return (
                 today.year
                 - self.fecha_nacimiento.year

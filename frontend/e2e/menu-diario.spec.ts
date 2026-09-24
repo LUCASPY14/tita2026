@@ -21,7 +21,15 @@ async function loginAs(page: import('@playwright/test').Page, user: typeof ADMIN
   await page.waitForURL('/dashboard')
 }
 
-const HOY = new Date().toISOString().split('T')[0]
+// Fecha local (no UTC): toISOString() convierte a UTC, y en Paraguay (UTC-3)
+// eso corre la fecha un día cerca de medianoche, haciendo flaky el mock.
+function isoLocal(diasAtras = 0) {
+  const d = new Date()
+  d.setDate(d.getDate() - diasAtras)
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
+}
+
+const HOY = isoLocal()
 
 const MENU_DIARIO_MOCK = {
   results: [
@@ -37,7 +45,7 @@ const MENU_DIARIO_MOCK = {
     },
     {
       id_menu: 2,
-      fecha: new Date(Date.now() - 86400000).toISOString().split('T')[0],
+      fecha: isoLocal(1),
       plato_principal: 'Arroz con pollo',
       guarnicion: '',
       postre: '',

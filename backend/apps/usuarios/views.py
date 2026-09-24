@@ -633,13 +633,12 @@ class PortalMiHijoView(APIView):
                 status=status.HTTP_400_BAD_REQUEST,
             )
 
-        from datetime import date
         from django.db.models import Count, Sum
         from apps.clientes.models import RestriccionHijo
         from apps.almuerzos.models import RegistroConsumoAlmuerzo, SaldoAlmuerzo
         from apps.ventas.models import DetalleVenta, Venta
 
-        hoy = date.today()
+        hoy = timezone.localdate()
         hijos_data = []
 
         for hijo in user.cliente.hijos.filter(activo=True):
@@ -741,16 +740,16 @@ class PortalHistorialConsumos(APIView):
     throttle_classes = [PortalRateThrottle]
 
     def get(self, request):
-        from datetime import date
         from apps.almuerzos.models import RegistroConsumoAlmuerzo, SaldoAlmuerzo
 
         user = request.user
         if not user.cliente:
             return Response({"detail": "Sin cliente vinculado."}, status=400)
 
+        hoy = timezone.localdate()
         hijo_id = request.query_params.get("hijo_id")
-        anio = int(request.query_params.get("anio", date.today().year))
-        mes = int(request.query_params.get("mes", date.today().month))
+        anio = int(request.query_params.get("anio", hoy.year))
+        mes = int(request.query_params.get("mes", hoy.month))
 
         hijo = user.cliente.hijos.filter(id_hijo=hijo_id, activo=True).first()
         if not hijo:

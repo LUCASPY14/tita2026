@@ -18,5 +18,15 @@ export default defineConfig([
     languageOptions: {
       globals: globals.browser,
     },
+    rules: {
+      'no-restricted-syntax': [
+        'error',
+        {
+          selector: "CallExpression[callee.property.name=/^(split|slice)$/][callee.object.callee.property.name='toISOString']",
+          message:
+            "No calcules 'hoy' con toISOString().split()/slice() — convierte a UTC, y en Paraguay (UTC-3) eso corre la fecha un día entre las 21:00 y 23:59 locales. Usá todayISO() de 'src/lib/fecha.ts'.",
+        },
+      ],
+    },
   },
 ])

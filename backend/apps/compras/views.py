@@ -832,11 +832,11 @@ class ReporteAgingProveedoresView(APIView):
 
     def get(self, request):
         import csv as csv_module
-        from datetime import date
         from django.http import HttpResponse as HR
         from django.db.models import OuterRef, Subquery
+        from django.utils import timezone
 
-        hoy = date.today()
+        hoy = timezone.localdate()
 
         ultimo_mov = (
             CuentaCorrienteProveedor.objects

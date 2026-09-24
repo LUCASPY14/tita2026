@@ -1,3 +1,5 @@
+import { todayISO } from '../../lib/fecha'
+
 // ─── Audio ────────────────────────────────────────────────────────────────────
 export function tone(freq: number, ms: number, type: OscillatorType = 'sine', vol = 0.22) {
   try {
@@ -39,10 +41,10 @@ export interface DailyStats { date: string; count: number; totalTime: number }
 export const getDailyStats = (): DailyStats => {
   try {
     const stored = JSON.parse(localStorage.getItem(DAILY_KEY) || '{}')
-    const today = new Date().toISOString().slice(0, 10)
+    const today = todayISO()
     if (stored.date !== today) return { date: today, count: 0, totalTime: 0 }
     return stored
-  } catch { return { date: new Date().toISOString().slice(0, 10), count: 0, totalTime: 0 } }
+  } catch { return { date: todayISO(), count: 0, totalTime: 0 } }
 }
 export const updateDailyStats = (timeMs: number) => {
   const stats = getDailyStats()

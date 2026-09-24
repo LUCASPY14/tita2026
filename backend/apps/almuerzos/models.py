@@ -324,7 +324,7 @@ class CuentaAlmuerzoMensual(models.Model):
         if self.monto_pagado >= self.monto_total:
             self.estado = self.Estado.PAGADO
             if not self.fecha_pago:
-                self.fecha_pago = timezone.now().date()
+                self.fecha_pago = timezone.localdate()
         elif self.monto_pagado > 0:
             self.estado = self.Estado.PARCIAL
         else:

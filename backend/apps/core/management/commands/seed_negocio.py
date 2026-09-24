@@ -16,6 +16,7 @@ from decimal import Decimal
 
 from django.core.management.base import BaseCommand
 from django.db import transaction
+from django.utils import timezone
 
 
 class Command(BaseCommand):
@@ -133,7 +134,7 @@ class Command(BaseCommand):
             ("Puchero", "Caldo y verduras", "Banana", "Agua"),
         ]
 
-        hoy = date.today()
+        hoy = timezone.localdate()
         # Start from the closest Monday
         lunes = hoy - timedelta(days=hoy.weekday())
 
@@ -169,7 +170,7 @@ class Command(BaseCommand):
 
         self.stdout.write("\n[5/6] Suscripciones de alumnos...")
 
-        hoy = date.today()
+        hoy = timezone.localdate()
         inicio_ciclo = date(hoy.year, 2, 1)  # Ciclo escolar desde febrero
         fin_ciclo = date(hoy.year, 11, 30)
 

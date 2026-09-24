@@ -10,6 +10,8 @@ import pytest
 from datetime import date, datetime, timedelta
 from decimal import Decimal
 from freezegun import freeze_time
+from django.test import override_settings
+from django.utils import timezone
 from rest_framework.test import APIClient
 
 
@@ -161,7 +163,11 @@ def cuenta_mensual(db, hijo_almuerzo):
 def menu_hoy(db, usuario_admin):
     from apps.almuerzos.models import MenuDiario
     return MenuDiario.objects.create(
-        fecha=date.today(),
+        # timezone.localdate() (no date.today()): la vista "hoy" filtra con
+        # timezone.localdate(), y en tests TIME_ZONE=UTC — usar la misma
+        # fuente que la vista evita que el fixture y la vista discrepen
+        # según la hora del reloj real de la máquina que corre el test.
+        fecha=timezone.localdate(),
         plato_principal="Milanesa con papas",
         activo=True,
         creado_por=usuario_admin,
@@ -381,6 +387,26 @@ class TestMenuHoy:
             format="json",
         )
         assert resp.status_code == 201
+
+    @override_settings(TIME_ZONE="America/Asuncion")
+    @freeze_time("2026-09-23 01:00:00")  # 22:00 del 22/09 en Paraguay (UTC-3)
+    def test_usa_fecha_local_no_utc_pasada_la_medianoche_utc(self, api_cajero, usuario_admin):
+        """
+        A esta hora ya es "mañana" en UTC pero todavía "hoy" en Paraguay.
+        La vista debe resolver con timezone.localdate() (fecha de Paraguay);
+        si usara date.today() en un contenedor con reloj UTC, buscaría el
+        menú de un día que para la escuela todavía no llegó.
+        """
+        from apps.almuerzos.models import MenuDiario
+        MenuDiario.objects.create(
+            fecha=timezone.localdate(),  # 2026-09-22, la fecha real en Paraguay
+            plato_principal="Sopa paraguaya",
+            activo=True,
+            creado_por=usuario_admin,
+        )
+        resp = api_cajero.get("/api/v1/almuerzos/menu/hoy/")
+        assert resp.status_code == 200
+        assert resp.data["plato_principal"] == "Sopa paraguaya"
 
 
 # ── RegistroConsumoAlmuerzoViewSet ────────────────────────────────────────────

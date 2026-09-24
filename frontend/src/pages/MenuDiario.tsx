@@ -4,6 +4,7 @@ import { useForm } from 'react-hook-form'
 import toast from 'react-hot-toast'
 import { Plus, Edit, AlertCircle, ChefHat, Trash2, AlertTriangle } from 'lucide-react'
 import api from '../services/api'
+import { todayISO } from '../lib/fecha'
 import Button from '../components/ui/Button'
 import Modal from '../components/ui/Modal'
 import Table, { type Column } from '../components/ui/Table'
@@ -73,13 +74,6 @@ function formatFecha(iso: string) {
   return new Date(iso + 'T00:00:00').toLocaleDateString('es-PY', {
     weekday: 'long', day: '2-digit', month: '2-digit', year: 'numeric',
   })
-}
-
-// Fecha local (no UTC): toISOString() convierte a UTC, y Paraguay está en
-// UTC-3 — pasadas las 21:00 locales eso ya cae en el día siguiente en UTC.
-function todayIso() {
-  const d = new Date()
-  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
 }
 
 // ─── Component ────────────────────────────────────────────────────────────────
@@ -153,7 +147,7 @@ export default function MenuDiario() {
   const openCreate = (fecha?: string) => {
     setEditingMenu(null)
     reset({
-      fecha: fecha ?? todayIso(),
+      fecha: fecha ?? todayISO(),
       plato_principal: '',
       guarnicion: '',
       postre: '',
@@ -338,7 +332,7 @@ export default function MenuDiario() {
             <AlertCircle className="w-5 h-5 text-yellow-500 shrink-0" />
             <p className="text-sm font-medium text-yellow-800">{t('menuDiario.noMenuHoy')}</p>
           </div>
-          <Button size="sm" variant="primary" onClick={() => openCreate(todayIso())}>
+          <Button size="sm" variant="primary" onClick={() => openCreate(todayISO())}>
             <Plus className="w-3.5 h-3.5" />
             {t('menuDiario.publicarHoy')}
           </Button>

@@ -852,6 +852,35 @@ class TestPortalHistorialConsumos:
         assert resp.status_code == 200
         assert resp.data["saldo_almuerzo"] == 0
 
+    def test_sin_anio_mes_usa_fecha_local_no_utc(self, api_portal, hijo_portal, usuario_cajero):
+        """
+        Sin ?anio=/?mes=, la vista debe resolver "el mes actual" con la fecha
+        de Paraguay (timezone.localdate()), no con date.today() (reloj UTC
+        del contenedor) — a las 22:00 locales ya es "mañana" en UTC, y de
+        usar date.today() esto buscaría en el mes/año equivocado.
+        """
+        from datetime import date
+        from freezegun import freeze_time
+        from django.test import override_settings
+        from apps.almuerzos.models import RegistroConsumoAlmuerzo
+
+        RegistroConsumoAlmuerzo.objects.create(
+            hijo=hijo_portal, fecha_consumo=date(2026, 7, 15), costo_almuerzo=25_000,
+            ya_cobrado=True, registrado_por=usuario_cajero,
+        )
+
+        with override_settings(TIME_ZONE="America/Asuncion"):
+            with freeze_time("2026-07-16 01:00:00"):  # 22:00 del 15/07 en Paraguay
+                resp = api_portal.get(
+                    "/api/v1/usuarios/portal/historial-consumos/",
+                    {"hijo_id": hijo_portal.pk},
+                )
+
+        assert resp.status_code == 200
+        assert resp.data["anio"] == 2026
+        assert resp.data["mes"] == 7
+        assert resp.data["total"] == 1
+
     def test_con_saldo_almuerzo_en_deuda_retorna_su_valor_real(self, api_portal, hijo_portal):
         # El saldo real de deuda vive en SaldoAlmuerzo (cuenta corriente única
         # por hijo) — no en CuentaAlmuerzoMensual, que quedó como reporte y ya

@@ -1,10 +1,17 @@
 import { test, expect, type Page } from '@playwright/test'
 
+// Fecha local (no UTC): toISOString() convierte a UTC, y en Paraguay (UTC-3)
+// eso corre la fecha un día cerca de medianoche, haciendo flaky el mock.
+function isoLocal() {
+  const d = new Date()
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
+}
+
 const ADMIN = { id_usuario: 1, email: 'admin@cantina.com', nombre: 'Admin', apellido: 'Tita', rol: 'ADMIN' }
 
 const MENU_HOY = {
   id_menu: 1,
-  fecha: new Date().toISOString().split('T')[0],
+  fecha: isoLocal(),
   tipo_almuerzo: 1,
   plato_principal: 'Milanesa con puré',
   guarnicion: 'Ensalada',
@@ -19,7 +26,7 @@ const ALMUERZOS_LIST = {
     {
       id_registro_consumo: 10,
       hijo_nombre: 'Sofía Torres',
-      fecha_consumo: new Date().toISOString().split('T')[0],
+      fecha_consumo: isoLocal(),
       tipo_almuerzo_nombre: 'Almuerzo Completo',
       costo_almuerzo: 15000,
       estado: 'REGISTRADO',

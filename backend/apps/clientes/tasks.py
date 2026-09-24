@@ -34,7 +34,7 @@ def alertar_saldo_negativo_prolongado():
     from apps.notificaciones.services import whatsapp_cliente
     from apps.usuarios.models import Usuario
 
-    hoy = timezone.now().date()
+    hoy = timezone.localdate()
     fecha_corte = hoy - timedelta(days=_DIAS_DEUDA_PROLONGADA)
 
     ultimo = CuentaCorrienteCliente.objects.filter(
@@ -159,7 +159,7 @@ def resumen_mensual_deuda_clientes():
         for c in clientes_con_deuda
     )
 
-    hoy = timezone.now().date()
+    hoy = timezone.localdate()
     cuerpo = (
         f"Resumen de deudas en cuenta corriente al {hoy:%d/%m/%Y}.\n\n"
         f"Total clientes con deuda: {total}\n"

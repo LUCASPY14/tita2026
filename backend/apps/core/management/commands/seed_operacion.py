@@ -395,7 +395,7 @@ class Command(BaseCommand):
 
         self.stdout.write(f"\n[6/8] Simulando {self.dias} días de operación...")
 
-        hoy = date.today()
+        hoy = timezone.localdate()
         ventas_creadas = 0
         cierres_creados = 0
 
@@ -588,7 +588,7 @@ class Command(BaseCommand):
 
         self.stdout.write("\n[8/8] Compras históricas a proveedores...")
 
-        hoy = date.today()
+        hoy = timezone.localdate()
         medio_transferencia = self.medio_transferencia or self.medio_efectivo
         creadas = 0
         pagadas = 0
@@ -665,7 +665,7 @@ class Command(BaseCommand):
                 continue
             nc = NotaCredito.objects.create(
                 cliente=venta.cliente, venta_origen=venta,
-                nro_nota_credito=f"NC-{date.today().year}-{1000 + i:04d}",
+                nro_nota_credito=f"NC-{timezone.localdate().year}-{1000 + i:04d}",
                 monto_total=detalle.subtotal,
                 motivo="Devolución de producto — cliente no conforme",
                 estado=NotaCredito.Estado.EMITIDA,

@@ -32,7 +32,7 @@ def cerrar_cuentas_mes_anterior():
     from django.db.models import Count, Sum
     from apps.almuerzos.models import RegistroConsumoAlmuerzo
 
-    hoy = timezone.now().date()
+    hoy = timezone.localdate()
     primer_dia_mes = date(hoy.year, hoy.month, 1)
     ultimo_dia_mes_ant = primer_dia_mes - timedelta(days=1)
     anio_ant, mes_ant = ultimo_dia_mes_ant.year, ultimo_dia_mes_ant.month

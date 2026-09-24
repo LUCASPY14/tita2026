@@ -83,7 +83,7 @@ from .validators import (
 def get_precio_almuerzo_activo(fecha=None):
     """Retorna el PrecioAlmuerzo vigente para la fecha dada."""
     if fecha is None:
-        fecha = date.today()
+        fecha = timezone.localdate()
     return (
         PrecioAlmuerzo.objects.filter(
             fecha_inicio_vigencia__lte=fecha,
@@ -1005,7 +1005,7 @@ class MenuDiarioViewSet(viewsets.ModelViewSet):
     @action(detail=False, methods=["get"], url_path="hoy")
     def hoy(self, request):
         """Retorna el menú del día actual (fecha de hoy)."""
-        menu = MenuDiario.objects.filter(fecha=date.today(), activo=True).first()
+        menu = MenuDiario.objects.filter(fecha=timezone.localdate(), activo=True).first()
         if menu is None:
             return Response({"detail": "No hay menú publicado para hoy."}, status=404)
         return Response(MenuDiarioSerializer(menu).data)

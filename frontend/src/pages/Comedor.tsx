@@ -11,16 +11,9 @@ import { exportarIngresosComedorPDF } from '../utils/pdf'
 import { useOfflineQueue } from '../hooks/useOfflineQueue'
 import { useAuthStore } from '../store/authStore'
 import { setAuthDoor } from '../lib/authDoor'
+import { todayISO } from '../lib/fecha'
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
-
-// Fecha local (no UTC): toISOString() convierte a UTC, y Paraguay está en
-// UTC-3 — pasadas las 21:00 locales eso ya cae en el día siguiente en UTC,
-// archivando el registro bajo la fecha equivocada.
-function todayISO() {
-  const d = new Date()
-  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
-}
 
 function formatGs(n: number | string | null | undefined) {
   return (Number(n) || 0).toLocaleString('es-PY') + ' Gs.'

@@ -299,7 +299,6 @@ class ReporteStockView(APIView):
 
     def _exportar_pdf(self, filas, total_valor, productos_bajo_minimo):
         from common.pdf_report import pdf_response
-        from datetime import date
         def fmt_gs(n):
             return f"{int(n):,} Gs.".replace(",", ".")
         rows = [
@@ -317,7 +316,7 @@ class ReporteStockView(APIView):
             for f in filas
         ]
         return pdf_response(
-            filename=f"reporte_stock_{date.today()}.pdf",
+            filename=f"reporte_stock_{timezone.localdate()}.pdf",
             title="Reporte de Inventario / Stock",
             subtitle=f"Total: {len(filas)} productos | {productos_bajo_minimo} bajo mínimo",
             headers=[

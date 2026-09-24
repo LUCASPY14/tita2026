@@ -73,7 +73,7 @@ def generar_resumen_diario_stock():
     alertas_activas = len(StockService.calcular_alertas_stock())
 
     resumen = {
-        "fecha": timezone.now().date().isoformat(),
+        "fecha": timezone.localdate().isoformat(),
         "total_productos_en_stock": total_productos,
         "productos_sin_stock": sin_stock,
         "alertas_activas": alertas_activas,
