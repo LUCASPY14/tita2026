@@ -357,7 +357,11 @@ export default function Almuerzos() {
     {
       title: 'Fecha',
       key: 'fecha',
-      render: (_, r) => <span className="text-sm text-slate-600">{formatFecha(r.fecha_consumo)}</span>,
+      render: (_, r) => (
+        <span className="text-sm text-slate-600">
+          {formatFecha(r.fecha_consumo)}{r.hora_registro ? ` · ${r.hora_registro.slice(0, 5)}` : ''}
+        </span>
+      ),
     },
     {
       title: 'Tipo',

@@ -83,6 +83,7 @@ export interface RegistroConsumo {
   id_registro_consumo: number
   hijo_nombre: string
   fecha_consumo: string
+  hora_registro: string
   tipo_almuerzo_nombre: string
   costo_almuerzo: string | number
   estado: string

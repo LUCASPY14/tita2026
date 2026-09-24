@@ -315,6 +315,24 @@ describe('PortalDashboard — tabs', () => {
     await screen.findByText('23/09/2026')
   })
 
+  it('tab Almuerzos → muestra la hora exacta del ingreso al comedor', async () => {
+    // Para poder demostrarle a un padre a qué hora exacta entró su hijo,
+    // no solo el día — hora_registro viaja de la API junto a fecha_consumo.
+    setupPortal({}, {
+      total: 1, monto_total: 25000,
+      consumos: [{
+        id_registro_consumo: 1, fecha_consumo: '2026-09-23',
+        hora_registro: '12:47:30', costo_almuerzo: '25000',
+      }],
+    })
+    renderDashboard()
+    await screen.findByText('Juan García')
+
+    await userEvent.click(screen.getByRole('tab', { name: /Almuerzos/i }))
+
+    await screen.findByText(/12:47/)
+  })
+
   it('tab Almuerzos → con saldo de almuerzo en deuda, muestra el saldo real en rojo', async () => {
     setupPortal({}, {
       total: 1, monto_total: 25000, saldo_almuerzo: -125000,
@@ -439,7 +457,9 @@ describe('PortalDashboard — tabs', () => {
 
     await userEvent.click(screen.getByRole('tab', { name: /Cantina/i }))
 
-    await screen.findByText('23/09/2026')
+    // Cantina muestra fecha Y hora (formatDateTime) — la hora ayuda a
+    // demostrarle a un padre exactamente cuándo se hizo la compra.
+    await screen.findByText(/23\/09\/2026/)
     expect(screen.queryByText(/Invalid Date/i)).not.toBeInTheDocument()
   })
 

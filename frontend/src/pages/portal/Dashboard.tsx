@@ -9,7 +9,7 @@ import {
 } from 'lucide-react'
 import api from '../../services/api'
 import { useAuthStore } from '../../store/authStore'
-import { formatDateOnly } from '../../lib/format'
+import { formatDateOnly, formatDateTime } from '../../lib/format'
 import Spinner from '../../components/ui/Spinner'
 import Badge, { type BadgeColor } from '../../components/ui/Badge'
 
@@ -32,6 +32,7 @@ interface Restriccion {
 interface ConsumoHistorial {
   id_registro_consumo: number
   fecha_consumo: string
+  hora_registro: string
   costo_almuerzo: string | number
 }
 
@@ -421,7 +422,9 @@ function AlmuerzosTab({
                     </div>
                     <div>
                       <p className="text-sm font-medium text-slate-800">Almuerzo</p>
-                      <p className="text-sm text-slate-400">{formatFechaSolo(c.fecha_consumo)}</p>
+                      <p className="text-sm text-slate-400">
+                        {formatFechaSolo(c.fecha_consumo)}{c.hora_registro ? ` · ${c.hora_registro.slice(0, 5)}` : ''}
+                      </p>
                     </div>
                   </div>
                   <p className="text-sm font-semibold text-slate-800 tabular-nums">
@@ -533,7 +536,7 @@ function CantinaTab({
             className="w-full flex items-center justify-between px-4 py-3 text-left cursor-pointer hover:bg-slate-50 transition-colors"
           >
             <div>
-              <p className="text-sm font-medium text-slate-800">{formatFecha(v.fecha)}</p>
+              <p className="text-sm font-medium text-slate-800">{formatDateTime(v.fecha)}</p>
               <p className="text-xs text-slate-400">{`${v.detalles.length} ítem${v.detalles.length !== 1 ? 's' : ''}`}</p>
             </div>
             <div className="flex items-center gap-2 shrink-0">
