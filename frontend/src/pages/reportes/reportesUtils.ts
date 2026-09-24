@@ -1,5 +1,6 @@
 import type { BadgeColor } from '../../components/ui/Badge'
 import { todayISO } from '../../lib/fecha'
+import { formatDateTime } from '../../lib/format'
 
 export const today = todayISO
 
@@ -9,12 +10,7 @@ export function formatGs(n: number | null | undefined): string {
   return (Number(n) || 0).toLocaleString('es-PY') + ' Gs.'
 }
 
-export function formatFecha(iso: string): string {
-  return new Date(iso).toLocaleString('es-PY', {
-    day: '2-digit', month: '2-digit', year: 'numeric',
-    hour: '2-digit', minute: '2-digit',
-  })
-}
+export const formatFecha = formatDateTime
 
 export function descargaBlob(blob: Blob, nombre: string) {
   const url = window.URL.createObjectURL(blob)

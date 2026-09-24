@@ -3,6 +3,7 @@ import toast from 'react-hot-toast'
 import { Shield, XCircle, CheckCircle2, Eye, EyeOff, Copy } from 'lucide-react'
 import { QRCodeSVG } from 'qrcode.react'
 import api from '../../services/api'
+import { formatDateOnly } from '../../lib/format'
 import Badge from '../../components/ui/Badge'
 import Button from '../../components/ui/Button'
 import { extractErrorMessage, inputClass, type Estado2FA } from './helpers'
@@ -82,7 +83,7 @@ export default function TabSeguridad() {
           <div className="space-y-3">
             {estado2fa?.fecha_activacion && (
               <p className="text-xs text-slate-400">
-                Activado el {new Date(estado2fa.fecha_activacion).toLocaleDateString('es-PY')}
+                Activado el {formatDateOnly(estado2fa.fecha_activacion)}
               </p>
             )}
             {estado2fa?.habilitado ? (

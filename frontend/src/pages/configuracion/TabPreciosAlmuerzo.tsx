@@ -3,6 +3,7 @@ import toast from 'react-hot-toast'
 import { Plus, Edit2, Trash2, CheckCircle } from 'lucide-react'
 import api from '../../services/api'
 import { todayISO } from '../../lib/fecha'
+import { formatDateOnly } from '../../lib/format'
 import Badge from '../../components/ui/Badge'
 import Button from '../../components/ui/Button'
 import Table, { type Column } from '../../components/ui/Table'
@@ -22,11 +23,7 @@ function formatGs(n: string | number | null | undefined) {
   return 'Gs. ' + (Number(n) || 0).toLocaleString('es-PY')
 }
 
-function formatFecha(iso: string | null | undefined) {
-  if (!iso) return '—'
-  const [y, m, d] = iso.split('-')
-  return `${d}/${m}/${y}`
-}
+const formatFecha = formatDateOnly
 
 const emptyForm = {
   precio_unitario: '',

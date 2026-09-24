@@ -6,6 +6,7 @@ import {
 } from 'lucide-react'
 import api from '../../services/api'
 import { useAuthStore } from '../../store/authStore'
+import { formatDateTime } from '../../lib/format'
 import Spinner from '../../components/ui/Spinner'
 import Button from '../../components/ui/Button'
 import type { LucideIcon } from 'lucide-react'
@@ -43,12 +44,7 @@ const TIPO_COLOR: Record<string, string> = {
   VENTA_DEUDA: 'text-red-500',
 }
 
-function formatFecha(iso: string) {
-  return new Date(iso).toLocaleString('es-PY', {
-    day: '2-digit', month: '2-digit', year: 'numeric',
-    hour: '2-digit', minute: '2-digit',
-  })
-}
+const formatFecha = formatDateTime
 
 function buildWsUrl(): string {
   const token = localStorage.getItem('access_token') ?? ''

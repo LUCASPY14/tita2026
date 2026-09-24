@@ -1,3 +1,4 @@
+import { formatDateOnly } from '../../lib/format'
 import type { BadgeColor } from '../../components/ui/Badge'
 
 export function extractErrorMessage(err: unknown): string {
@@ -20,12 +21,7 @@ export function extractErrorMessage(err: unknown): string {
   return 'Error inesperado'
 }
 
-export function formatFecha(iso: string | null | undefined): string {
-  if (!iso) return '—'
-  return new Date(iso).toLocaleDateString('es-PY', {
-    day: '2-digit', month: '2-digit', year: 'numeric',
-  })
-}
+export const formatFecha = formatDateOnly
 
 export interface Producto { id_producto: number; descripcion: string }
 

@@ -311,8 +311,8 @@ describe('PortalDashboard — tabs', () => {
     await userEvent.click(screen.getByRole('tab', { name: /Almuerzos/i }))
 
     // new Date('2026-09-23') sin hora se interpreta como UTC medianoche; en
-    // Paraguay (UTC-3) eso mostraba "22/09/26" en vez de "23/09/26".
-    await screen.findByText('23/09/26')
+    // Paraguay (UTC-3) eso mostraba "22/09/2026" en vez de "23/09/2026".
+    await screen.findByText('23/09/2026')
   })
 
   it('tab Almuerzos → con saldo de almuerzo en deuda, muestra el saldo real en rojo', async () => {
@@ -407,7 +407,7 @@ describe('PortalDashboard — tabs', () => {
     expect(screen.getByText('Gs. 100.000')).toBeInTheDocument()
     // recarga.fecha es DateTimeField (con hora) — parsear con new Date(iso)
     // + 'T00:00:00' (el fix para fecha_consumo) rompería esto con "Invalid Date"
-    expect(screen.getByText(/10\/07\/26/)).toBeInTheDocument()
+    expect(screen.getByText(/10\/07\/2026/)).toBeInTheDocument()
     expect(screen.queryByText(/Invalid Date/i)).not.toBeInTheDocument()
   })
 
@@ -439,7 +439,7 @@ describe('PortalDashboard — tabs', () => {
 
     await userEvent.click(screen.getByRole('tab', { name: /Cantina/i }))
 
-    await screen.findByText('23/09/26')
+    await screen.findByText('23/09/2026')
     expect(screen.queryByText(/Invalid Date/i)).not.toBeInTheDocument()
   })
 

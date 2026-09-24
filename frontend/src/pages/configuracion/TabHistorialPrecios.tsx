@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import toast from 'react-hot-toast'
 import api from '../../services/api'
+import { formatDateOnly } from '../../lib/format'
 import Badge from '../../components/ui/Badge'
 import Table, { type Column } from '../../components/ui/Table'
 import Combobox from '../../components/ui/Combobox'
@@ -57,7 +58,7 @@ export default function TabHistorialPrecios() {
         return <Badge color={v >= 0 ? 'orange' : 'green'}>{v >= 0 ? '+' : ''}{v}%</Badge>
       },
     },
-    { title: 'Fecha', key: 'fecha', width: 140, render: (_, r) => <span className="text-xs text-slate-400 tabular-nums">{new Date(r.fecha_cambio).toLocaleDateString('es-PY')}</span> },
+    { title: 'Fecha', key: 'fecha', width: 140, render: (_, r) => <span className="text-xs text-slate-400 tabular-nums">{formatDateOnly(r.fecha_cambio)}</span> },
   ]
 
   return (

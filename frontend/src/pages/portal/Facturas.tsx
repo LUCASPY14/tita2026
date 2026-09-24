@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import toast from 'react-hot-toast'
 import { FileText, ExternalLink } from 'lucide-react'
 import api from '../../services/api'
+import { formatDateOnly } from '../../lib/format'
 import Spinner from '../../components/ui/Spinner'
 
 // ─── Interfaces ───────────────────────────────────────────────────────────────
@@ -21,11 +22,7 @@ function formatGs(n: number | string) {
   return 'Gs. ' + (Number(n) || 0).toLocaleString('es-PY')
 }
 
-function formatFecha(iso: string) {
-  return new Date(iso).toLocaleDateString('es-PY', {
-    day: '2-digit', month: '2-digit', year: 'numeric',
-  })
-}
+const formatFecha = formatDateOnly
 
 // ─── Component ────────────────────────────────────────────────────────────────
 

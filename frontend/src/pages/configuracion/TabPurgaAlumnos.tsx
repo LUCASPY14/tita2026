@@ -2,6 +2,7 @@ import { useCallback, useEffect, useState } from 'react'
 import toast from 'react-hot-toast'
 import { UserX, CheckCircle2 } from 'lucide-react'
 import api from '../../services/api'
+import { formatDateOnly } from '../../lib/format'
 import Button from '../../components/ui/Button'
 import Modal from '../../components/ui/Modal'
 import Table, { type Column } from '../../components/ui/Table'
@@ -16,10 +17,7 @@ interface HijoPendiente {
   purga_solicitada_en: string | null
 }
 
-function formatFecha(iso: string | null) {
-  if (!iso) return '—'
-  return new Date(iso).toLocaleDateString('es-PY')
-}
+const formatFecha = formatDateOnly
 
 export default function TabPurgaAlumnos() {
   const [pendientes, setPendientes] = useState<HijoPendiente[]>([])

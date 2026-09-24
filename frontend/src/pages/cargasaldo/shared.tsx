@@ -1,5 +1,6 @@
 import type { BadgeColor } from '../../components/ui/Badge'
 import { METODOS_PAGO as METODOS } from '../../constants/mediosPago'
+import { formatDateTime } from '../../lib/format'
 
 export function extractErrorMessage(err: unknown): string {
   const e = err as { response?: { data?: unknown } }
@@ -26,13 +27,7 @@ export function formatGs(n: number | string | null | undefined): string {
   return 'Gs. ' + (Number(n) || 0).toLocaleString('es-PY')
 }
 
-export function formatFecha(iso: string | null | undefined): string {
-  if (!iso) return '—'
-  return new Date(iso).toLocaleString('es-PY', {
-    day: '2-digit', month: '2-digit', year: 'numeric',
-    hour: '2-digit', minute: '2-digit',
-  })
-}
+export const formatFecha = formatDateTime
 
 export interface Tarjeta {
   nro_tarjeta: string
@@ -118,7 +113,7 @@ export function abrirRecibo(carga: UltimaCarga) {
 <h1>LA CANTINA DE TITA</h1>
 <p class="center">Recibo de Recarga de Saldo</p>
 <div class="divider"></div>
-<div class="row"><span class="label">Fecha:</span><span>${new Date(carga.fecha).toLocaleString('es-PY')}</span></div>
+<div class="row"><span class="label">Fecha:</span><span>${formatDateTime(carga.fecha)}</span></div>
 <div class="divider"></div>
 <div class="row"><span class="label">Alumno:</span><span>${carga.tarjeta.hijo_nombre}</span></div>
 <div class="row"><span class="label">Grado:</span><span>${carga.tarjeta.hijo_grado || '—'}</span></div>

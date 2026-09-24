@@ -1,5 +1,6 @@
 import type { BadgeColor } from '../../components/ui/Badge'
 export { todayISO } from '../../lib/fecha'
+export { formatDateOnly as formatFecha } from '../../lib/format'
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 export function extractErrorMessage(err: unknown): string {
@@ -26,11 +27,6 @@ export function formatGs(n: number | string | null | undefined): string {
   return (Number(n) || 0).toLocaleString('es-PY') + ' Gs.'
 }
 
-export function formatFecha(iso: string | null | undefined): string {
-  if (!iso) return '—'
-  const [y, m, d] = iso.split('-')
-  return `${d}/${m}/${y}`
-}
 
 export const MESES = ['', 'Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio',
   'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre']

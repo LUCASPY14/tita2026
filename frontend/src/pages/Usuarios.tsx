@@ -3,6 +3,7 @@ import { useTranslation } from 'react-i18next'
 import toast from 'react-hot-toast'
 import { Search, Edit2, Briefcase, ShieldOff, Fingerprint, Users, HardHat, Plus, Pencil, Trash2, Globe, RefreshCw, KeyRound } from 'lucide-react'
 import api from '../services/api'
+import { formatDateTime } from '../lib/format'
 import Badge from '../components/ui/Badge'
 import Button from '../components/ui/Button'
 import Table, { type Column } from '../components/ui/Table'
@@ -434,7 +435,7 @@ export default function Usuarios() {
       render: (_, r) => (
         <span className="text-sm text-slate-500">
           {r.ultimo_acceso
-            ? new Date(r.ultimo_acceso).toLocaleDateString('es-PY', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' })
+            ? formatDateTime(r.ultimo_acceso)
             : <span className="text-slate-300 italic">Nunca ingresó</span>}
         </span>
       ),

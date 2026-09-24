@@ -9,6 +9,7 @@ import {
 } from 'lucide-react'
 import api from '../../services/api'
 import { useAuthStore } from '../../store/authStore'
+import { formatDateOnly } from '../../lib/format'
 import Spinner from '../../components/ui/Spinner'
 import Badge, { type BadgeColor } from '../../components/ui/Badge'
 
@@ -119,18 +120,11 @@ function formatGs(n: number) {
   return 'Gs. ' + (Number(n) || 0).toLocaleString('es-PY')
 }
 
-// Para DateTimeField (Venta.fecha, recarga.fecha): ya viene con hora y
-// offset explícitos ("...T14:30:00-03:00"), new Date(iso) sola es correcta.
-function formatFecha(iso: string) {
-  return new Date(iso).toLocaleDateString('es-PY', { day: '2-digit', month: '2-digit', year: '2-digit' })
-}
-
-// Para DateField (fecha_consumo: "2026-09-23", sin hora): new Date(iso) sola
-// la interpreta como medianoche UTC, y en Paraguay (UTC-3) eso muestra un
-// día menos. Agregar hora fuerza a que se parsee en hora local.
-function formatFechaSolo(iso: string) {
-  return new Date(iso + 'T00:00:00').toLocaleDateString('es-PY', { day: '2-digit', month: '2-digit', year: '2-digit' })
-}
+// formatDateOnly no usa new Date() (arma el string a mano) — funciona igual
+// de bien para DateField (fecha_consumo, sin hora) que para DateTimeField
+// (Venta.fecha, recarga.fecha, con hora), sin el riesgo de corrimiento UTC.
+const formatFecha = formatDateOnly
+const formatFechaSolo = formatDateOnly
 
 function formatVeces(n: number) {
   const cantidad = n % 1 === 0 ? n : Number(n.toFixed(2))

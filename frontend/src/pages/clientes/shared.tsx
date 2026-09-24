@@ -1,5 +1,6 @@
 import toast from 'react-hot-toast'
 import { METODOS_PAGO as METODOS } from '../../constants/mediosPago'
+import { formatDateTime } from '../../lib/format'
 import type { BadgeColor } from '../../components/ui/Badge'
 
 // ─── Interfaces ───────────────────────────────────────────────────────────────
@@ -201,12 +202,7 @@ export function formatGs(value: string | number | null | undefined): string {
   return (Number(value) || 0).toLocaleString('es-PY') + ' Gs.'
 }
 
-export function formatFechaConsumo(iso: string) {
-  return new Date(iso).toLocaleString('es-PY', {
-    day: '2-digit', month: '2-digit', year: 'numeric',
-    hour: '2-digit', minute: '2-digit',
-  })
-}
+export const formatFechaConsumo = formatDateTime
 
 export function formatGsConsumo(v: string | number) {
   return (Number(v) || 0).toLocaleString('es-PY') + ' Gs.'

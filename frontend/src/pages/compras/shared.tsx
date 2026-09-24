@@ -1,3 +1,4 @@
+import { formatDateOnly } from '../../lib/format'
 import type { BadgeColor } from '../../components/ui/Badge'
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
@@ -27,10 +28,7 @@ export function formatGs(n: number | string | null | undefined): string {
   return (Number(n) || 0).toLocaleString('es-PY') + ' Gs.'
 }
 
-export function formatFecha(iso: string | null | undefined): string {
-  if (!iso) return '—'
-  return new Date(iso).toLocaleDateString('es-PY', { day: '2-digit', month: '2-digit', year: 'numeric' })
-}
+export const formatFecha = formatDateOnly
 
 // ─── Interfaces ───────────────────────────────────────────────────────────────
 

@@ -1,3 +1,4 @@
+import { formatDateTime } from '../../lib/format'
 import type { BadgeColor } from '../../components/ui/Badge'
 
 export function extractErrorMessage(err: unknown): string {
@@ -24,13 +25,7 @@ export function formatGs(n: number | string | null | undefined): string {
   return (Number(n) || 0).toLocaleString('es-PY') + ' Gs.'
 }
 
-export function formatFecha(iso: string | null | undefined): string {
-  if (!iso) return '—'
-  return new Date(iso).toLocaleString('es-PY', {
-    day: '2-digit', month: '2-digit', year: 'numeric',
-    hour: '2-digit', minute: '2-digit',
-  })
-}
+export const formatFecha = formatDateTime
 
 export interface PendienteItem {
   tipo: string

@@ -1,3 +1,4 @@
+import { formatDateTime } from '../../lib/format'
 import type { BadgeColor } from '../../components/ui/Badge'
 
 export function extractErrorMessage(err: unknown): string {
@@ -25,13 +26,7 @@ export function formatGs(value: string | number | null | undefined): string {
   return (Number(value) || 0).toLocaleString('es-PY') + ' Gs.'
 }
 
-export function formatDatetime(iso: string | null | undefined): string {
-  if (!iso) return '—'
-  return new Date(iso).toLocaleString('es-PY', {
-    day: '2-digit', month: '2-digit', year: 'numeric',
-    hour: '2-digit', minute: '2-digit',
-  })
-}
+export const formatDatetime = formatDateTime
 
 export function elapsedLabel(isoApertura: string): string {
   const mins = Math.floor((Date.now() - new Date(isoApertura).getTime()) / 60000)

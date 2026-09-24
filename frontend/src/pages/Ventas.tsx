@@ -7,6 +7,7 @@ import {
 import api from '../services/api'
 import { useAuthStore } from '../store/authStore'
 import { todayISO } from '../lib/fecha'
+import { formatDateTime } from '../lib/format'
 import Badge, { type BadgeColor } from '../components/ui/Badge'
 import Button from '../components/ui/Button'
 import Modal from '../components/ui/Modal'
@@ -59,12 +60,7 @@ function formatGs(n: string | number | null | undefined): string {
   return (Number(n) || 0).toLocaleString('es-PY') + ' Gs.'
 }
 
-function formatFecha(iso: string): string {
-  return new Date(iso).toLocaleString('es-PY', {
-    day: '2-digit', month: '2-digit', year: 'numeric',
-    hour: '2-digit', minute: '2-digit',
-  })
-}
+const formatFecha = formatDateTime
 
 const TIPO_LABEL: Record<string, string> = {
   VENTA_TARJETA:   'Tarjeta prepago',

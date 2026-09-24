@@ -7,6 +7,7 @@ import Badge, { type BadgeColor } from '../components/ui/Badge'
 import Button from '../components/ui/Button'
 import Modal from '../components/ui/Modal'
 import { descargaBlob } from './reportes/reportesUtils'
+import { formatDateTime } from '../lib/format'
 
 // ── Utilidades ───────────────────────────────────────────────────────────────
 
@@ -14,12 +15,7 @@ function formatGs(n: number | string): string {
   return (Number(n) || 0).toLocaleString('es-PY') + ' Gs.'
 }
 
-function formatFecha(iso: string | null): string {
-  if (!iso) return '—'
-  return new Date(iso).toLocaleString('es-PY', {
-    day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit',
-  })
-}
+const formatFecha = formatDateTime
 
 function esDeHoy(iso: string | null): boolean {
   if (!iso) return false
