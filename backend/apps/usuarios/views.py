@@ -771,7 +771,7 @@ class PortalHistorialConsumos(APIView):
 
         consumos = list(
             consumos_qs.values(
-                "id_registro_consumo", "fecha_consumo", "costo_almuerzo",
+                "id_registro_consumo", "fecha_consumo", "hora_registro", "costo_almuerzo",
             )
         )
 

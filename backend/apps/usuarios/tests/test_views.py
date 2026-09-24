@@ -819,6 +819,28 @@ class TestPortalHistorialConsumos:
         assert "total" in resp.data
         assert "hijo" in resp.data
 
+    def test_incluye_hora_registro_para_poder_demostrar_el_momento_exacto(
+        self, api_portal, hijo_portal, usuario_cajero
+    ):
+        # Los padres consultan reclamos por compras/ingresos — sin la hora
+        # exacta no se puede demostrar cuándo ocurrió un registro, solo el día.
+        from datetime import date, time
+        from apps.almuerzos.models import RegistroConsumoAlmuerzo
+        RegistroConsumoAlmuerzo.objects.create(
+            hijo=hijo_portal, fecha_consumo=date(2026, 7, 15), hora_registro=time(12, 47, 30),
+            costo_almuerzo=25_000, ya_cobrado=True, registrado_por=usuario_cajero,
+        )
+        resp = api_portal.get(
+            "/api/v1/usuarios/portal/historial-consumos/",
+            {"hijo_id": hijo_portal.pk, "anio": 2026, "mes": 7},
+        )
+        assert resp.status_code == 200
+        # resp.data trae el time crudo (pre-render) — lo que importa es cómo
+        # queda serializado en el JSON que realmente recibe el frontend.
+        import json
+        data = json.loads(resp.content)
+        assert data["consumos"][0]["hora_registro"] == "12:47:30"
+
     def test_sin_hijo_id_retorna_404(self, api_portal):
         # hijo_id=None → hijo not found (None filter returns nothing)
         resp = api_portal.get("/api/v1/usuarios/portal/historial-consumos/")
