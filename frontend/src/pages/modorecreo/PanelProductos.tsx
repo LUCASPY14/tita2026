@@ -47,7 +47,7 @@ export default function PanelProductos({
   }
 
   return (
-    <main className="flex-1 min-w-[420px] flex flex-col overflow-hidden bg-slate-50">
+    <main className="flex-1 min-w-[320px] flex flex-col overflow-hidden bg-slate-50">
       <div className="px-4 pt-2 pb-1.5 border-b border-slate-200 space-y-2 shrink-0 bg-white shadow-sm">
         <div className="relative">
           <Search size={18} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" />
@@ -101,7 +101,7 @@ export default function PanelProductos({
                 return (
                   <button key={p.id_producto} onClick={() => onAgregar(p)} disabled={bloqueado}
                     className={[
-                      'relative flex flex-col items-center justify-center shrink-0 w-24 h-[68px] rounded-xl border-2 p-1.5 transition-all duration-100',
+                      'relative flex flex-col items-center justify-center shrink-0 w-20 h-16 rounded-xl border-2 p-1.5 transition-all duration-100',
                       bloqueado
                         ? 'bg-red-50 border-red-200 opacity-50 cursor-not-allowed'
                         : `${meta.bg} ${meta.border} cursor-pointer hover:shadow-md hover:scale-105 active:scale-95`,

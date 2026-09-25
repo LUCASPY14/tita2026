@@ -37,7 +37,7 @@ export default function PanelAlumno({
   const fotoBlobUrl = useAuthenticatedImage(tarjeta?.hijo_foto)
 
   return (
-    <aside className="w-64 lg:w-80 bg-white border-r-2 border-slate-200 flex flex-col shrink-0">
+    <aside className="w-56 2xl:w-72 bg-white border-r-2 border-slate-200 flex flex-col shrink-0">
 
       <div className="p-3 border-b border-slate-100">
         <input

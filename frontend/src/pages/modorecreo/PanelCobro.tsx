@@ -55,7 +55,7 @@ export default function PanelCobro({
   const [focused, setFocused] = useState(false)
 
   return (
-    <aside className="w-[380px] xl:w-[440px] shrink-0 bg-white border-l-2 border-slate-200 flex flex-col">
+    <aside className="w-[300px] 2xl:w-[380px] shrink-0 bg-white border-l-2 border-slate-200 flex flex-col">
 
       {/* Selector de pago: dos niveles */}
       <div className="px-5 py-5 border-b border-slate-100 bg-slate-50 space-y-4">
