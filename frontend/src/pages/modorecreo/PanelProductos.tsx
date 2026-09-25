@@ -101,20 +101,22 @@ export default function PanelProductos({
                 return (
                   <button key={p.id_producto} onClick={() => onAgregar(p)} disabled={bloqueado}
                     className={[
-                      'relative flex flex-col items-center justify-center shrink-0 w-20 h-16 rounded-xl border-2 p-1.5 transition-all duration-100',
+                      'relative flex flex-col items-center justify-center text-center shrink-0 w-[104px] min-h-[108px] rounded-xl border-2 p-2 transition-all duration-100',
                       bloqueado
                         ? 'bg-red-50 border-red-200 opacity-50 cursor-not-allowed'
                         : `${meta.bg} ${meta.border} cursor-pointer hover:shadow-md hover:scale-105 active:scale-95`,
                     ].join(' ')}
                   >
                     {p.stock_actual != null && p.stock_actual <= 3 && (
-                      <span className="absolute top-0.5 right-0.5 text-[8px] font-bold text-red-600 bg-red-100 rounded px-1">
+                      <span className="absolute top-1.5 right-1.5 text-[9px] font-bold px-1 py-0.5 rounded tabular-nums bg-red-100 text-red-700">
                         {p.stock_actual === 0 ? 'AGOTADO' : `${p.stock_actual}u`}
                       </span>
                     )}
-                    <span className="text-xl mb-0.5">{meta.emoji}</span>
-                    <span className="text-[10px] text-slate-700 font-semibold leading-tight line-clamp-1 text-center">{p.descripcion}</span>
-                    <span className={`text-xs font-black tabular-nums ${meta.accent}`}>{gs(getPrecio(p))}</span>
+                    <span className="text-2xl mb-1">{meta.emoji}</span>
+                    <span className={`text-base font-black tabular-nums ${meta.accent}`}>{gs(getPrecio(p))}</span>
+                    <span className="text-slate-700 text-xs font-medium leading-tight line-clamp-2 mt-0.5 px-1">
+                      {p.descripcion}
+                    </span>
                   </button>
                 )
               })}
