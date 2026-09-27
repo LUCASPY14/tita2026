@@ -119,6 +119,10 @@ app.conf.beat_schedule = {
         "task": "apps.core.tasks.alertar_saldo_tarjeta_negativo",
         "schedule": crontab(hour=9, minute=50),   # Todos los días 09:50
     },
+    "verificar-consistencia-saldos": {
+        "task": "apps.core.tasks.verificar_consistencia_saldos",
+        "schedule": crontab(hour=4, minute=15),   # Todos los días 04:15
+    },
     # ── Usuarios / Auditoría ──────────────────────────────────────────
     "limpiar-audit-logs": {
         "task": "apps.usuarios.tasks.limpiar_audit_logs",

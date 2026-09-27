@@ -1549,8 +1549,16 @@ class TestRegistroConsumoAnular:
     def test_anula_y_revierte_saldo_cuando_estaba_cobrado(
         self, api_cajero, hijo_almuerzo, tarjeta_almuerzo, usuario_cajero
     ):
-        from apps.almuerzos.models import SaldoAlmuerzo
-        SaldoAlmuerzo.objects.create(hijo=hijo_almuerzo, saldo_actual=Decimal("-15000"))
+        from apps.almuerzos.models import SaldoAlmuerzo, MovimientoSaldoAlmuerzo
+        saldo_previo = SaldoAlmuerzo.objects.create(hijo=hijo_almuerzo)
+        # El trigger de sincronización recalcula saldo_actual sumando los
+        # movimientos reales — un saldo_actual=-15000 seteado a mano (sin
+        # movimiento) no sobrevive al primer movimiento real, así que la
+        # deuda inicial se establece acá con un movimiento de verdad.
+        MovimientoSaldoAlmuerzo.objects.create(
+            saldo=saldo_previo, tipo=MovimientoSaldoAlmuerzo.Tipo.CONSUMO,
+            monto=Decimal("-15000"), saldo_resultante=Decimal("-15000"),
+        )
         registro = self._registro(hijo_almuerzo, tarjeta_almuerzo, usuario_cajero, ya_cobrado=True, costo="15000")
 
         resp = api_cajero.post(f"/api/v1/almuerzos/registros-consumo/{registro.pk}/anular/")

@@ -113,3 +113,87 @@ def alertar_saldo_tarjeta_negativo():
 
     logger.info("alertar_saldo_tarjeta_negativo: %d tarjetas en alerta", alertadas)
     return {"alertadas": alertadas}
+
+
+@shared_task(
+    name="apps.core.tasks.verificar_consistencia_saldos",
+    autoretry_for=(Exception,),
+    max_retries=2,
+)
+def verificar_consistencia_saldos():
+    """
+    Compara saldo_actual (Tarjeta y SaldoAlmuerzo) contra la suma real de sus
+    movimientos. Con los triggers de sincronización (trg_sync_saldo_tarjeta,
+    trg_sync_saldo_almuerzo) esto no debería divergir nunca desde un
+    movimiento normal — esta tarea es la red de seguridad para el caso que
+    los triggers no cubren: alguien (o algún código futuro) edita
+    saldo_actual directo, sin pasar por un movimiento.
+
+    No corrige nada solo — avisa a ADMINS por email para revisar a mano,
+    igual que el aviso de tareas críticas en celery_app.py.
+    """
+    from decimal import Decimal
+    from django.conf import settings
+    from django.db.models import Case, DecimalField, F, Sum, When
+    from django.db.models.functions import Coalesce
+
+    from .models import Tarjeta
+    from apps.almuerzos.models import SaldoAlmuerzo
+
+    calculado_tarjeta = Coalesce(
+        Sum(
+            Case(
+                When(movimientos__tipo="CONSUMO", then=-F("movimientos__monto")),
+                default=F("movimientos__monto"),
+                output_field=DecimalField(max_digits=12, decimal_places=0),
+            )
+        ),
+        Decimal("0"),
+    )
+    desajustes_tarjeta = list(
+        Tarjeta.objects
+        .annotate(calculado=calculado_tarjeta)
+        .exclude(saldo_actual=F("calculado"))
+        .values_list("nro_tarjeta", "saldo_actual", "calculado")
+    )
+
+    calculado_almuerzo = Coalesce(Sum("movimientos__monto"), Decimal("0"))
+    desajustes_almuerzo = list(
+        SaldoAlmuerzo.objects
+        .annotate(calculado=calculado_almuerzo)
+        .exclude(saldo_actual=F("calculado"))
+        .values_list("hijo_id", "saldo_actual", "calculado")
+    )
+
+    total = len(desajustes_tarjeta) + len(desajustes_almuerzo)
+    logger.info(
+        "verificar_consistencia_saldos: %d desajustes de tarjeta, %d de almuerzo",
+        len(desajustes_tarjeta), len(desajustes_almuerzo),
+    )
+
+    if total:
+        lineas = [
+            f"  - Tarjeta {nro}: guardado Gs. {int(guardado):,} vs. calculado Gs. {int(calc):,}"
+            for nro, guardado, calc in desajustes_tarjeta
+        ] + [
+            f"  - SaldoAlmuerzo (hijo_id={hijo_id}): guardado Gs. {int(guardado):,} vs. calculado Gs. {int(calc):,}"
+            for hijo_id, guardado, calc in desajustes_almuerzo
+        ]
+        cuerpo = (
+            f"Se encontraron {total} saldo(s) que no coinciden con la suma de sus movimientos.\n"
+            "Esto no debería pasar con los triggers de sincronización activos — revisar a mano:\n\n"
+            + "\n".join(lineas)
+        )
+        for _, admin_email in getattr(settings, "ADMINS", []):
+            try:
+                from apps.notificaciones.services import EmailService
+                EmailService.enviar_simple(
+                    destinatario_email=admin_email,
+                    destinatario_nombre="Admin",
+                    asunto=f"[Cantina Tita] {total} saldo(s) desincronizados",
+                    cuerpo=cuerpo,
+                )
+            except Exception:
+                logger.warning("No se pudo enviar alerta de saldos desincronizados", exc_info=True)
+
+    return {"desajustes_tarjeta": len(desajustes_tarjeta), "desajustes_almuerzo": len(desajustes_almuerzo)}

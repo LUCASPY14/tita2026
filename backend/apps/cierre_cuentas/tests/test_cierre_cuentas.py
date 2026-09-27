@@ -64,8 +64,8 @@ def grado_normal(db):
 
 def _alumno(cliente, grado, nombre, nro, cantina=0, almuerzo=0, activo=True):
     """Alumno con tarjeta. El saldo entra por el libro mayor: un trigger de la base
-    recalcula tarjeta.saldo_actual desde los movimientos."""
-    from apps.almuerzos.models import SaldoAlmuerzo
+    recalcula tarjeta.saldo_actual y SaldoAlmuerzo.saldo_actual desde los movimientos."""
+    from apps.almuerzos.models import MovimientoSaldoAlmuerzo, SaldoAlmuerzo
     from apps.clientes.models import Hijo
     from apps.core.models import MovimientoTarjeta, Tarjeta
 
@@ -81,7 +81,13 @@ def _alumno(cliente, grado, nombre, nro, cantina=0, almuerzo=0, activo=True):
             descripcion="Saldo inicial de prueba",
         )
     if almuerzo:
-        SaldoAlmuerzo.objects.create(hijo=hijo, saldo_actual=Decimal(almuerzo))
+        saldo_almuerzo = SaldoAlmuerzo.objects.create(hijo=hijo)
+        MovimientoSaldoAlmuerzo.objects.create(
+            saldo=saldo_almuerzo,
+            tipo=MovimientoSaldoAlmuerzo.Tipo.RECARGA if almuerzo > 0 else MovimientoSaldoAlmuerzo.Tipo.CONSUMO,
+            monto=Decimal(almuerzo), saldo_resultante=Decimal(almuerzo),
+            observaciones="Saldo inicial de prueba",
+        )
     return hijo
 
 
