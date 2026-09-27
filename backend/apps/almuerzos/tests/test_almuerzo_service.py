@@ -380,6 +380,52 @@ class TestRecargarSaldo:
 
 
 @pytest.mark.django_db
+class TestAjustarSaldo:
+
+    def test_ajuste_positivo_crea_saldo_y_suma(self, hijo_almuerzo, usuario_admin):
+        from apps.almuerzos.services import AlmuerzoService
+        from apps.almuerzos.models import SaldoAlmuerzo, MovimientoSaldoAlmuerzo
+
+        mov = AlmuerzoService.ajustar_saldo(
+            hijo=hijo_almuerzo, monto=Decimal("15000"),
+            motivo="Corrección por reclamo de padre", usuario=usuario_admin,
+        )
+
+        saldo = SaldoAlmuerzo.objects.get(hijo=hijo_almuerzo)
+        assert saldo.saldo_actual == Decimal("15000")
+        assert mov.tipo == MovimientoSaldoAlmuerzo.Tipo.AJUSTE
+        assert mov.saldo_resultante == Decimal("15000")
+        assert usuario_admin.email in mov.observaciones
+
+    def test_ajuste_negativo_resta_sobre_saldo_existente(self, hijo_almuerzo, usuario_admin):
+        from apps.almuerzos.services import AlmuerzoService
+        from apps.almuerzos.models import SaldoAlmuerzo
+
+        AlmuerzoService.recargar_saldo(hijo=hijo_almuerzo, monto=Decimal("50000"))
+        AlmuerzoService.ajustar_saldo(
+            hijo=hijo_almuerzo, monto=Decimal("-20000"),
+            motivo="Descuento aplicado dos veces", usuario=usuario_admin,
+        )
+
+        saldo = SaldoAlmuerzo.objects.get(hijo=hijo_almuerzo)
+        assert saldo.saldo_actual == Decimal("30000")
+
+    def test_ajuste_monto_cero_falla(self, hijo_almuerzo, usuario_admin):
+        from apps.almuerzos.services import AlmuerzoService
+        with pytest.raises(ValidationError, match="no puede ser cero"):
+            AlmuerzoService.ajustar_saldo(
+                hijo=hijo_almuerzo, monto=Decimal("0"), motivo="motivo", usuario=usuario_admin,
+            )
+
+    def test_ajuste_sin_motivo_falla(self, hijo_almuerzo, usuario_admin):
+        from apps.almuerzos.services import AlmuerzoService
+        with pytest.raises(ValidationError, match="motivo"):
+            AlmuerzoService.ajustar_saldo(
+                hijo=hijo_almuerzo, monto=Decimal("1000"), motivo="", usuario=usuario_admin,
+            )
+
+
+@pytest.mark.django_db
 class TestConfirmarRecarga:
 
     def test_confirma_recarga_pendiente(self, hijo_almuerzo):

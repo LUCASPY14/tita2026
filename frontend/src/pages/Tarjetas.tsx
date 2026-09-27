@@ -1,8 +1,9 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import toast from 'react-hot-toast'
-import { CreditCard, Search, Plus, Lock, Unlock, History, Edit2 } from 'lucide-react'
+import { CreditCard, Search, Plus, Lock, Unlock, History, Edit2, Wallet } from 'lucide-react'
 import tarjetasService from '../services/tarjetas'
+import { useAuthStore } from '../store/authStore'
 import Badge from '../components/ui/Badge'
 import Button from '../components/ui/Button'
 import Table, { type Column } from '../components/ui/Table'
@@ -10,9 +11,12 @@ import { extractErrorMessage, formatGs, formatFechaCorta, type Tarjeta, ESTADO_C
 import ModalDetalle from './tarjetas/ModalDetalle'
 import ModalCrear from './tarjetas/ModalCrear'
 import ModalEditar from './tarjetas/ModalEditar'
+import ModalAjustarSaldo from './tarjetas/ModalAjustarSaldo'
 
 export default function Tarjetas() {
   const { t } = useTranslation()
+  const { user } = useAuthStore()
+  const puedeAjustarSaldo = user?.rol === 'ADMIN' || user?.rol === 'SUPERVISOR'
   const [tarjetas, setTarjetas] = useState<Tarjeta[]>([])
   const [loading, setLoading] = useState(false)
   const [search, setSearch] = useState('')
@@ -34,6 +38,7 @@ export default function Tarjetas() {
   const [toggling, setToggling] = useState<string | null>(null)
   const [createOpen, setCreateOpen] = useState(false)
   const [editTarjeta, setEditTarjeta] = useState<Tarjeta | null>(null)
+  const [ajustarTarjeta, setAjustarTarjeta] = useState<Tarjeta | null>(null)
 
   // ── Data loading ─────────────────────────────────────────────────
 
@@ -172,7 +177,7 @@ export default function Tarjetas() {
       ),
     },
     {
-      title: '', key: 'acciones', width: 160,
+      title: '', key: 'acciones', width: puedeAjustarSaldo ? 210 : 160,
       render: (_, r) => (
         <div className="flex items-center gap-1.5">
           <Button size="sm" variant="secondary" onClick={() => setDetailTarjeta(r)}>
@@ -183,6 +188,11 @@ export default function Tarjetas() {
             <Edit2 className="w-3.5 h-3.5" />
             Editar
           </Button>
+          {puedeAjustarSaldo && (
+            <Button size="sm" variant="secondary" onClick={() => setAjustarTarjeta(r)}>
+              <Wallet className="w-3.5 h-3.5" />
+            </Button>
+          )}
           <Button
             size="sm"
             variant={r.estado === 'ACTIVA' ? 'danger' : 'primary'}
@@ -308,6 +318,17 @@ export default function Tarjetas() {
           loadTarjetas(search, estadoFilter, page)
           setDetailTarjeta(prev =>
             prev?.nro_tarjeta === editTarjeta?.nro_tarjeta ? { ...prev!, ...updates } : prev,
+          )
+        }}
+      />
+
+      <ModalAjustarSaldo
+        tarjeta={ajustarTarjeta}
+        onClose={() => setAjustarTarjeta(null)}
+        onSaved={updates => {
+          loadTarjetas(search, estadoFilter, page)
+          setDetailTarjeta(prev =>
+            prev?.nro_tarjeta === ajustarTarjeta?.nro_tarjeta ? { ...prev!, ...updates } : prev,
           )
         }}
       />

@@ -142,3 +142,75 @@ class TestCargarSaldo:
         assert carga.estado == "CONFIRMADA"
         tarjeta_activa.refresh_from_db()
         assert tarjeta_activa.saldo_actual == Decimal("12000")
+
+
+@pytest.mark.django_db
+class TestAjustarSaldo:
+
+    def test_ajuste_positivo_suma(self, tarjeta_activa, usuario_admin):
+        from apps.core.services import TarjetaService
+        from apps.core.models import MovimientoTarjeta
+
+        mov = TarjetaService.ajustar_saldo(
+            tarjeta=tarjeta_activa, monto=Decimal("5000"),
+            motivo="Corrección por reclamo de padre", usuario=usuario_admin,
+        )
+
+        tarjeta_activa.refresh_from_db()
+        assert tarjeta_activa.saldo_actual == Decimal("15000")
+        assert mov.tipo == MovimientoTarjeta.Tipo.AJUSTE
+        assert mov.saldo_anterior == Decimal("10000")
+        assert mov.saldo_resultante == Decimal("15000")
+        assert usuario_admin.email in mov.descripcion
+
+    def test_ajuste_negativo_resta(self, tarjeta_activa, usuario_admin):
+        from apps.core.services import TarjetaService
+
+        TarjetaService.ajustar_saldo(
+            tarjeta=tarjeta_activa, monto=Decimal("-3000"),
+            motivo="Descuento aplicado dos veces", usuario=usuario_admin,
+        )
+
+        tarjeta_activa.refresh_from_db()
+        assert tarjeta_activa.saldo_actual == Decimal("7000")
+
+    def test_ajuste_funciona_en_tarjeta_bloqueada(self, tarjeta_bloqueada, usuario_admin):
+        """A diferencia de cargar_saldo, el ajuste no exige tarjeta ACTIVA."""
+        from apps.core.services import TarjetaService
+        from apps.core.models import MovimientoTarjeta
+
+        # El trigger de la base recalcula saldo_actual sumando los movimientos
+        # reales de la tarjeta — el saldo_actual=5000 del fixture (seteado a
+        # mano, sin movimiento) no sobrevive al primer movimiento real, así
+        # que lo establecemos acá de forma consistente antes de ajustar.
+        MovimientoTarjeta.objects.create(
+            tarjeta=tarjeta_bloqueada, tipo=MovimientoTarjeta.Tipo.AJUSTE, monto=Decimal("5000"),
+        )
+        tarjeta_bloqueada.refresh_from_db()
+        assert tarjeta_bloqueada.saldo_actual == Decimal("5000")
+
+        TarjetaService.ajustar_saldo(
+            tarjeta=tarjeta_bloqueada, monto=Decimal("1000"),
+            motivo="Corrección de saldo previo al bloqueo", usuario=usuario_admin,
+        )
+
+        tarjeta_bloqueada.refresh_from_db()
+        assert tarjeta_bloqueada.saldo_actual == Decimal("6000")
+
+    def test_ajuste_monto_cero_falla(self, tarjeta_activa, usuario_admin):
+        from apps.core.services import TarjetaService
+
+        with pytest.raises(ValidationError, match="no puede ser cero"):
+            TarjetaService.ajustar_saldo(
+                tarjeta=tarjeta_activa, monto=Decimal("0"),
+                motivo="motivo", usuario=usuario_admin,
+            )
+
+    def test_ajuste_sin_motivo_falla(self, tarjeta_activa, usuario_admin):
+        from apps.core.services import TarjetaService
+
+        with pytest.raises(ValidationError, match="motivo"):
+            TarjetaService.ajustar_saldo(
+                tarjeta=tarjeta_activa, monto=Decimal("1000"),
+                motivo="   ", usuario=usuario_admin,
+            )

@@ -686,3 +686,76 @@ class TestRecargasInmutables:
         assert resp.status_code == 201
         conf = api_cajero.post(f"/api/v1/almuerzos/recargas-saldo/{resp.data['id_recarga_almuerzo']}/confirmar/")
         assert conf.status_code == 200
+
+
+@pytest.fixture
+def usuario_supervisor_saldo(db):
+    from apps.usuarios.models import Usuario
+    return Usuario.objects.create_user(
+        email="supervisor_saldo@test.com", password="test1234",
+        nombre="Sup", apellido="Saldo", rol=Usuario.Rol.SUPERVISOR,
+    )
+
+
+@pytest.fixture
+def api_supervisor_saldo(api_client, usuario_supervisor_saldo):
+    api_client.force_authenticate(user=usuario_supervisor_saldo)
+    return api_client
+
+
+@pytest.mark.django_db
+class TestAjustarSaldoAlmuerzo:
+
+    def test_admin_puede_ajustar(self, api_admin, hijo_almuerzo):
+        from apps.almuerzos.models import SaldoAlmuerzo
+
+        resp = api_admin.post(
+            "/api/v1/almuerzos/saldos/ajustar/",
+            {"hijo_id": hijo_almuerzo.pk, "monto": "8000", "motivo": "Corrección por reclamo"},
+            format="json",
+        )
+        assert resp.status_code == 200
+        assert Decimal(resp.data["saldo_actual"]) == Decimal("8000")
+        assert SaldoAlmuerzo.objects.get(hijo=hijo_almuerzo).saldo_actual == Decimal("8000")
+
+    def test_supervisor_puede_ajustar(self, api_supervisor_saldo, hijo_almuerzo):
+        resp = api_supervisor_saldo.post(
+            "/api/v1/almuerzos/saldos/ajustar/",
+            {"hijo_id": hijo_almuerzo.pk, "monto": "1000", "motivo": "Corrección"},
+            format="json",
+        )
+        assert resp.status_code == 200
+
+    def test_cajero_no_puede_ajustar(self, api_cajero, hijo_almuerzo):
+        resp = api_cajero.post(
+            "/api/v1/almuerzos/saldos/ajustar/",
+            {"hijo_id": hijo_almuerzo.pk, "monto": "1000", "motivo": "Corrección"},
+            format="json",
+        )
+        assert resp.status_code == 403
+
+    def test_sin_motivo_devuelve_400(self, api_admin, hijo_almuerzo):
+        resp = api_admin.post(
+            "/api/v1/almuerzos/saldos/ajustar/",
+            {"hijo_id": hijo_almuerzo.pk, "monto": "1000", "motivo": ""},
+            format="json",
+        )
+        assert resp.status_code == 400
+
+    def test_hijo_inexistente_devuelve_404(self, api_admin):
+        resp = api_admin.post(
+            "/api/v1/almuerzos/saldos/ajustar/",
+            {"hijo_id": 999999, "monto": "1000", "motivo": "Corrección"},
+            format="json",
+        )
+        assert resp.status_code == 404
+
+    def test_create_generico_sigue_bloqueado(self, api_admin, hijo_almuerzo):
+        """El POST directo al listado (crear SaldoAlmuerzo a mano) sigue
+        prohibido — el único POST habilitado es la acción "ajustar"."""
+        resp = api_admin.post(
+            "/api/v1/almuerzos/saldos/",
+            {"hijo": hijo_almuerzo.pk, "saldo_actual": "999999"},
+            format="json",
+        )
+        assert resp.status_code == 405

@@ -508,3 +508,60 @@ class TestPortalSoloVeSuFamilia:
     def test_staff_sigue_viendo_todas(self, api_cajero, escenario):
         resp = api_cajero.get("/api/v1/core/tarjetas/", {"search": "ISO"})
         assert resp.data["count"] == 2
+
+
+# ── TarjetaViewSet.ajustar_saldo ────────────────────────────────────────────
+
+@pytest.fixture
+def usuario_supervisor(db):
+    from apps.usuarios.models import Usuario
+    return Usuario.objects.create_user(
+        email="supervisor_core@test.com", password="test1234",
+        nombre="Sup", apellido="Core", rol="SUPERVISOR",
+    )
+
+
+@pytest.fixture
+def api_supervisor(api_client, usuario_supervisor):
+    api_client.force_authenticate(user=usuario_supervisor)
+    return api_client
+
+
+@pytest.mark.django_db
+class TestAjustarSaldoTarjeta:
+
+    def test_admin_puede_ajustar(self, api_admin, tarjeta_core):
+        resp = api_admin.post(
+            f"/api/v1/core/tarjetas/{tarjeta_core.pk}/ajustar-saldo/",
+            {"monto": "5000", "motivo": "Corrección por reclamo"},
+        )
+        assert resp.status_code == 200
+        assert Decimal(resp.data["saldo_actual"]) == Decimal("5000")
+
+    def test_supervisor_puede_ajustar(self, api_supervisor, tarjeta_core):
+        resp = api_supervisor.post(
+            f"/api/v1/core/tarjetas/{tarjeta_core.pk}/ajustar-saldo/",
+            {"monto": "1000", "motivo": "Corrección"},
+        )
+        assert resp.status_code == 200
+
+    def test_cajero_no_puede_ajustar(self, api_cajero, tarjeta_core):
+        resp = api_cajero.post(
+            f"/api/v1/core/tarjetas/{tarjeta_core.pk}/ajustar-saldo/",
+            {"monto": "1000", "motivo": "Corrección"},
+        )
+        assert resp.status_code == 403
+
+    def test_sin_motivo_devuelve_400(self, api_admin, tarjeta_core):
+        resp = api_admin.post(
+            f"/api/v1/core/tarjetas/{tarjeta_core.pk}/ajustar-saldo/",
+            {"monto": "1000", "motivo": ""},
+        )
+        assert resp.status_code == 400
+
+    def test_monto_invalido_devuelve_400(self, api_admin, tarjeta_core):
+        resp = api_admin.post(
+            f"/api/v1/core/tarjetas/{tarjeta_core.pk}/ajustar-saldo/",
+            {"monto": "no-es-un-numero", "motivo": "Corrección"},
+        )
+        assert resp.status_code == 400

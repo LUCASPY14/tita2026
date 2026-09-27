@@ -174,3 +174,32 @@ class TarjetaService:
                 )
 
             return carga
+
+    @staticmethod
+    def ajustar_saldo(*, tarjeta, monto: Decimal, motivo: str, usuario) -> MovimientoTarjeta:
+        """
+        Corrección administrativa del saldo de cantina — no es una recarga real
+        (no genera CargaSaldo ni MovimientoCaja). monto lleva signo: positivo
+        suma, negativo resta. No exige tarjeta ACTIVA: puede hacer falta
+        corregir el saldo de una tarjeta bloqueada o cancelada.
+        """
+        if monto == 0:
+            raise ValidationError({"error": "El monto del ajuste no puede ser cero."})
+        if not motivo or not motivo.strip():
+            raise ValidationError({"error": "El motivo del ajuste es obligatorio."})
+
+        with transaction.atomic():
+            tarjeta = Tarjeta.objects.select_for_update().get(pk=tarjeta.pk)
+            saldo_anterior = tarjeta.saldo_actual
+            tarjeta.saldo_actual += monto
+            tarjeta.save(update_fields=["saldo_actual"])
+
+            return MovimientoTarjeta.objects.create(
+                tarjeta=tarjeta,
+                tipo=MovimientoTarjeta.Tipo.AJUSTE,
+                monto=monto,
+                saldo_anterior=saldo_anterior,
+                saldo_resultante=tarjeta.saldo_actual,
+                descripcion=f"{motivo.strip()} (ajuste manual: {usuario.email})",
+                creado_por=usuario,
+            )

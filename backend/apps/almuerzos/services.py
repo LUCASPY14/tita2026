@@ -306,3 +306,29 @@ class AlmuerzoService:
                 )
 
             return recarga
+
+    @staticmethod
+    def ajustar_saldo(*, hijo, monto: Decimal, motivo: str, usuario) -> MovimientoSaldoAlmuerzo:
+        """
+        Corrección administrativa del saldo de almuerzo — no es una recarga
+        real (no genera RecargaSaldoAlmuerzo ni MovimientoCaja). monto lleva
+        signo: positivo suma, negativo resta.
+        """
+        if monto == 0:
+            raise ValidationError({"error": "El monto del ajuste no puede ser cero."})
+        if not motivo or not motivo.strip():
+            raise ValidationError({"error": "El motivo del ajuste es obligatorio."})
+
+        with transaction.atomic():
+            saldo, _ = SaldoAlmuerzo.objects.get_or_create(hijo=hijo)
+            saldo = SaldoAlmuerzo.objects.select_for_update().get(pk=saldo.pk)
+            saldo.saldo_actual += monto
+            saldo.save(update_fields=["saldo_actual"])
+
+            return MovimientoSaldoAlmuerzo.objects.create(
+                saldo=saldo,
+                tipo=MovimientoSaldoAlmuerzo.Tipo.AJUSTE,
+                monto=monto,
+                saldo_resultante=saldo.saldo_actual,
+                observaciones=f"{motivo.strip()} (ajuste manual: {usuario.email})",
+            )

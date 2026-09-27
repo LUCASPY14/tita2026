@@ -2,6 +2,8 @@
 Views para la app core
 """
 
+from decimal import Decimal, InvalidOperation
+
 from django.core.cache import cache
 from django.db.models import Q
 
@@ -12,7 +14,9 @@ from rest_framework.filters import SearchFilter, OrderingFilter
 from rest_framework.response import Response
 
 from common.pagination import CursorResultsSetPagination
-from common.permissions import IsAdmin, IsAdminOrReadOnly, IsCajeroOrAdmin, IsStaffOrClienteWeb, IsStaffUser
+from common.permissions import (
+    IsAdmin, IsAdminOrReadOnly, IsAdminOrSupervisor, IsCajeroOrAdmin, IsStaffOrClienteWeb, IsStaffUser,
+)
 from common.throttling import SensitiveEndpointThrottle
 from common.utils.medios_pago import resolver_medio_pago
 from apps.usuarios.auditoria import registrar_auditoria
@@ -44,6 +48,7 @@ from .serializers import (
     MedioPagoSerializer,
 )
 from .services import TarjetaService
+from rest_framework.exceptions import ValidationError
 
 
 class TarjetaViewSet(viewsets.ModelViewSet):
@@ -70,6 +75,8 @@ class TarjetaViewSet(viewsets.ModelViewSet):
             return [IsAdmin()]
         if self.action == "resumen":
             return [IsStaffUser()]
+        if self.action == "ajustar_saldo":
+            return [IsAdminOrSupervisor()]
         return super().get_permissions()
 
     @action(detail=False, methods=["get"], url_path="resumen")
@@ -158,6 +165,31 @@ class TarjetaViewSet(viewsets.ModelViewSet):
     def activar(self, request, pk=None):
         """Solo se puede reactivar una tarjeta BLOQUEADA."""
         return self._cambiar_estado(request, pk, Tarjeta.Estado.BLOQUEADA, Tarjeta.Estado.ACTIVA, "ACTIVAR_TARJETA")
+
+    @action(detail=True, methods=["post"], url_path="ajustar-saldo", throttle_classes=[SensitiveEndpointThrottle])
+    def ajustar_saldo(self, request, pk=None):
+        """Corrección administrativa del saldo de cantina — solo ADMIN/SUPERVISOR."""
+        tarjeta = self.get_object()
+        try:
+            monto = Decimal(str(request.data.get("monto", "")))
+        except (InvalidOperation, ValueError):
+            return Response({"error": "Monto inválido."}, status=status.HTTP_400_BAD_REQUEST)
+        motivo = (request.data.get("motivo") or "").strip()
+
+        try:
+            TarjetaService.ajustar_saldo(tarjeta=tarjeta, monto=monto, motivo=motivo, usuario=request.user)
+        except ValidationError as e:
+            return Response(e.detail, status=status.HTTP_400_BAD_REQUEST)
+
+        tarjeta.refresh_from_db()
+        registrar_auditoria(
+            request=request,
+            operacion="AJUSTAR_SALDO_TARJETA",
+            tabla="core_tarjeta",
+            id_registro=None,
+            descripcion=f"Tarjeta {tarjeta.nro_tarjeta}: ajuste de Gs. {int(monto):,} — {motivo}",
+        )
+        return Response(self.get_serializer(tarjeta).data)
 
 
 class MovimientoTarjetaViewSet(viewsets.ReadOnlyModelViewSet):

@@ -6,7 +6,7 @@ import logging
 from datetime import date
 
 logger = logging.getLogger(__name__)
-from decimal import Decimal
+from decimal import Decimal, InvalidOperation
 
 from django.db import models, transaction
 from django.db.models import Count, Sum
@@ -16,13 +16,13 @@ import csv
 
 from rest_framework import viewsets, status
 from rest_framework.decorators import action
-from rest_framework.exceptions import ValidationError
+from rest_framework.exceptions import MethodNotAllowed, ValidationError
 from rest_framework.filters import OrderingFilter, SearchFilter
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
 from common.permissions import (
-    IsAdminOrReadOnly, IsCajeroOrAdmin, IsCajeroCobradorOrAdmin, IsCajeroCocinaSupervisorOrAdmin,
+    IsAdminOrReadOnly, IsAdminOrSupervisor, IsCajeroOrAdmin, IsCajeroCobradorOrAdmin, IsCajeroCocinaSupervisorOrAdmin,
     IsStaffOrClienteWeb, IsStaffUser,
 )
 from common.utils.medios_pago import resolver_medio_pago
@@ -712,7 +712,7 @@ class SaldoAlmuerzoViewSet(viewsets.ModelViewSet):
     editable acá es limite_credito (tope de alerta), y solo ADMIN/SUPERVISOR
     (ver SaldoAlmuerzoSerializer.validate)."""
 
-    http_method_names = ["get", "patch", "head", "options"]
+    http_method_names = ["get", "post", "patch", "head", "options"]
     queryset = SaldoAlmuerzo.objects.select_related(
         "hijo__grado", "hijo__cliente_responsable", "hijo__tarjeta",
     ).all()
@@ -723,6 +723,17 @@ class SaldoAlmuerzoViewSet(viewsets.ModelViewSet):
     search_fields = ["hijo__nombre", "hijo__apellido", "hijo__tarjeta__nro_tarjeta"]
     ordering_fields = ["saldo_actual", "fecha_actualizacion"]
     ordering = ["-fecha_actualizacion"]
+
+    def get_permissions(self):
+        if self.action == "ajustar":
+            return [IsAdminOrSupervisor()]
+        return super().get_permissions()
+
+    def create(self, request, *args, **kwargs):
+        # http_method_names incluye "post" solo para habilitar la acción
+        # "ajustar" — la creación genérica de SaldoAlmuerzo sigue bloqueada,
+        # se crea sola vía get_or_create() desde el servicio correspondiente.
+        raise MethodNotAllowed("POST")
 
     def _scoped_queryset(self):
         qs = super().get_queryset()
@@ -759,6 +770,38 @@ class SaldoAlmuerzoViewSet(viewsets.ModelViewSet):
         saldo = self.get_object()
         movimientos = saldo.movimientos.order_by("-fecha")[:100]
         return Response(MovimientoSaldoAlmuerzoSerializer(movimientos, many=True).data)
+
+    @action(detail=False, methods=["post"], url_path="ajustar", throttle_classes=[SensitiveEndpointThrottle])
+    def ajustar(self, request):
+        """POST /api/v1/almuerzos/saldos/ajustar/ — corrección administrativa
+        del saldo de almuerzo de un hijo, solo ADMIN/SUPERVISOR. Recibe
+        hijo_id (no el id de SaldoAlmuerzo, que puede no existir todavía)."""
+        from apps.clientes.models import Hijo
+
+        hijo_id = request.data.get("hijo_id")
+        hijo = Hijo.objects.filter(pk=hijo_id).first()
+        if hijo is None:
+            return Response({"error": "Alumno no encontrado."}, status=status.HTTP_404_NOT_FOUND)
+
+        try:
+            monto = Decimal(str(request.data.get("monto", "")))
+        except (InvalidOperation, ValueError):
+            return Response({"error": "Monto inválido."}, status=status.HTTP_400_BAD_REQUEST)
+        motivo = (request.data.get("motivo") or "").strip()
+
+        try:
+            movimiento = AlmuerzoService.ajustar_saldo(hijo=hijo, monto=monto, motivo=motivo, usuario=request.user)
+        except ValidationError as e:
+            return Response(e.detail, status=status.HTTP_400_BAD_REQUEST)
+
+        registrar_auditoria(
+            request=request,
+            operacion="AJUSTAR_SALDO_ALMUERZO",
+            tabla="almuerzos_saldoalmuerzo",
+            id_registro=None,
+            descripcion=f"Saldo almuerzo de {hijo}: ajuste de Gs. {int(monto):,} — {motivo}",
+        )
+        return Response(SaldoAlmuerzoSerializer(movimiento.saldo).data)
 
 
 class RecargaSaldoAlmuerzoViewSet(viewsets.ModelViewSet):

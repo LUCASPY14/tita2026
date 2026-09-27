@@ -55,6 +55,7 @@ export interface Tarjeta {
   nro_tarjeta: string
   codigo_barras: string
   es_alumno: boolean
+  hijo: number | null
   hijo_nombre: string | null
   hijo_grado: string | null
   cliente_nombre: string | null
