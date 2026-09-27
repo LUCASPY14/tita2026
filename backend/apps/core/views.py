@@ -47,7 +47,7 @@ from .serializers import (
     CargaSaldoSerializer,
     MedioPagoSerializer,
 )
-from .services import TarjetaService
+from .services import TarjetaService, MOTIVOS_RENUMERACION_TARJETA
 from rest_framework.exceptions import ValidationError
 
 
@@ -76,6 +76,8 @@ class TarjetaViewSet(viewsets.ModelViewSet):
         if self.action == "resumen":
             return [IsStaffUser()]
         if self.action == "ajustar_saldo":
+            return [IsAdminOrSupervisor()]
+        if self.action == "renumerar":
             return [IsAdminOrSupervisor()]
         return super().get_permissions()
 
@@ -190,6 +192,33 @@ class TarjetaViewSet(viewsets.ModelViewSet):
             descripcion=f"Tarjeta {tarjeta.nro_tarjeta}: ajuste de Gs. {int(monto):,} — {motivo}",
         )
         return Response(self.get_serializer(tarjeta).data)
+
+    @action(detail=True, methods=["post"], url_path="renumerar", throttle_classes=[SensitiveEndpointThrottle])
+    def renumerar(self, request, pk=None):
+        """Corrige/reemplaza el número de una tarjeta — solo ADMIN/SUPERVISOR."""
+        tarjeta = self.get_object()
+        nro_actual = tarjeta.pk
+        nro_nuevo = (request.data.get("nro_nuevo") or "").strip()
+        motivo = (request.data.get("motivo") or "").strip()
+        motivo_detalle = (request.data.get("motivo_detalle") or "").strip()
+
+        try:
+            nueva = TarjetaService.renumerar(
+                tarjeta=tarjeta, nro_nuevo=nro_nuevo, motivo=motivo,
+                motivo_detalle=motivo_detalle, usuario=request.user,
+            )
+        except ValidationError as e:
+            return Response(e.detail, status=status.HTTP_400_BAD_REQUEST)
+
+        motivo_texto = motivo_detalle if motivo == "OTRO" else MOTIVOS_RENUMERACION_TARJETA.get(motivo, motivo)
+        registrar_auditoria(
+            request=request,
+            operacion="RENUMERAR_TARJETA",
+            tabla="core_tarjeta",
+            id_registro=None,
+            descripcion=f"Tarjeta {nro_actual} → {nueva.nro_tarjeta}: {motivo_texto}",
+        )
+        return Response(self.get_serializer(nueva).data)
 
 
 class MovimientoTarjetaViewSet(viewsets.ReadOnlyModelViewSet):

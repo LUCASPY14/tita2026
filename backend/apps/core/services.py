@@ -15,6 +15,16 @@ from rest_framework.exceptions import ValidationError
 
 from .models import Tarjeta, MovimientoTarjeta, CargaSaldo
 
+# Motivos preestablecidos para TarjetaService.renumerar — para no depender de
+# que cada uno escriba el motivo distinto. "OTRO" exige motivo_detalle.
+MOTIVOS_RENUMERACION_TARJETA = {
+    "TIPEO": "Error de tipeo al cargar el número",
+    "OTRA_TARJETA": "Se cargó el número de otra tarjeta por error",
+    "EXTRAVIO": "Tarjeta física extraviada — se reemplaza por una nueva",
+    "DANIO": "Tarjeta física dañada — se reemplaza por una nueva",
+    "OTRO": "Otro",
+}
+
 
 class TarjetaService:
     """Servicio para operaciones con tarjetas."""
@@ -203,3 +213,48 @@ class TarjetaService:
                 descripcion=f"{motivo.strip()} (ajuste manual: {usuario.email})",
                 creado_por=usuario,
             )
+
+    @staticmethod
+    def renumerar(*, tarjeta, nro_nuevo: str, motivo: str, motivo_detalle: str = "", usuario) -> Tarjeta:
+        """
+        Corrige/reemplaza el número de una tarjeta (nro_tarjeta es su PK).
+        Sirve tanto para un error de tipeo en una tarjeta recién cargada como
+        para el reemplazo de una tarjeta extraviada/dañada con años de
+        movimientos — es la misma operación técnica en los dos casos: mover
+        el número, todo lo demás (saldo, historial) sigue intacto.
+
+        nro_tarjeta está referenciado por 5 tablas (MovimientoTarjeta,
+        CargaSaldo, PagoBancard, Venta, RegistroConsumoAlmuerzo). Las FK ya
+        están declaradas DEFERRABLE INITIALLY DEFERRED en la base (para el
+        particionado anual de MovimientoTarjeta) — eso es lo que permite
+        repuntar las 5 y renombrar la tarjeta dentro de la misma transacción
+        sin que Postgres se queje de una referencia rota a mitad de camino.
+        """
+        nro_nuevo = (nro_nuevo or "").strip()
+        nro_actual = tarjeta.pk
+        if not nro_nuevo:
+            raise ValidationError({"error": "El número nuevo es obligatorio."})
+        if nro_nuevo == nro_actual:
+            raise ValidationError({"error": "El número nuevo es igual al actual."})
+        if motivo not in MOTIVOS_RENUMERACION_TARJETA:
+            raise ValidationError({"error": "Motivo inválido."})
+        if motivo == "OTRO" and not (motivo_detalle or "").strip():
+            raise ValidationError({"error": "Aclará el motivo en el campo de detalle."})
+
+        from apps.core.models import PagoBancard
+        from apps.ventas.models import Venta
+        from apps.almuerzos.models import RegistroConsumoAlmuerzo
+
+        with transaction.atomic():
+            Tarjeta.objects.select_for_update().get(pk=nro_actual)
+            if Tarjeta.objects.filter(pk=nro_nuevo).exists():
+                raise ValidationError({"error": f'Ya existe una tarjeta con el número "{nro_nuevo}".'})
+
+            MovimientoTarjeta.objects.filter(tarjeta_id=nro_actual).update(tarjeta_id=nro_nuevo)
+            CargaSaldo.objects.filter(tarjeta_id=nro_actual).update(tarjeta_id=nro_nuevo)
+            PagoBancard.objects.filter(tarjeta_id=nro_actual).update(tarjeta_id=nro_nuevo)
+            Venta.objects.filter(tarjeta_id=nro_actual).update(tarjeta_id=nro_nuevo)
+            RegistroConsumoAlmuerzo.objects.filter(nro_tarjeta_id=nro_actual).update(nro_tarjeta_id=nro_nuevo)
+            Tarjeta.objects.filter(pk=nro_actual).update(nro_tarjeta=nro_nuevo)
+
+            return Tarjeta.objects.get(pk=nro_nuevo)

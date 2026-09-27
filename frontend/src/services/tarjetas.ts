@@ -75,6 +75,9 @@ const tarjetasService = {
   ajustarSaldo: <T = TarjetaBase>(nro: string, monto: number, motivo: string) =>
     api.post<T>(`/core/tarjetas/${nro}/ajustar-saldo/`, { monto, motivo }),
 
+  renumerar: <T = TarjetaBase>(nro: string, nro_nuevo: string, motivo: string, motivo_detalle?: string) =>
+    api.post<T>(`/core/tarjetas/${nro}/renumerar/`, { nro_nuevo, motivo, motivo_detalle }),
+
   getMovimientos: <T = MovimientoTarjeta>(nro_tarjeta: string, page_size = 20) =>
     api.get<Paginated<T>>('/core/movimientos-tarjeta/', {
       params: { tarjeta: nro_tarjeta, page_size },

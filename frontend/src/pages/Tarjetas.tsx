@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import toast from 'react-hot-toast'
-import { CreditCard, Search, Plus, Lock, Unlock, History, Edit2, Wallet } from 'lucide-react'
+import { CreditCard, Search, Plus, Lock, Unlock, History, Edit2, Wallet, Hash } from 'lucide-react'
 import tarjetasService from '../services/tarjetas'
 import { useAuthStore } from '../store/authStore'
 import Badge from '../components/ui/Badge'
@@ -12,6 +12,7 @@ import ModalDetalle from './tarjetas/ModalDetalle'
 import ModalCrear from './tarjetas/ModalCrear'
 import ModalEditar from './tarjetas/ModalEditar'
 import ModalAjustarSaldo from './tarjetas/ModalAjustarSaldo'
+import ModalRenumerar from './tarjetas/ModalRenumerar'
 
 export default function Tarjetas() {
   const { t } = useTranslation()
@@ -39,6 +40,7 @@ export default function Tarjetas() {
   const [createOpen, setCreateOpen] = useState(false)
   const [editTarjeta, setEditTarjeta] = useState<Tarjeta | null>(null)
   const [ajustarTarjeta, setAjustarTarjeta] = useState<Tarjeta | null>(null)
+  const [renumerarTarjeta, setRenumerarTarjeta] = useState<Tarjeta | null>(null)
 
   // ── Data loading ─────────────────────────────────────────────────
 
@@ -177,7 +179,7 @@ export default function Tarjetas() {
       ),
     },
     {
-      title: '', key: 'acciones', width: puedeAjustarSaldo ? 210 : 160,
+      title: '', key: 'acciones', width: puedeAjustarSaldo ? 250 : 160,
       render: (_, r) => (
         <div className="flex items-center gap-1.5">
           <Button size="sm" variant="secondary" onClick={() => setDetailTarjeta(r)}>
@@ -191,6 +193,11 @@ export default function Tarjetas() {
           {puedeAjustarSaldo && (
             <Button size="sm" variant="secondary" onClick={() => setAjustarTarjeta(r)}>
               <Wallet className="w-3.5 h-3.5" />
+            </Button>
+          )}
+          {puedeAjustarSaldo && (
+            <Button size="sm" variant="secondary" onClick={() => setRenumerarTarjeta(r)} title="Renumerar tarjeta">
+              <Hash className="w-3.5 h-3.5" />
             </Button>
           )}
           <Button
@@ -330,6 +337,20 @@ export default function Tarjetas() {
           setDetailTarjeta(prev =>
             prev?.nro_tarjeta === ajustarTarjeta?.nro_tarjeta ? { ...prev!, ...updates } : prev,
           )
+        }}
+      />
+
+      <ModalRenumerar
+        tarjeta={renumerarTarjeta}
+        onClose={() => setRenumerarTarjeta(null)}
+        onSaved={() => {
+          // El número (PK) cambió: cualquier modal que siga referenciando el
+          // número viejo por nro_tarjeta quedaría apuntando a una tarjeta
+          // inexistente — mejor cerrarlo y recargar la lista de cero.
+          setDetailTarjeta(prev => prev?.nro_tarjeta === renumerarTarjeta?.nro_tarjeta ? null : prev)
+          setEditTarjeta(prev => prev?.nro_tarjeta === renumerarTarjeta?.nro_tarjeta ? null : prev)
+          setPage(1)
+          loadTarjetas(search, estadoFilter, 1)
         }}
       />
     </div>

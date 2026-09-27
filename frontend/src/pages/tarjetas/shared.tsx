@@ -151,6 +151,15 @@ export const ESTADO_CARGA_COLOR: Record<string, BadgeColor> = {
   CONFIRMADA: 'green', PENDIENTE: 'yellow', RECHAZADA: 'red',
 }
 
+// Debe coincidir con MOTIVOS_RENUMERACION_TARJETA en apps/core/services.py
+export const MOTIVOS_RENUMERACION: { value: string; label: string }[] = [
+  { value: 'TIPEO', label: 'Error de tipeo al cargar el número' },
+  { value: 'OTRA_TARJETA', label: 'Se cargó el número de otra tarjeta por error' },
+  { value: 'EXTRAVIO', label: 'Tarjeta física extraviada — se reemplaza por una nueva' },
+  { value: 'DANIO', label: 'Tarjeta física dañada — se reemplaza por una nueva' },
+  { value: 'OTRO', label: 'Otro' },
+]
+
 export const FORM_INITIAL: TarjetaForm = {
   nro_tarjeta: '', codigo_barras: '',
   tipoTitular: 'alumno', hijo: '', cliente_directo: '',

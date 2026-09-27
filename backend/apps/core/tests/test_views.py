@@ -565,3 +565,47 @@ class TestAjustarSaldoTarjeta:
             {"monto": "no-es-un-numero", "motivo": "Corrección"},
         )
         assert resp.status_code == 400
+
+
+# ── TarjetaViewSet.renumerar ─────────────────────────────────────────────────
+
+@pytest.mark.django_db
+class TestRenumerarTarjetaEndpoint:
+
+    def test_admin_puede_renumerar(self, api_admin, tarjeta_core):
+        from apps.core.models import Tarjeta
+        resp = api_admin.post(
+            f"/api/v1/core/tarjetas/{tarjeta_core.pk}/renumerar/",
+            {"nro_nuevo": "CORE-NUEVO-1", "motivo": "TIPEO"},
+        )
+        assert resp.status_code == 200
+        assert resp.data["nro_tarjeta"] == "CORE-NUEVO-1"
+        assert not Tarjeta.objects.filter(pk=tarjeta_core.pk).exists()
+
+    def test_supervisor_puede_renumerar(self, api_supervisor, tarjeta_core):
+        resp = api_supervisor.post(
+            f"/api/v1/core/tarjetas/{tarjeta_core.pk}/renumerar/",
+            {"nro_nuevo": "CORE-NUEVO-2", "motivo": "EXTRAVIO"},
+        )
+        assert resp.status_code == 200
+
+    def test_cajero_no_puede_renumerar(self, api_cajero, tarjeta_core):
+        resp = api_cajero.post(
+            f"/api/v1/core/tarjetas/{tarjeta_core.pk}/renumerar/",
+            {"nro_nuevo": "CORE-NUEVO-3", "motivo": "TIPEO"},
+        )
+        assert resp.status_code == 403
+
+    def test_numero_repetido_devuelve_400(self, api_admin, tarjeta_core):
+        resp = api_admin.post(
+            f"/api/v1/core/tarjetas/{tarjeta_core.pk}/renumerar/",
+            {"nro_nuevo": tarjeta_core.pk, "motivo": "TIPEO"},
+        )
+        assert resp.status_code == 400
+
+    def test_motivo_invalido_devuelve_400(self, api_admin, tarjeta_core):
+        resp = api_admin.post(
+            f"/api/v1/core/tarjetas/{tarjeta_core.pk}/renumerar/",
+            {"nro_nuevo": "CORE-NUEVO-4", "motivo": "NO_EXISTE"},
+        )
+        assert resp.status_code == 400
