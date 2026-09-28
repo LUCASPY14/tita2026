@@ -49,6 +49,7 @@ from django.core.management.base import BaseCommand, CommandError
 from django.db import transaction
 
 from apps.clientes.models import Ciudad, Cliente, Grado, Hijo, TipoCliente
+from apps.clientes.services import crear_usuario_portal
 from apps.core.models import Tarjeta
 from apps.productos.models import ListaPrecio
 
@@ -188,6 +189,7 @@ class Command(BaseCommand):
             },
         )
         if creado:
+            crear_usuario_portal(cliente)
             stats["clientes_creados"] += 1
         else:
             stats["clientes_reutilizados"] += 1

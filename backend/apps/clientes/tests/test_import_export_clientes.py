@@ -11,6 +11,7 @@ from django.core.management import CommandError, call_command
 from apps.clientes.models import Ciudad, Cliente, Departamento, Grado, Hijo, Pais, TipoCliente
 from apps.core.models import Tarjeta
 from apps.productos.models import ListaPrecio
+from apps.usuarios.models import Usuario
 
 CLIENTE_FIELDS = {
     "ruc_ci": "4123456", "cliente_nombres": "Ana", "cliente_apellidos": "García",
@@ -78,6 +79,28 @@ class TestImportarClientesUnHijo:
         assert "Clientes creados: 1" in salida
         assert "Hijos creados: 1" in salida
 
+    def test_fila_valida_crea_tambien_el_usuario_de_portal(self, tmp_path, tipo_cliente, lista_precio):
+        """Bug real: el import bypaseaba Cliente.objects.get_or_create() sin
+        pasar por crear_usuario_portal(), dejando a todos los clientes
+        importados sin acceso al portal de padres."""
+        csv_path = escribir_csv(tmp_path / "in.csv", [fila_base()])
+        run_importar(csv_path, tipo_cliente="Padre", lista_precio="General")
+
+        cliente = Cliente.objects.get(ruc_ci="4123456")
+        usuario = Usuario.objects.get(cliente=cliente)
+        assert usuario.rol == Usuario.Rol.CLIENTE_WEB
+        assert usuario.email == "ana@test.com"
+        assert usuario.check_password("4123456")
+
+    def test_fila_sin_email_crea_usuario_portal_con_email_sintetico(self, tmp_path, tipo_cliente, lista_precio):
+        csv_path = escribir_csv(tmp_path / "in.csv", [fila_base(cliente_email="")])
+        run_importar(csv_path, tipo_cliente="Padre", lista_precio="General")
+
+        cliente = Cliente.objects.get(ruc_ci="4123456")
+        usuario = Usuario.objects.get(cliente=cliente)
+        assert usuario.email == "4123456@portal.tita.local"
+        assert usuario.email_verificado is False
+
     def test_lista_precio_cae_a_es_por_defecto_si_no_se_especifica(self, tmp_path, tipo_cliente):
         ListaPrecio.objects.create(nombre="Defecto", activo=True, es_por_defecto=True)
         csv_path = escribir_csv(tmp_path / "in.csv", [fila_base()])
@@ -96,6 +119,7 @@ class TestImportarClientesUnHijo:
         assert "Clientes creados: 0" in salida2
         assert "reutilizados: 1" in salida2
         assert "omitidos (ya existían): 1" in salida2
+        assert Usuario.objects.filter(cliente__ruc_ci="4123456").count() == 1
 
     def test_cliente_existente_no_se_toca_sin_flag_actualizar(self, tmp_path, tipo_cliente, lista_precio, cliente):
         csv_path = escribir_csv(tmp_path / "in.csv", [fila_base(

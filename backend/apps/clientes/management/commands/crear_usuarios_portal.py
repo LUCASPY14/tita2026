@@ -10,7 +10,7 @@ Uso:
 from django.core.management.base import BaseCommand
 
 from apps.clientes.models import Cliente
-from apps.clientes.views import _crear_usuario_portal
+from apps.clientes.services import crear_usuario_portal
 
 
 class Command(BaseCommand):
@@ -37,7 +37,7 @@ class Command(BaseCommand):
         errores = 0
         for cliente in qs:
             try:
-                _crear_usuario_portal(cliente)
+                crear_usuario_portal(cliente)
                 self.stdout.write(f"  + {cliente.ruc_ci} — {cliente.nombre_completo}")
                 creados += 1
             except Exception as e:
