@@ -24,6 +24,7 @@ export default function Clientes() {
   const [loading, setLoading] = useState(false)
   const [total, setTotal] = useState(0)
   const [page, setPage] = useState(1)
+  const [resumen, setResumen] = useState<{ activos: number; con_deuda: number } | null>(null)
 
   const [searchInput, setSearchInput] = useState('')
   const [search, setSearch] = useState('')
@@ -53,6 +54,7 @@ export default function Clientes() {
       if (search) params.search = search
       if (filterActivo) params.activo = filterActivo
       if (filterTipo) params.tipo_cliente = filterTipo
+      api.get('/clientes/clientes/resumen/').then(r => setResumen(r.data)).catch(() => setResumen(null))
       const { data } = await api.get('/clientes/clientes/', { params })
       if (requestId !== requestIdRef.current) return
       setClientes(data.results ?? [])
@@ -165,11 +167,6 @@ export default function Clientes() {
     },
   ], [])
 
-  const stats = useMemo(() => ({
-    activos: clientes.filter(c => c.activo).length,
-    conDeuda: clientes.filter(c => (Number(c.saldo_cuenta_corriente) || 0) > 0 || (Number(c.saldo_negativo_tarjetas) || 0) < 0).length,
-  }), [clientes])
-
   const selectClass = 'min-w-[140px] border border-slate-200 rounded-xl px-3 py-2 text-base text-slate-700 bg-white focus:outline-none focus:ring-2 focus:ring-green-500/30 focus:border-green-500 transition-colors duration-150'
 
   return (
@@ -187,8 +184,8 @@ export default function Clientes() {
       <div className="grid grid-cols-3 gap-3">
         {[
           { label: 'Total', value: total, color: 'text-slate-900' },
-          { label: 'Activos', value: stats.activos, color: 'text-green-600' },
-          { label: 'Con Deuda', value: stats.conDeuda, color: 'text-red-600' },
+          { label: 'Activos', value: resumen?.activos ?? '—', color: 'text-green-600' },
+          { label: 'Con Deuda', value: resumen?.con_deuda ?? '—', color: 'text-red-600' },
         ].map(({ label, value, color }) => (
           <div key={label} className="bg-white rounded-2xl border border-slate-100 shadow-sm px-4 py-3">
             <p className="text-sm font-semibold text-slate-500 uppercase tracking-wide">{label}</p>

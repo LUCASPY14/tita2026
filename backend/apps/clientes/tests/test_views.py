@@ -82,6 +82,71 @@ def cuenta_con_deuda(db, cliente, usuario_cajero):
     )
 
 
+# ── ClienteViewSet.resumen ──────────────────────────────────────────────────
+
+@pytest.mark.django_db
+class TestClienteResumen:
+    """activos/con_deuda deben contar sobre TODA la tabla, no solo la página
+    visible — bug real: el frontend los calculaba con clientes.filter(...)
+    sobre el array paginado (ver Clientes.tsx antes del fix)."""
+
+    def test_activos_cuenta_todos_no_solo_la_pagina(self, api_admin, cliente, lista_precio):
+        from apps.clientes.models import Cliente, TipoCliente
+        from decimal import Decimal as D
+
+        tipo = TipoCliente.objects.create(nombre="Otro tipo resumen")
+        for i in range(3):
+            Cliente.objects.create(
+                nombres=f"Extra{i}", apellidos="Test", ruc_ci=f"900000{i}",
+                tipo_cliente=tipo, lista_precio=lista_precio, limite_credito=D("0"),
+            )
+        Cliente.objects.create(
+            nombres="Inactivo", apellidos="Test", ruc_ci="9999999",
+            tipo_cliente=tipo, lista_precio=lista_precio, limite_credito=D("0"), activo=False,
+        )
+
+        resp = api_admin.get("/api/v1/clientes/clientes/resumen/")
+        assert resp.status_code == 200
+        # cliente (fixture) + 3 extra activos = 4; el inactivo no cuenta
+        assert resp.data["activos"] == 4
+        assert resp.data["con_deuda"] == 0
+
+    def test_con_deuda_cuenta_cuenta_corriente_positiva(self, api_admin, cuenta_con_deuda):
+        resp = api_admin.get("/api/v1/clientes/clientes/resumen/")
+        assert resp.status_code == 200
+        assert resp.data["con_deuda"] == 1
+
+    def test_con_deuda_cuenta_tarjeta_en_negativo(self, api_admin, hijo_fixture):
+        from apps.core.models import Tarjeta
+        from decimal import Decimal as D
+        Tarjeta.objects.create(nro_tarjeta="RES-001", hijo=hijo_fixture, saldo_actual=D("-5000"))
+
+        resp = api_admin.get("/api/v1/clientes/clientes/resumen/")
+        assert resp.status_code == 200
+        assert resp.data["con_deuda"] == 1
+
+    def test_ultimo_movimiento_cc_positivo_no_el_primero(self, api_admin, cliente, usuario_cajero):
+        """Si la deuda ya se pagó (último movimiento = crédito que salda todo),
+        no debe contar como con_deuda aunque haya habido un débito antes."""
+        from apps.clientes.models import CuentaCorrienteCliente
+        from decimal import Decimal as D
+
+        CuentaCorrienteCliente.objects.create(
+            cliente=cliente, tipo=CuentaCorrienteCliente.Tipo.DEBITO,
+            monto=D("50000"), saldo_anterior=D("0"), saldo_resultante=D("50000"),
+            descripcion="Venta fiado", creado_por=usuario_cajero,
+        )
+        CuentaCorrienteCliente.objects.create(
+            cliente=cliente, tipo=CuentaCorrienteCliente.Tipo.CREDITO,
+            monto=D("50000"), saldo_anterior=D("50000"), saldo_resultante=D("0"),
+            descripcion="Pago total", creado_por=usuario_cajero,
+        )
+
+        resp = api_admin.get("/api/v1/clientes/clientes/resumen/")
+        assert resp.status_code == 200
+        assert resp.data["con_deuda"] == 0
+
+
 # ── ViewSets simples ──────────────────────────────────────────────────────────
 
 @pytest.mark.django_db

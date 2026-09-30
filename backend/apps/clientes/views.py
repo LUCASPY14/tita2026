@@ -84,6 +84,33 @@ class ClienteViewSet(viewsets.ModelViewSet):
     filterset_fields = ["activo", "tipo_cliente"]
     search_fields = ["ruc_ci", "nombres", "apellidos"]
 
+    @action(detail=False, methods=["get"], url_path="resumen")
+    def resumen(self, request):
+        """GET /clientes/clientes/resumen/ — activos y con_deuda sobre TODA la
+        tabla, no solo la página visible (la lista pagina de a 15-20; calcular
+        estas estadísticas sobre `clientes` en el frontend solo contaba lo
+        que estaba cargado en pantalla en ese momento)."""
+        from django.db.models import OuterRef, Subquery
+
+        activos = Cliente.objects.filter(activo=True).count()
+
+        ultimo_saldo_cc = CuentaCorrienteCliente.objects.filter(
+            cliente=OuterRef("pk")
+        ).order_by("-id_movimiento_cc").values("saldo_resultante")[:1]
+
+        con_deuda = Cliente.objects.annotate(
+            saldo_cc_actual=Subquery(ultimo_saldo_cc),
+        ).annotate(
+            saldo_neg_tarjetas=Coalesce(
+                Sum("hijos__tarjeta__saldo_actual", filter=Q(hijos__tarjeta__saldo_actual__lt=0)),
+                Value(0, output_field=DecimalField(max_digits=12, decimal_places=0)),
+            ),
+        ).filter(
+            Q(saldo_cc_actual__gt=0) | Q(saldo_neg_tarjetas__lt=0)
+        ).count()
+
+        return Response({"activos": activos, "con_deuda": con_deuda})
+
     def perform_create(self, serializer):
         cliente = serializer.save()
         crear_usuario_portal(cliente)
