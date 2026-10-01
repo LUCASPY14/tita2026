@@ -100,7 +100,7 @@ class TestTarjetaSerializerAlumno:
         from freezegun import freeze_time
         hijo.fecha_nacimiento = date(2015, 5, 15)
         hijo.save(update_fields=["fecha_nacimiento"])
-        with freeze_time("2026-05-15"):
+        with freeze_time("2026-05-15 12:00:00"):
             data = _serialize(tarjeta_alumno)
         assert data["hijo_cumple_hoy"] is True
 
@@ -109,7 +109,7 @@ class TestTarjetaSerializerAlumno:
         from freezegun import freeze_time
         hijo.fecha_nacimiento = date(2015, 5, 15)
         hijo.save(update_fields=["fecha_nacimiento"])
-        with freeze_time("2026-05-16"):
+        with freeze_time("2026-05-16 12:00:00"):
             data = _serialize(tarjeta_alumno)
         assert data["hijo_cumple_hoy"] is False
 

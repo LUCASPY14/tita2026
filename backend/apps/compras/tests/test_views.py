@@ -369,7 +369,7 @@ class TestReporteComprasProveedores:
 
     def test_con_ordenes_llena_funnel(self, api_admin, orden_pendiente):
         from django.utils import timezone
-        hoy = timezone.now().date().isoformat()
+        hoy = timezone.localdate().isoformat()
         resp = api_admin.get(
             "/api/v1/compras/reporte-compras/",
             {"desde": hoy, "hasta": hoy},
@@ -381,7 +381,7 @@ class TestReporteComprasProveedores:
         self, api_admin, compra_contado, proveedor
     ):
         from django.utils import timezone
-        hoy = timezone.now().date().isoformat()
+        hoy = timezone.localdate().isoformat()
         resp = api_admin.get(
             "/api/v1/compras/reporte-compras/",
             {"desde": hoy, "hasta": hoy, "formato": "csv"},
@@ -420,7 +420,7 @@ class TestReporteNotasCreditoCompra:
             estado=NotaCreditoProveedor.Estado.EMITIDA,
             creado_por=usuario_admin,
         )
-        hoy = timezone.now().date().isoformat()
+        hoy = timezone.localdate().isoformat()
         resp = api_admin.get(
             "/api/v1/compras/reporte-notas-credito/",
             {"desde": hoy, "hasta": hoy},
@@ -436,7 +436,7 @@ class TestReporteNotasCreditoCompra:
             proveedor=proveedor, monto_total=Decimal("10000"),
             estado=NotaCreditoProveedor.Estado.ANULADA, creado_por=usuario_admin,
         )
-        hoy = timezone.now().date().isoformat()
+        hoy = timezone.localdate().isoformat()
         resp = api_admin.get(
             "/api/v1/compras/reporte-notas-credito/",
             {"desde": hoy, "hasta": hoy, "estado": "EMITIDA"},
@@ -451,7 +451,7 @@ class TestReporteNotasCreditoCompra:
             proveedor=proveedor, monto_total=Decimal("25000"),
             estado=NotaCreditoProveedor.Estado.EMITIDA, creado_por=usuario_admin,
         )
-        hoy = timezone.now().date().isoformat()
+        hoy = timezone.localdate().isoformat()
         resp = api_admin.get(
             "/api/v1/compras/reporte-notas-credito/",
             {"desde": hoy, "hasta": hoy, "formato": "csv"},

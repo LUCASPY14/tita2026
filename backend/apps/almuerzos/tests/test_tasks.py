@@ -170,7 +170,7 @@ def _mes_anterior():
     return anio_ant, mes_ant
 
 
-@freeze_time("2026-07-15")
+@freeze_time("2026-07-15 12:00:00")
 @pytest.mark.django_db
 class TestCerrarCuentasMesAnterior:
     """Resumen mensual informativo — ya no cierra ni actualiza ninguna

@@ -79,7 +79,7 @@ class TestReporteVentasProducto:
 
     def test_json_con_venta(self, api_admin, venta_hoy):
         from django.utils import timezone
-        hoy = timezone.now().date().isoformat()
+        hoy = timezone.localdate().isoformat()
         resp = api_admin.get(self.URL, {"desde": hoy, "hasta": hoy})
         assert resp.status_code == 200
         assert resp.data["total_monto"] >= 0
@@ -94,7 +94,7 @@ class TestReporteVentasProducto:
 
     def test_csv_con_venta_incluye_producto(self, api_admin, venta_hoy, producto):
         from django.utils import timezone
-        hoy = timezone.now().date().isoformat()
+        hoy = timezone.localdate().isoformat()
         resp = api_admin.get(self.URL, {
             "desde": hoy, "hasta": hoy, "formato": "csv"
         })
@@ -145,7 +145,7 @@ class TestReporteVentasCajero:
 
     def test_json_con_venta(self, api_admin, venta_hoy):
         from django.utils import timezone
-        hoy = timezone.now().date().isoformat()
+        hoy = timezone.localdate().isoformat()
         resp = api_admin.get(self.URL, {"desde": hoy, "hasta": hoy})
         assert resp.status_code == 200
         assert len(resp.data["cajeros"]) >= 1
@@ -160,7 +160,7 @@ class TestReporteVentasCajero:
 
     def test_csv_con_venta_incluye_cajero(self, api_admin, venta_hoy, usuario_cajero):
         from django.utils import timezone
-        hoy = timezone.now().date().isoformat()
+        hoy = timezone.localdate().isoformat()
         resp = api_admin.get(self.URL, {
             "desde": hoy, "hasta": hoy, "formato": "csv"
         })

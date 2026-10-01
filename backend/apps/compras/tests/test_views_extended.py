@@ -323,7 +323,7 @@ class TestReporteComprasProveedores:
 
     def test_json_con_compra(self, api_admin, compra_contado):
         from django.utils import timezone
-        hoy = timezone.now().date().isoformat()
+        hoy = timezone.localdate().isoformat()
         resp = api_admin.get(self.URL, {"desde": hoy, "hasta": hoy})
         assert resp.status_code == 200
         assert resp.data["resumen"]["total_compras"] >= 1

@@ -81,7 +81,7 @@ def suscripcion_activa(db, hijo_almuerzo):
 
 # ── AlmuerzoService.get_precio_activo ─────────────────────────────────────────
 
-@freeze_time("2026-07-15")
+@freeze_time("2026-07-15 12:00:00")
 @pytest.mark.django_db
 class TestGetPrecioActivo:
 
@@ -99,7 +99,7 @@ class TestGetPrecioActivo:
 
 # ── AlmuerzoService.registrar_consumo ─────────────────────────────────────────
 
-@freeze_time("2026-07-15")
+@freeze_time("2026-07-15 12:00:00")
 @pytest.mark.django_db
 class TestRegistrarConsumo:
 

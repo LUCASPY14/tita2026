@@ -3,6 +3,7 @@ from datetime import timedelta
 
 from celery import shared_task
 from django.db.models import DateField, DecimalField, OuterRef, Subquery
+from django.db.models.functions import TruncDate
 from django.utils import timezone
 
 logger = logging.getLogger(__name__)
@@ -48,14 +49,17 @@ def alertar_saldo_negativo_prolongado():
                 ultimo.values("saldo_resultante")[:1],
                 output_field=DecimalField(),
             ),
+            # output_field=DateField() solo no trunca la fecha a nivel SQL —
+            # TruncDate sí, y respeta TIME_ZONE (Paraguay), evitando que un
+            # movimiento de la tarde/noche se compare en términos de UTC.
             fecha_ultimo_mov=Subquery(
-                ultimo.values("fecha")[:1],
+                ultimo.annotate(fecha_local=TruncDate("fecha")).values("fecha_local")[:1],
                 output_field=DateField(),
             ),
         )
         .filter(
             saldo_cc__gt=0,
-            fecha_ultimo_mov__lte=fecha_corte,
+            fecha_ultimo_mov__lt=fecha_corte,
         )
     )
 

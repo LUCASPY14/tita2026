@@ -6,8 +6,9 @@ Base de datos: cantina_tita_test (configurable vía DB_TEST_NAME).
 from .base import *
 
 DEBUG = True
-USE_TZ = True
-TIME_ZONE = "UTC"
+# USE_TZ/TIME_ZONE: heredados de base.py (America/Asuncion) — un solo modelo
+# de hora en todo el sistema. No pisar acá: un test corrido cerca de la
+# medianoche UTC calculaba "mes actual" distinto que producción.
 
 DATABASES = {
     "default": {

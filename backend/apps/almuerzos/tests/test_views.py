@@ -7,7 +7,7 @@ AlergenoViewSet, ProductoAlergenoViewSet,
 MenuDiarioViewSet (hoy), DetalleMenuDiarioViewSet, ReporteAlmuerzosView.
 """
 import pytest
-from datetime import date, datetime, timedelta
+from datetime import date, datetime, time, timedelta
 from decimal import Decimal
 from freezegun import freeze_time
 from django.test import override_settings
@@ -940,14 +940,17 @@ class TestEstadoCuentaAlmuerzoArrastre:
 
     def _comer(self, hijo, tarjeta, usuario, fecha):
         from apps.almuerzos.services import AlmuerzoService
-        with freeze_time(fecha):
+        # Mediodía, no medianoche: freeze_time ancla en UTC, y a medianoche
+        # eso cae en el día anterior en Paraguay (UTC-3/-4) — correría el
+        # registro al mes equivocado si fecha es el 1ro.
+        with freeze_time(datetime.combine(fecha, time(12, 0))):
             AlmuerzoService.registrar_consumo(
                 hijo=hijo, fecha_consumo=fecha, nro_tarjeta=tarjeta, registrado_por=usuario,
             )
 
     def _recargar(self, hijo, monto, fecha):
         from apps.almuerzos.services import AlmuerzoService
-        with freeze_time(fecha):
+        with freeze_time(datetime.combine(fecha, time(12, 0))):
             AlmuerzoService.recargar_saldo(hijo=hijo, monto=Decimal(str(monto)))
 
     def test_arrastre_real_mes_a_mes_por_la_billetera(
@@ -992,9 +995,9 @@ class TestEstadoCuentaAlmuerzoArrastre:
         from apps.almuerzos.models import MovimientoSaldoAlmuerzo, SaldoAlmuerzo
 
         # Consumos de antes de la migración, ya cargados directo (sin billetera).
-        with freeze_time(date(2026, 8, 3)):
+        with freeze_time(datetime(2026, 8, 3, 12, 0)):
             self._registro_directo(hijo_almuerzo, usuario_cajero, date(2026, 8, 3))
-        with freeze_time(date(2026, 8, 5)):
+        with freeze_time(datetime(2026, 8, 5, 12, 0)):
             self._registro_directo(hijo_almuerzo, usuario_cajero, date(2026, 8, 5))
 
         # 06/08: migración — ajuste de +100.000 (lo que se trae del sistema viejo).
@@ -1045,7 +1048,7 @@ class TestEstadoCuentaAlmuerzoArrastre:
         # Marzo: consumo cargado directo (como en el sistema viejo, con su
         # fecha_creacion real de esa época), sin pasar por el servicio -> no
         # genera movimiento de billetera.
-        with freeze_time(date(2026, 3, 10)):
+        with freeze_time(datetime(2026, 3, 10, 12, 0)):
             RegistroConsumoAlmuerzo.objects.create(
                 hijo=hijo_almuerzo, fecha_consumo=date(2026, 3, 10),
                 costo_almuerzo=Decimal("15000"), ya_cobrado=True, registrado_por=usuario_cajero,
@@ -1074,7 +1077,7 @@ class TestEstadoCuentaAlmuerzoArrastre:
         self, api_admin, hijo_almuerzo, tarjeta_almuerzo, usuario_cajero, suscripcion_activa, precio_fijo,
     ):
         from apps.almuerzos.models import RegistroConsumoAlmuerzo
-        with freeze_time(date(2026, 3, 10)):
+        with freeze_time(datetime(2026, 3, 10, 12, 0)):
             RegistroConsumoAlmuerzo.objects.create(
                 hijo=hijo_almuerzo, fecha_consumo=date(2026, 3, 10),
                 costo_almuerzo=Decimal("15000"), ya_cobrado=True, registrado_por=usuario_cajero,

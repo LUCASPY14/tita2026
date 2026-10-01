@@ -221,7 +221,7 @@ class TestImpuestoModel:
         imp = Impuesto.objects.create(
             nombre="IVA 10%",
             porcentaje=Decimal("10.00"),
-            vigente_desde=timezone.now().date(),
+            vigente_desde=timezone.localdate(),
         )
         assert str(imp) == "IVA 10% (10.00%)"
 
@@ -237,7 +237,7 @@ class TestProductoImpuestoModel:
         imp = Impuesto.objects.create(
             nombre="IVA 5%",
             porcentaje=Decimal("5.00"),
-            vigente_desde=timezone.now().date(),
+            vigente_desde=timezone.localdate(),
         )
         pi = ProductoImpuesto.objects.create(producto=prod, impuesto=imp)
         assert "IVA 5%" in str(pi)

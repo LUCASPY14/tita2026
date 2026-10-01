@@ -718,7 +718,7 @@ class TestPortalMiHijoConDatos:
 
     def test_con_tarjeta_y_cuenta_retorna_datos(self, api_portal, hijo_portal, cliente, usuario_cajero):
         from decimal import Decimal
-        from datetime import date
+        from django.utils import timezone
         from apps.core.models import Tarjeta
         from apps.almuerzos.models import RegistroConsumoAlmuerzo
         tarjeta = Tarjeta.objects.create(
@@ -727,7 +727,7 @@ class TestPortalMiHijoConDatos:
             saldo_actual=Decimal("30000"),
             estado=Tarjeta.Estado.ACTIVA,
         )
-        hoy = date.today()
+        hoy = timezone.localdate()
         for _ in range(3):
             RegistroConsumoAlmuerzo.objects.create(
                 hijo=hijo_portal, fecha_consumo=hoy, costo_almuerzo=Decimal("15000"),

@@ -625,7 +625,10 @@ def _dias_atraso_ciclo(movimientos_qs, hoy, negativo=False):
         )
     if not inicio_ciclo:
         return 0
-    return (hoy - inicio_ciclo["fecha"].date()).days
+    # inicio_ciclo["fecha"] es un datetime aware en UTC (valor crudo de .values()) —
+    # convertir a hora local antes de .date(), si no un movimiento de noche en
+    # Paraguay (ya "mañana" en UTC) resta un día de antigüedad de más.
+    return (hoy - timezone.localtime(inicio_ciclo["fecha"]).date()).days
 
 
 def _texto_detalle(entradas):

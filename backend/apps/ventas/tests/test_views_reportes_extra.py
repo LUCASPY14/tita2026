@@ -95,7 +95,7 @@ class TestReporteMediosPago:
 
     def test_json_con_pago(self, api_admin, pago_venta):
         from django.utils import timezone
-        hoy = timezone.now().date().isoformat()
+        hoy = timezone.localdate().isoformat()
         resp = api_admin.get(self.URL, {"desde": hoy, "hasta": hoy})
         assert resp.status_code == 200
         assert resp.data["resumen"]["total_pagos"] >= 1
@@ -111,7 +111,7 @@ class TestReporteMediosPago:
 
     def test_csv_con_pago_incluye_medio(self, api_admin, pago_venta, medio_pago_efectivo):
         from django.utils import timezone
-        hoy = timezone.now().date().isoformat()
+        hoy = timezone.localdate().isoformat()
         resp = api_admin.get(self.URL, {"desde": hoy, "hasta": hoy, "formato": "csv"})
         assert resp.status_code == 200
         assert medio_pago_efectivo.descripcion.encode() in resp.content
@@ -141,7 +141,7 @@ class TestReporteNotasCreditoVenta:
 
     def test_json_con_nota_credito(self, api_admin, nota_credito_venta):
         from django.utils import timezone
-        hoy = timezone.now().date().isoformat()
+        hoy = timezone.localdate().isoformat()
         resp = api_admin.get(self.URL, {"desde": hoy, "hasta": hoy})
         assert resp.status_code == 200
         assert resp.data["resumen"]["total_emitidas"] >= 1
@@ -149,7 +149,7 @@ class TestReporteNotasCreditoVenta:
 
     def test_filtro_por_estado(self, api_admin, nota_credito_venta):
         from django.utils import timezone
-        hoy = timezone.now().date().isoformat()
+        hoy = timezone.localdate().isoformat()
         resp = api_admin.get(self.URL, {
             "desde": hoy, "hasta": hoy, "estado": "EMITIDA",
         })
@@ -159,7 +159,7 @@ class TestReporteNotasCreditoVenta:
 
     def test_filtro_estado_excluye_otros(self, api_admin, nota_credito_venta):
         from django.utils import timezone
-        hoy = timezone.now().date().isoformat()
+        hoy = timezone.localdate().isoformat()
         resp = api_admin.get(self.URL, {
             "desde": hoy, "hasta": hoy, "estado": "ANULADA",
         })
@@ -176,7 +176,7 @@ class TestReporteNotasCreditoVenta:
 
     def test_csv_con_nota_incluye_datos(self, api_admin, nota_credito_venta):
         from django.utils import timezone
-        hoy = timezone.now().date().isoformat()
+        hoy = timezone.localdate().isoformat()
         resp = api_admin.get(self.URL, {"desde": hoy, "hasta": hoy, "formato": "csv"})
         assert resp.status_code == 200
         assert b"NC-TEST-001" in resp.content
