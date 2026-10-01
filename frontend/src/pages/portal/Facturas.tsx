@@ -42,7 +42,7 @@ export default function PortalFacturas() {
     setLoadingPdf(id)
     try {
       const res = await api.get(`/contabilidad/facturas/${id}/pdf/`, {
-        responseType: 'blob',
+        responseType: 'blob', params: { formato: 'ticket' },
       })
       const blobUrl = URL.createObjectURL(
         new Blob([res.data], { type: 'text/html; charset=utf-8' })
