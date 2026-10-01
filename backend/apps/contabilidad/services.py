@@ -180,8 +180,9 @@ class FacturacionService:
     @classmethod
     def emitir_para_origen(cls, *, tipo: str, origen_id: int, nro_factura: str) -> Factura:
         """
-        Emite una factura para una CargaSaldo o PagoCuentaAlmuerzo.
-        tipo: CARGA_SALDO | PAGO_ALMUERZO
+        Emite una factura para un único origen (carga de saldo, recarga/pago de
+        almuerzo, venta o pago de cuenta corriente a crédito).
+        tipo: CARGA_SALDO | PAGO_ALMUERZO | RECARGA_ALMUERZO | VENTA | PAGO_CREDITO
         """
         from apps.core.models import CargaSaldo
         from apps.almuerzos.models import PagoCuentaAlmuerzo, RecargaSaldoAlmuerzo
@@ -338,12 +339,12 @@ class FacturacionService:
     @classmethod
     def emitir_lote(cls, *, tipo: str, ids: list[int], nro_factura: str) -> Factura:
         """
-        Emite UNA factura agrupando varias cargas de saldo o pagos de almuerzo.
-        tipo: CARGA_SALDO | PAGO_ALMUERZO
+        Emite UNA factura agrupando varios orígenes del mismo tipo.
+        tipo: CARGA_SALDO | PAGO_ALMUERZO | RECARGA_ALMUERZO | VENTA | PAGO_CREDITO
         Todos los ids deben pertenecer al mismo cliente.
         """
         from apps.core.models import CargaSaldo
-        from apps.almuerzos.models import PagoCuentaAlmuerzo
+        from apps.almuerzos.models import PagoCuentaAlmuerzo, RecargaSaldoAlmuerzo
 
         if not ids:
             raise ValidationError({"error": "Debe seleccionar al menos un ítem."})
@@ -378,6 +379,31 @@ class FacturacionService:
 
                 cliente_obj = (origenes[0].cliente_origen
                                or origenes[0].tarjeta.hijo.cliente_responsable)
+                monto_total = sum(o.monto_cargado for o in origenes)
+                iva = cls._calcular_iva_10(monto_total)
+
+            elif tipo == TIPO_RECARGA_ALMUERZO:
+                origenes = list(
+                    RecargaSaldoAlmuerzo.objects
+                    .select_related("hijo__cliente_responsable")
+                    .select_for_update()
+                    .filter(pk__in=ids)
+                )
+                if len(origenes) != len(ids):
+                    raise ValidationError({"error": "Uno o más ítems no existen."})
+
+                clientes = set()
+                for o in origenes:
+                    if o.estado != RecargaSaldoAlmuerzo.Estado.CONFIRMADA:
+                        raise ValidationError({"error": f"La recarga #{o.pk} no está confirmada."})
+                    if o.factura_id:
+                        raise ValidationError({"error": f"La recarga #{o.pk} ya tiene factura."})
+                    clientes.add(o.hijo.cliente_responsable_id)
+
+                if len(clientes) > 1:
+                    raise ValidationError({"error": "Todos los ítems deben pertenecer al mismo cliente."})
+
+                cliente_obj = origenes[0].hijo.cliente_responsable
                 monto_total = sum(o.monto_cargado for o in origenes)
                 iva = cls._calcular_iva_10(monto_total)
 

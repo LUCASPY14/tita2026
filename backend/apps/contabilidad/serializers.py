@@ -76,14 +76,17 @@ class CerrarCajaSerializer(serializers.Serializer):
     monto_contado_fisico = serializers.IntegerField(min_value=0)
 
 
+TIPOS_FACTURABLES = ["CARGA_SALDO", "PAGO_ALMUERZO", "RECARGA_ALMUERZO", "VENTA", "PAGO_CREDITO"]
+
+
 class EmitirFacturaSerializer(serializers.Serializer):
-    tipo = serializers.ChoiceField(choices=["CARGA_SALDO", "PAGO_ALMUERZO", "VENTA", "PAGO_CREDITO"])
+    tipo = serializers.ChoiceField(choices=TIPOS_FACTURABLES)
     origen_id = serializers.IntegerField(min_value=1)
     nro_factura = serializers.CharField(max_length=20)
 
 
 class EmitirLoteSerializer(serializers.Serializer):
-    tipo = serializers.ChoiceField(choices=["CARGA_SALDO", "PAGO_ALMUERZO", "VENTA", "PAGO_CREDITO"])
+    tipo = serializers.ChoiceField(choices=TIPOS_FACTURABLES)
     ids = serializers.ListField(child=serializers.IntegerField(min_value=1), min_length=1)
     nro_factura = serializers.CharField(max_length=20)
 

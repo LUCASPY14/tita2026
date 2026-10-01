@@ -78,6 +78,16 @@ def _carga_confirmada(tarjeta, cliente, monto=Decimal("20000")):
     )
 
 
+def _recarga_almuerzo(hijo, monto=Decimal("20000"), estado=None):
+    from apps.almuerzos.models import RecargaSaldoAlmuerzo
+    estado = estado or RecargaSaldoAlmuerzo.Estado.CONFIRMADA
+    return RecargaSaldoAlmuerzo.objects.create(
+        hijo=hijo,
+        monto_cargado=monto,
+        estado=estado,
+    )
+
+
 def _pago_almuerzo(cuenta_mensual, cajero, monto=Decimal("20000")):
     from apps.almuerzos.models import PagoCuentaAlmuerzo
     return PagoCuentaAlmuerzo.objects.create(
@@ -215,6 +225,83 @@ class TestEmitirLoteCargaSaldo:
                 tipo="CARGA_SALDO",
                 ids=[c1.pk, c2.pk],
                 nro_factura="001-001-9100007",
+            )
+
+
+# ─── emitir_lote — RECARGA_ALMUERZO ──────────────────────────────────────────
+
+@pytest.mark.django_db
+class TestEmitirLoteRecargaAlmuerzo:
+
+    def test_lote_recarga_almuerzo_ok(self, hijo, cliente):
+        from apps.contabilidad.services import FacturacionService
+        from apps.contabilidad.models import Factura
+
+        r1 = _recarga_almuerzo(hijo, Decimal("10000"))
+        r2 = _recarga_almuerzo(hijo, Decimal("5000"))
+
+        factura = FacturacionService.emitir_lote(
+            tipo="RECARGA_ALMUERZO",
+            ids=[r1.pk, r2.pk],
+            nro_factura="001-001-9100101",
+        )
+
+        assert factura.estado == Factura.Estado.EMITIDA
+        assert factura.monto_total == Decimal("15000")
+        r1.refresh_from_db()
+        r2.refresh_from_db()
+        assert r1.factura_id == factura.pk
+        assert r2.factura_id == factura.pk
+
+    def test_lote_recarga_ids_inexistentes_falla(self):
+        from apps.contabilidad.services import FacturacionService
+
+        with pytest.raises(ValidationError, match="no existen"):
+            FacturacionService.emitir_lote(
+                tipo="RECARGA_ALMUERZO",
+                ids=[999998, 999999],
+                nro_factura="001-001-9100102",
+            )
+
+    def test_lote_recarga_no_confirmada_falla(self, hijo):
+        from apps.contabilidad.services import FacturacionService
+        from apps.almuerzos.models import RecargaSaldoAlmuerzo
+
+        r = _recarga_almuerzo(hijo, estado=RecargaSaldoAlmuerzo.Estado.PENDIENTE)
+        with pytest.raises(ValidationError, match="no está confirmada"):
+            FacturacionService.emitir_lote(
+                tipo="RECARGA_ALMUERZO",
+                ids=[r.pk],
+                nro_factura="001-001-9100103",
+            )
+
+    def test_lote_recarga_ya_facturada_falla(self, hijo):
+        from apps.contabilidad.services import FacturacionService
+
+        r = _recarga_almuerzo(hijo)
+        FacturacionService.emitir_lote(
+            tipo="RECARGA_ALMUERZO",
+            ids=[r.pk],
+            nro_factura="001-001-9100104",
+        )
+        with pytest.raises(ValidationError, match="ya tiene factura"):
+            FacturacionService.emitir_lote(
+                tipo="RECARGA_ALMUERZO",
+                ids=[r.pk],
+                nro_factura="001-001-9100105",
+            )
+
+    def test_lote_recarga_clientes_distintos_falla(self, hijo, hijo_2):
+        from apps.contabilidad.services import FacturacionService
+
+        r1 = _recarga_almuerzo(hijo)
+        r2 = _recarga_almuerzo(hijo_2)
+
+        with pytest.raises(ValidationError, match="mismo cliente"):
+            FacturacionService.emitir_lote(
+                tipo="RECARGA_ALMUERZO",
+                ids=[r1.pk, r2.pk],
+                nro_factura="001-001-9100106",
             )
 
 

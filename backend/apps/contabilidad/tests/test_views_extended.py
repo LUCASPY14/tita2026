@@ -271,7 +271,7 @@ class TestDashboardResumen:
         from apps.clientes.models import Grado, Hijo
 
         grado = Grado.objects.create(nombre="3er Grado", nivel=3, orden=3)
-        with freeze_time("2026-05-15"):
+        with freeze_time("2026-05-15 12:00:00"):
             hijo_cumple = Hijo.objects.create(
                 cliente_responsable=cliente, nombre="Sofía", apellido="García",
                 fecha_nacimiento="2015-05-15", grado=grado,
@@ -291,7 +291,7 @@ class TestDashboardResumen:
         from freezegun import freeze_time
         from apps.clientes.models import Hijo
 
-        with freeze_time("2026-05-15"):
+        with freeze_time("2026-05-15 12:00:00"):
             Hijo.objects.create(
                 cliente_responsable=cliente, nombre="Baja", apellido="García",
                 fecha_nacimiento="2015-05-15", activo=False,
@@ -313,7 +313,7 @@ class TestDashboardResumen:
 
         rol_cajero = Rol.objects.create(nombre_rol="Cajero")
         rol_cocina = Rol.objects.create(nombre_rol="Cocina")
-        with freeze_time("2026-05-15"):
+        with freeze_time("2026-05-15 12:00:00"):
             empleado_cumple = Empleado.objects.create(
                 nombre="Marta", apellido="Ruiz", id_rol=rol_cajero,
                 fecha_nacimiento="1990-05-15",
@@ -336,7 +336,7 @@ class TestDashboardResumen:
         from apps.usuarios.models import Empleado, Rol
 
         rol = Rol.objects.create(nombre_rol="Cocina")
-        with freeze_time("2026-05-15"):
+        with freeze_time("2026-05-15 12:00:00"):
             Empleado.objects.create(
                 nombre="Sin", apellido="Acceso", id_rol=rol,
                 fecha_nacimiento="1990-05-15",
@@ -350,7 +350,7 @@ class TestDashboardResumen:
         from apps.usuarios.models import Empleado, Rol
 
         rol = Rol.objects.create(nombre_rol="Cajero")
-        with freeze_time("2026-05-15"):
+        with freeze_time("2026-05-15 12:00:00"):
             Empleado.objects.create(
                 nombre="Baja", apellido="Personal", id_rol=rol,
                 fecha_nacimiento="1990-05-15", estado=False,
@@ -610,6 +610,22 @@ class TestPendienteFacturar:
         tipos = [i["tipo"] for i in resp.data]
         assert "PAGO_ALMUERZO" in tipos
 
+    def test_lista_recargas_almuerzo(self, api_admin, hijo):
+        """Bug real: una recarga de saldo de almuerzo confirmada (ej. vía
+        Bancard) no aparecía en Facturación — FacturacionService.get_pendientes()
+        ya la traía, pero la vista nunca recorría ese resultado."""
+        from decimal import Decimal
+        from apps.almuerzos.models import RecargaSaldoAlmuerzo
+        RecargaSaldoAlmuerzo.objects.create(
+            hijo=hijo, monto_cargado=Decimal("15000"),
+            estado=RecargaSaldoAlmuerzo.Estado.CONFIRMADA,
+        )
+        resp = api_admin.get("/api/v1/contabilidad/facturas/pendiente-facturar/")
+        assert resp.status_code == 200
+        item = next(i for i in resp.data if i["tipo"] == "RECARGA_ALMUERZO")
+        assert item["monto"] == 15000
+        assert "Juan" in item["cliente_nombre"]  # cliente_responsable del hijo, no el hijo
+
     def test_requiere_autenticacion(self, api_client):
         resp = api_client.get("/api/v1/contabilidad/facturas/pendiente-facturar/")
         assert resp.status_code in (401, 403)
@@ -640,6 +656,29 @@ class TestEmitirFactura:
             format="json",
         )
         assert resp.status_code == 400
+
+    def test_emite_para_recarga_almuerzo(self, api_admin, hijo):
+        """El serializer de entrada rechazaba este tipo aunque el servicio
+        ya lo soportaba — confirma el fix end-to-end vía la API real."""
+        from decimal import Decimal
+        from apps.almuerzos.models import RecargaSaldoAlmuerzo
+        recarga = RecargaSaldoAlmuerzo.objects.create(
+            hijo=hijo, monto_cargado=Decimal("15000"),
+            estado=RecargaSaldoAlmuerzo.Estado.CONFIRMADA,
+        )
+        resp = api_admin.post(
+            "/api/v1/contabilidad/facturas/emitir/",
+            {
+                "tipo": "RECARGA_ALMUERZO",
+                "origen_id": recarga.pk,
+                "nro_factura": "001-001-8888889",
+            },
+            format="json",
+        )
+        assert resp.status_code == 201
+        assert resp.data["nro_factura"] == "001-001-8888889"
+        recarga.refresh_from_db()
+        assert recarga.factura_id is not None
 
 
 # ── FacturaViewSet.pdf — branch CLIENTE_WEB ───────────────────────────────────

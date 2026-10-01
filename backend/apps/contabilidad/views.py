@@ -326,7 +326,7 @@ class FacturaViewSet(viewsets.ModelViewSet):
 
     @action(detail=False, methods=["get"], url_path="pendiente-facturar")
     def pendiente_facturar(self, request):
-        """Lista cargas de saldo y pagos de almuerzo sin factura emitida."""
+        """Lista cargas de saldo, pagos y recargas de almuerzo sin factura emitida."""
         data = FacturacionService.get_pendientes()
 
         items = []
@@ -360,6 +360,19 @@ class FacturaViewSet(viewsets.ModelViewSet):
                 "descripcion": f"Pago almuerzo {cuenta.hijo.nombre_completo} — {cuenta.mes}/{cuenta.anio}",
                 "monto": int(p.monto),
                 "fecha": p.fecha_pago,
+            })
+
+        for r in data["recargas_almuerzo"]:
+            cliente = r.hijo.cliente_responsable
+            items.append({
+                "tipo": "RECARGA_ALMUERZO",
+                "id": r.pk,
+                "cliente_id": cliente.pk,
+                "cliente_nombre": cliente.nombre_completo,
+                "modalidad_facturacion": cliente.modalidad_facturacion,
+                "descripcion": f"Recarga saldo almuerzo {r.hijo.nombre_completo}",
+                "monto": int(r.monto_cargado),
+                "fecha": r.fecha_carga,
             })
 
         for v in data["ventas"]:
