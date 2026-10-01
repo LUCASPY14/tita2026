@@ -64,6 +64,74 @@ class TestMiCaja:
         assert resp.status_code in (401, 403)
 
 
+# ── CierreCajaViewSet.resumen ─────────────────────────────────────────────────
+
+@pytest.mark.django_db
+class TestCierreCajaResumen:
+    """abiertas/cerradas/conciliadas deben contar sobre TODA la tabla, no
+    solo la página de 15 visible — mismo bug que Clientes.tsx (Activos)."""
+
+    def test_cuenta_todos_no_solo_la_pagina(self, api_admin, caja, usuario_cajero):
+        from apps.contabilidad.models import CierreCaja
+
+        CierreCaja.objects.create(
+            caja=caja, empleado=usuario_cajero, monto_inicial=Decimal("50000"),
+            estado=CierreCaja.Estado.ABIERTO,
+        )
+        for _ in range(3):
+            CierreCaja.objects.create(
+                caja=caja, empleado=usuario_cajero, monto_inicial=Decimal("50000"),
+                estado=CierreCaja.Estado.CERRADO,
+            )
+        for _ in range(20):
+            CierreCaja.objects.create(
+                caja=caja, empleado=usuario_cajero, monto_inicial=Decimal("50000"),
+                estado=CierreCaja.Estado.CONCILIADO,
+            )
+
+        resp = api_admin.get("/api/v1/contabilidad/cierres-caja/resumen/")
+        assert resp.status_code == 200
+        assert resp.data == {"abiertas": 1, "cerradas": 3, "conciliadas": 20}
+
+    def test_caja_inactiva_no_cuenta(self, api_admin, usuario_cajero):
+        from apps.contabilidad.models import Caja, CierreCaja
+
+        caja_inactiva = Caja.objects.create(nombre="Caja Inactiva Test", activo=False)
+        CierreCaja.objects.create(
+            caja=caja_inactiva, empleado=usuario_cajero, monto_inicial=Decimal("0"),
+            estado=CierreCaja.Estado.CONCILIADO,
+        )
+
+        resp = api_admin.get("/api/v1/contabilidad/cierres-caja/resumen/")
+        assert resp.status_code == 200
+        assert resp.data == {"abiertas": 0, "cerradas": 0, "conciliadas": 0}
+
+    def test_cajero_solo_ve_los_suyos(self, api_cajero, usuario_cajero, caja):
+        from apps.usuarios.models import Usuario
+        from apps.contabilidad.models import CierreCaja
+
+        otro_cajero = Usuario.objects.create_user(
+            email="otro_cajero_resumen@test.com", password="test1234",
+            nombre="Otro", apellido="Cajero", rol=Usuario.Rol.CAJERO,
+        )
+        CierreCaja.objects.create(
+            caja=caja, empleado=usuario_cajero, monto_inicial=Decimal("0"),
+            estado=CierreCaja.Estado.CONCILIADO,
+        )
+        CierreCaja.objects.create(
+            caja=caja, empleado=otro_cajero, monto_inicial=Decimal("0"),
+            estado=CierreCaja.Estado.CONCILIADO,
+        )
+
+        resp = api_cajero.get("/api/v1/contabilidad/cierres-caja/resumen/")
+        assert resp.status_code == 200
+        assert resp.data["conciliadas"] == 1
+
+    def test_requiere_autenticacion(self, api_client):
+        resp = api_client.get("/api/v1/contabilidad/cierres-caja/resumen/")
+        assert resp.status_code in (401, 403)
+
+
 # ── CierreCajaViewSet.registrar_movimiento ────────────────────────────────────
 
 @pytest.mark.django_db

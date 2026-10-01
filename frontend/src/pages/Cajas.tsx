@@ -32,6 +32,7 @@ export default function CajaPage() {
   const [filterEstado, setFilterEstado] = useState('')
   const [filterCaja, setFilterCaja] = useState('')
 
+  const [resumen, setResumen] = useState<{ abiertas: number; cerradas: number; conciliadas: number } | null>(null)
   const [miCierre, setMiCierre] = useState<CierreCaja | null | undefined>(undefined)
   const [arqueo, setArqueo] = useState<ArqueoData | null>(null)
   const [loadingArqueo, setLoadingArqueo] = useState(false)
@@ -52,6 +53,8 @@ export default function CajaPage() {
       const params: Record<string, string | number> = { page, page_size: 15 }
       if (filterEstado) params.estado = filterEstado
       if (filterCaja) params.caja = filterCaja
+      api.get('/contabilidad/cierres-caja/resumen/', { timeout: 8000 })
+        .then(r => setResumen(r.data)).catch(() => setResumen(null))
       const { data } = await api.get('/contabilidad/cierres-caja/', { params, timeout: 8000 })
       if (requestId !== requestIdRef.current) return
       setCierres(data.results ?? [])
@@ -199,12 +202,6 @@ export default function CajaPage() {
 
   // ── Stats rápidas ─────────────────────────────────────────────────────────
 
-  const stats = useMemo(() => ({
-    abiertas: cierres.filter(c => c.caja_activo && c.estado === 'ABIERTO').length,
-    cerradas: cierres.filter(c => c.caja_activo && c.estado === 'CERRADO').length,
-    conciliadas: cierres.filter(c => c.caja_activo && c.estado === 'CONCILIADO').length,
-  }), [cierres])
-
   const selectClass = 'border border-slate-200 rounded-xl px-3 py-2 text-sm text-slate-700 bg-white focus:outline-none focus:ring-2 focus:ring-green-500/30 focus:border-green-500 transition-colors duration-150'
 
   return (
@@ -340,9 +337,9 @@ export default function CajaPage() {
       {/* Stats rápidas */}
       <div className="grid grid-cols-3 gap-3">
         {[
-          { label: 'Abiertas', value: stats.abiertas, color: 'text-green-600', icon: Banknote },
-          { label: 'Cerradas', value: stats.cerradas, color: 'text-blue-600', icon: Lock },
-          { label: 'Conciliadas', value: stats.conciliadas, color: 'text-purple-600', icon: CheckCircle },
+          { label: 'Abiertas', value: resumen?.abiertas ?? '—', color: 'text-green-600', icon: Banknote },
+          { label: 'Cerradas', value: resumen?.cerradas ?? '—', color: 'text-blue-600', icon: Lock },
+          { label: 'Conciliadas', value: resumen?.conciliadas ?? '—', color: 'text-purple-600', icon: CheckCircle },
         ].map(({ label, value, color, icon: Icon }) => (
           <div key={label} className="bg-white rounded-2xl border border-slate-100 shadow-sm px-4 py-3 flex items-start justify-between gap-2">
             <div>

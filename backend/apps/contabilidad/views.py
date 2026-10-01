@@ -65,6 +65,23 @@ class CierreCajaViewSet(CajaOwnerQuerysetMixin, viewsets.ModelViewSet):
     filterset_fields = ["caja", "estado", "empleado"]
     cajero_field = "empleado"
 
+    @action(detail=False, methods=["get"], url_path="resumen")
+    def resumen(self, request):
+        """GET /contabilidad/cierres-caja/resumen/ — conteos por estado sobre
+        TODA la tabla (respetando la misma visibilidad que el listado: un
+        CAJERO solo ve lo suyo), no solo la página de 15 que se ve en
+        pantalla."""
+        from django.db.models import Count
+        conteos = dict(
+            self.get_queryset().filter(caja__activo=True)
+            .values_list("estado").annotate(n=Count("pk"))
+        )
+        return Response({
+            "abiertas": conteos.get(CierreCaja.Estado.ABIERTO, 0),
+            "cerradas": conteos.get(CierreCaja.Estado.CERRADO, 0),
+            "conciliadas": conteos.get(CierreCaja.Estado.CONCILIADO, 0),
+        })
+
     @action(detail=False, methods=["get"], url_path="mi-caja")
     def mi_caja(self, request):
         """Retorna el CierreCaja ABIERTO del usuario autenticado, si existe."""
