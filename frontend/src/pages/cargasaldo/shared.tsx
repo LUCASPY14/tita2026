@@ -97,6 +97,7 @@ export function abrirRecibo(carga: UltimaCarga) {
 <meta charset="UTF-8" />
 <title>Recibo de Recarga</title>
 <style>
+  @page { size: 80mm auto; margin: 2mm; }
   * { margin: 0; padding: 0; box-sizing: border-box; }
   body { font-family: monospace; font-size: 13px; padding: 16px; max-width: 380px; margin: auto; }
   h1 { font-size: 16px; font-weight: bold; text-align: center; margin-bottom: 4px; }

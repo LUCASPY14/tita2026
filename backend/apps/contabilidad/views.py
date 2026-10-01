@@ -529,7 +529,12 @@ class FacturaViewSet(viewsets.ModelViewSet):
         for linea in lineas:
             totales_columna[linea["columna"]] += linea["valor_venta"]
 
-        html = render_to_string("contabilidad/factura_print.html", {
+        template = (
+            "contabilidad/factura_ticket.html"
+            if request.query_params.get("formato") == "ticket"
+            else "contabilidad/factura_print.html"
+        )
+        html = render_to_string(template, {
             "factura": factura,
             "concepto": concepto,
             "empresa": empresa,

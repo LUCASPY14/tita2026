@@ -465,6 +465,18 @@ class TestFacturaViewSet:
         assert resp.status_code == 200
         assert "text/html" in resp["Content-Type"]
 
+    def test_pdf_formato_ticket_sin_valor_fiscal(self, api_admin, factura):
+        """El ticket es un comprobante informal (SIN VALOR FISCAL) — la
+        factura legal real se emite aparte, consolidada en el talonario."""
+        resp = api_admin.get(
+            f"/api/v1/contabilidad/facturas/{factura.pk}/pdf/", {"formato": "ticket"},
+        )
+        assert resp.status_code == 200
+        assert "text/html" in resp["Content-Type"]
+        content = resp.content.decode("utf-8")
+        assert "SIN VALOR FISCAL" in content
+        assert factura.nro_factura in content
+
     def test_requiere_autenticacion(self, api_client):
         resp = api_client.get("/api/v1/contabilidad/facturas/")
         assert resp.status_code in (401, 403)

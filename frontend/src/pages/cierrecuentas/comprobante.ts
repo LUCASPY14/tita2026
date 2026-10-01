@@ -27,6 +27,7 @@ export function imprimirComprobante(cierre: CierreDetalle, res: Resolucion) {
 <meta charset="UTF-8" />
 <title>Comprobante de cierre de cuentas #${res.id_resolucion}</title>
 <style>
+  @page { size: 80mm auto; margin: 2mm; }
   * { margin: 0; padding: 0; box-sizing: border-box; }
   body { font-family: monospace; font-size: 13px; padding: 16px; max-width: 400px; margin: auto; }
   h1 { font-size: 16px; text-align: center; margin-bottom: 2px; }

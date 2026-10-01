@@ -1,0 +1,91 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<title>Comprobante {{ factura.nro_factura }}</title>
+<style>
+  @page { size: 80mm auto; margin: 2mm; }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body { font-family: monospace; font-size: 12px; padding: 16px; max-width: 380px; margin: auto; color: #000; }
+  h1 { font-size: 15px; font-weight: bold; text-align: center; margin-bottom: 2px; }
+  .center { text-align: center; }
+  .divider { border-top: 1px dashed #000; margin: 8px 0; }
+  .row { display: flex; justify-content: space-between; gap: 10px; margin: 3px 0; }
+  .label { color: #555; }
+  .big { font-size: 18px; font-weight: bold; text-align: center; margin: 10px 0; }
+  .sin-valor {
+    text-align: center; font-weight: bold; font-size: 13px;
+    border: 1px solid #000; padding: 4px 6px; margin: 8px 0;
+  }
+  .item { margin: 4px 0; }
+  .item-desc { font-weight: bold; }
+  .item-detalle { display: flex; justify-content: space-between; font-size: 11px; color: #333; }
+  .footer { font-size: 10.5px; text-align: center; color: #555; margin-top: 12px; line-height: 1.4; }
+  .btn-print {
+    display: block; width: 100%; margin-bottom: 16px;
+    background: #1d4ed8; color: #fff; border: none; border-radius: 8px;
+    padding: 10px; font-size: 14px; cursor: pointer; font-family: Arial, sans-serif;
+  }
+  @media print { .btn-print { display: none; } body { padding: 0; } }
+</style>
+</head>
+<body>
+
+<button class="btn-print" onclick="window.print()">&#128438;&nbsp; Imprimir ticket</button>
+
+<h1>LA CANTINA DE TITA</h1>
+<p class="center">Comprobante de pago</p>
+<div class="sin-valor">SIN VALOR FISCAL</div>
+
+<div class="divider"></div>
+<div class="row"><span class="label">Nº</span><span><strong>{{ factura.nro_factura }}</strong></span></div>
+<div class="row"><span class="label">Fecha</span><span>{{ factura.fecha_emision|date:"d/m/Y H:i" }}</span></div>
+{% if factura.estado == 'ANULADA' %}
+<div class="row"><span class="label">Estado</span><span><strong>ANULADA</strong></span></div>
+{% endif %}
+
+<div class="divider"></div>
+<div class="row"><span class="label">Cliente</span><span>{{ factura.cliente.nombre_completo|default:'—' }}</span></div>
+{% if factura.cliente.ruc_ci %}
+<div class="row"><span class="label">RUC/CI</span><span>{{ factura.cliente.ruc_ci }}</span></div>
+{% endif %}
+{% if factura.cliente.direccion %}
+<div class="row"><span class="label">Dirección</span><span>{{ factura.cliente.direccion }}</span></div>
+{% endif %}
+{% if factura.cliente.telefono %}
+<div class="row"><span class="label">Teléfono</span><span>{{ factura.cliente.telefono }}</span></div>
+{% endif %}
+<div class="row"><span class="label">Condición</span><span>{{ condicion_venta }}</span></div>
+
+<div class="divider"></div>
+{% for linea in lineas %}
+<div class="item">
+  <div class="item-desc">{{ linea.cantidad|floatformat:"-3" }} x {{ linea.descripcion }}</div>
+  <div class="item-detalle">
+    <span>P. unit. Gs. {{ linea.precio_unitario|floatformat:0 }} ({% if linea.columna == '10' %}IVA 10%{% elif linea.columna == '5' %}IVA 5%{% else %}Exenta{% endif %})</span>
+    <span>Gs. {{ linea.valor_venta|floatformat:0 }}</span>
+  </div>
+</div>
+{% endfor %}
+
+<div class="divider"></div>
+<div class="row"><span class="label">Valor parcial — Exenta</span><span>Gs. {{ totales_columna.exenta|floatformat:0 }}</span></div>
+<div class="row"><span class="label">Valor parcial — 5%</span><span>Gs. {{ totales_columna.5|floatformat:0 }}</span></div>
+<div class="row"><span class="label">Valor parcial — 10%</span><span>Gs. {{ totales_columna.10|floatformat:0 }}</span></div>
+<div class="row"><span class="label">Liquidación IVA 5%</span><span>Gs. {{ factura.iva_5|floatformat:0 }}</span></div>
+<div class="row"><span class="label">Liquidación IVA 10%</span><span>Gs. {{ factura.iva_10|floatformat:0 }}</span></div>
+<div class="row"><span class="label">Total IVA</span><span>Gs. {{ total_iva|floatformat:0 }}</span></div>
+
+<div class="divider"></div>
+<div class="big">TOTAL Gs. {{ factura.monto_total|floatformat:0 }}</div>
+<p class="center" style="font-size:11px; font-style: italic;">{{ monto_en_letras }}</p>
+
+<div class="footer">
+  Este comprobante no reemplaza la factura legal.<br>
+  La factura Nº {{ factura.nro_factura }} se emitirá en el talonario<br>
+  timbrado junto con el resto del período correspondiente.<br>
+  Conserve este comprobante.
+</div>
+
+</body>
+</html>

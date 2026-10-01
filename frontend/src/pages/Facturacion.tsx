@@ -266,12 +266,33 @@ export default function Facturacion() {
       render: (_, r) => <span className="text-sm text-slate-500">{formatFecha(r.fecha_emision)}</span>,
     },
     {
-      title: '', key: 'acciones', width: 130,
+      title: '', key: 'acciones', width: 190,
       render: (_, r) => (
         <div className="flex gap-1.5">
           <Button
             size="sm"
             variant="secondary"
+            title="Ticket imprimible — sin valor fiscal, para entregar al cliente"
+            onClick={async () => {
+              try {
+                const res = await api.get(`/contabilidad/facturas/${r.id_factura}/pdf/`, {
+                  responseType: 'blob', params: { formato: 'ticket' },
+                })
+                const url = URL.createObjectURL(new Blob([res.data], { type: 'text/html' }))
+                const w = window.open(url, '_blank')
+                if (w) w.onload = () => URL.revokeObjectURL(url)
+              } catch {
+                toast.error('Error al abrir el ticket')
+              }
+            }}
+          >
+            <Printer className="w-3.5 h-3.5" />
+            Ticket
+          </Button>
+          <Button
+            size="sm"
+            variant="secondary"
+            title="Vista para imprimir sobre el talonario preimpreso con timbrado"
             onClick={async () => {
               try {
                 const res = await api.get(`/contabilidad/facturas/${r.id_factura}/pdf/`, { responseType: 'blob' })
@@ -283,8 +304,7 @@ export default function Facturacion() {
               }
             }}
           >
-            <Printer className="w-3.5 h-3.5" />
-            PDF
+            <FileText className="w-3.5 h-3.5" />
           </Button>
           {r.estado === 'EMITIDA' && (
             <Button size="sm" variant="danger" onClick={() => setConfirmAnularId(r)}>
