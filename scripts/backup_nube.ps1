@@ -109,14 +109,14 @@ foreach ($archivo in $archivos) {
         & $RcloneBin copyto $archivo.FullName $destino --progress 2>&1 |
             ForEach-Object { Write-Log "  rclone: $_" }
         if ($LASTEXITCODE -eq 0) {
-            Write-Log "  ✓ Subido correctamente"
+            Write-Log "  OK: subido correctamente"
             $subidos++
         } else {
-            Write-Log "  ✗ rclone salió con código $LASTEXITCODE" "ERROR"
+            Write-Log "  ERROR: rclone salio con codigo $LASTEXITCODE" "ERROR"
             $errores++
         }
     } catch {
-        Write-Log "  ✗ Excepción: $_" "ERROR"
+        Write-Log "  ERROR: Excepcion: $_" "ERROR"
         $errores++
     }
 }
