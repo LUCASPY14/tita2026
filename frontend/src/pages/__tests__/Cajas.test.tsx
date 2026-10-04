@@ -31,6 +31,11 @@ vi.mock('../../services/api', () => ({
   default: { get: vi.fn(), defaults: { baseURL: '/api/v1' } },
 }))
 
+const mockUseAuthStore = vi.fn(() => ({ user: { rol: 'ADMIN' } }))
+vi.mock('../../store/authStore', () => ({
+  useAuthStore: () => mockUseAuthStore(),
+}))
+
 vi.mock('react-hot-toast', () => ({
   default: { error: vi.fn(), success: vi.fn() },
 }))
@@ -91,6 +96,7 @@ beforeAll(() => {
 
 beforeEach(() => {
   vi.clearAllMocks()
+  mockUseAuthStore.mockReturnValue({ user: { rol: 'ADMIN' } })
 })
 
 // ── Renderizado inicial ───────────────────────────────────────────────────────
@@ -255,5 +261,15 @@ describe('Cajas — modales', () => {
     render(<Cajas />)
     await userEvent.click(await screen.findByRole('button', { name: /Conciliar/i }))
     expect(screen.getByTestId('modal-conciliar')).toBeInTheDocument()
+  })
+
+  it('CAJERO no ve el botón "Conciliar" — solo ADMIN puede conciliar', async () => {
+    mockUseAuthStore.mockReturnValue({ user: { rol: 'CAJERO' } })
+    mockGet({
+      '/contabilidad/cierres-caja/': Promise.resolve({ data: { results: [CIERRE_CERRADO], count: 1 } }),
+    })
+    render(<Cajas />)
+    await waitFor(() => expect(vi.mocked(api.get)).toHaveBeenCalled())
+    expect(screen.queryByRole('button', { name: /Conciliar/i })).not.toBeInTheDocument()
   })
 })

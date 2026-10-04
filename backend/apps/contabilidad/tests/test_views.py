@@ -100,10 +100,12 @@ class TestConciliarCaja:
         assert resp.status_code == 200
         assert resp.data["estado"] == "CONCILIADO"
 
-    def test_cajero_puede_conciliar(self, api_cajero, cierre_cerrado):
+    def test_cajero_no_puede_conciliar(self, api_cajero, cierre_cerrado):
+        # Conciliar es el control de que alguien distinto del cajero revisó
+        # su cierre — permitirle conciliar su propia caja anularía ese control.
         url = f"/api/v1/contabilidad/cierres-caja/{cierre_cerrado.pk}/conciliar/"
         resp = api_cajero.post(url, {}, format="json")
-        assert resp.status_code == 200
+        assert resp.status_code == 403
 
     def test_conciliar_caja_abierta_falla(self, api_admin, cierre_abierto):
         url = f"/api/v1/contabilidad/cierres-caja/{cierre_abierto.pk}/conciliar/"

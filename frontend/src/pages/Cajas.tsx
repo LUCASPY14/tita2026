@@ -7,6 +7,7 @@ import {
   Printer, ArrowUpCircle, ArrowDownCircle, RefreshCw,
 } from 'lucide-react'
 import api from '../services/api'
+import { useAuthStore } from '../store/authStore'
 import Badge from '../components/ui/Badge'
 import Button from '../components/ui/Button'
 import Table, { type Column } from '../components/ui/Table'
@@ -22,6 +23,8 @@ import ModalMovimiento from './cajas/ModalMovimiento'
 
 export default function CajaPage() {
   const { t } = useTranslation()
+  const { user } = useAuthStore()
+  const esAdmin = user?.rol === 'ADMIN'
 
   const [cierres, setCierres] = useState<CierreCaja[]>([])
   const [cajas, setCajas] = useState<Caja[]>([])
@@ -179,7 +182,7 @@ export default function CajaPage() {
               Cerrar
             </button>
           )}
-          {r.estado === 'CERRADO' && (
+          {r.estado === 'CERRADO' && esAdmin && (
             <button
               onClick={() => setConciliarModal(r)}
               className="flex items-center gap-1 px-2.5 py-1.5 text-sm font-medium text-purple-600 hover:bg-purple-50 rounded-lg transition-colors"
@@ -198,7 +201,7 @@ export default function CajaPage() {
         </div>
       ),
     },
-  ], [])
+  ], [esAdmin])
 
   // ── Stats rápidas ─────────────────────────────────────────────────────────
 

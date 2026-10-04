@@ -114,9 +114,15 @@ class CierreCajaViewSet(CajaOwnerQuerysetMixin, viewsets.ModelViewSet):
         headers = self.get_success_headers(out.data)
         return Response(out.data, status=status.HTTP_201_CREATED, headers=headers)
 
-    @action(detail=True, methods=["post"], url_path="conciliar")
+    @action(detail=True, methods=["post"], url_path="conciliar", permission_classes=[IsAdmin])
     def conciliar(self, request, pk=None):
-        """Marca un cierre de caja como CONCILIADO. Solo aplica a cierres CERRADOS."""
+        """Marca un cierre de caja como CONCILIADO. Solo aplica a cierres CERRADOS.
+
+        Solo ADMIN — conciliar es el control de que alguien distinto del
+        cajero reviso su cierre; permitir que el propio cajero concilie su
+        caja anula ese control (el permiso de clase del ViewSet, pensado
+        para abrir/cerrar, es mas amplio e incluye a CAJERO sobre su propia
+        caja — por eso esta accion necesita su propio permiso explicito)."""
         cierre = self.get_object()
         if cierre.estado != CierreCaja.Estado.CERRADO:
             return Response(
