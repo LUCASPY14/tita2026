@@ -46,9 +46,9 @@ const CARGA_ROLES    = ['ADMIN', 'CAJERO', 'COBRADOR']
 const FACTURACION    = ['ADMIN', 'COBRADOR']                    // sin CAJERO
 const COBROS_ROLES   = ['ADMIN', 'SUPERVISOR', 'COBRADOR']
 const COMPRAS_ROLES  = ['ADMIN', 'SUPERVISOR']                  // sin CAJERO
-const TARJETAS       = ['ADMIN', 'CAJERO', 'SUPERVISOR', 'COBRADOR']
-const CLIENTES       = ['ADMIN', 'CAJERO', 'SUPERVISOR', 'COBRADOR']
-const CIERRE_CUENTAS = ['ADMIN', 'SUPERVISOR', 'CAJERO', 'COBRADOR']
+const TARJETAS       = ['ADMIN', 'SUPERVISOR', 'COBRADOR']             // sin CAJERO
+const CLIENTES       = ['ADMIN', 'SUPERVISOR', 'COBRADOR']             // sin CAJERO
+const CIERRE_CUENTAS = ['ADMIN', 'SUPERVISOR', 'COBRADOR']             // sin CAJERO
 
 interface NavItem {
   path: string
@@ -71,7 +71,7 @@ const navItems: NavItem[] = [
   { path: '/alergenos',    labelKey: 'nav.alergenos',    icon: Leaf,            roles: OPS_ROLES },
   { path: '/productos',    labelKey: 'nav.productos',    icon: Package,         roles: OPS_ROLES },
   { path: '/compras',      labelKey: 'nav.compras',      icon: Truck,           roles: COMPRAS_ROLES },
-  { path: '/ventas',       labelKey: 'nav.ventas',       icon: ShoppingCart,    roles: ['ADMIN', 'SUPERVISOR', 'CAJERO'] },
+  { path: '/ventas',       labelKey: 'nav.ventas',       icon: ShoppingCart,    roles: ['ADMIN', 'SUPERVISOR'] },
   { path: '/cobros',       labelKey: 'nav.cobros',       icon: HandCoins,       roles: COBROS_ROLES },
   { path: '/facturacion',  labelKey: 'nav.facturacion',  icon: FileText,        roles: FACTURACION },
   { path: '/pagos-bancard',labelKey: 'nav.pagosBancard', icon: Undo2,           roles: ['ADMIN', 'SUPERVISOR'] },

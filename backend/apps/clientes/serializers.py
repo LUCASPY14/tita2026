@@ -101,6 +101,18 @@ class AlumnoResponsableResumenSerializer(serializers.ModelSerializer):
         ]
 
 
+class ClienteBusquedaCajeroSerializer(serializers.ModelSerializer):
+    """Resultado de busqueda de cliente para CAJERO (venta a credito en Modo
+    Recreo, sin tarjeta escaneada) — solo lo minimo para elegir el cliente
+    correcto (incluye ruc_ci para distinguir homonimos), sin exponer email,
+    telefono, direccion ni el resto de los datos de contacto."""
+    nombre_completo = serializers.ReadOnlyField()
+
+    class Meta:
+        model = Cliente
+        fields = ["id_cliente", "nombre_completo", "ruc_ci", "modalidad_facturacion"]
+
+
 class ClienteSerializer(serializers.ModelSerializer):
     nombre_completo = serializers.ReadOnlyField()
     saldo_cuenta_corriente = serializers.DecimalField(max_digits=12, decimal_places=0, read_only=True)

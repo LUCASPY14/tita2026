@@ -94,6 +94,16 @@ class IsClienteWeb(permissions.BasePermission):
         )
 
 
+class IsCobradorSupervisorOrAdmin(permissions.BasePermission):
+    """Cobradores, supervisores y administradores — sin CAJERO."""
+    def has_permission(self, request, view):
+        return bool(
+            request.user and
+            request.user.is_authenticated and
+            request.user.rol in {"ADMIN", "SUPERVISOR", "COBRADOR"}
+        )
+
+
 class IsAdminOrSupervisor(permissions.BasePermission):
     """Solo ADMIN y SUPERVISOR."""
     def has_permission(self, request, view):

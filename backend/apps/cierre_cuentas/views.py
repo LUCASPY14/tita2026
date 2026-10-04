@@ -22,8 +22,12 @@ from .services import CierreCuentaService
 class CierreCuentaViewSet(viewsets.ReadOnlyModelViewSet):
     """Expedientes de cierre de cuenta de alumnos que egresan.
 
-    Lectura: ADMIN, SUPERVISOR, CAJERO, COBRADOR. Cada acción valida además el rol
-    que corresponde (ver CierreCuentaService).
+    Lectura: ADMIN, SUPERVISOR, CAJERO, COBRADOR — un cajero necesita poder
+    consultarlos para registrar el cobro de la deuda de un egresado en caja
+    (ver `resoluciones`). Cada acción valida además el rol puntual que
+    corresponde (ver CierreCuentaService / exigir_rol): abrir/cerrar un
+    cierre, por ejemplo, sigue siendo exclusivo de ADMIN/SUPERVISOR pese a
+    este permiso más amplio de lectura/registro.
     """
 
     permission_classes = [IsCajeroCobradorSupervisorOrAdmin]

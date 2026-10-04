@@ -47,6 +47,7 @@ from .serializers import (
     AlumnoResponsableSerializer,
     AutorizacionSaldoNegativoSerializer,
     CiudadSerializer,
+    ClienteBusquedaCajeroSerializer,
     ClienteSerializer,
     CuentaCorrienteClienteSerializer,
     DepartamentoSerializer,
@@ -83,6 +84,14 @@ class ClienteViewSet(viewsets.ModelViewSet):
     filter_backends = [DjangoFilterBackend, SearchFilter]
     filterset_fields = ["activo", "tipo_cliente"]
     search_fields = ["ruc_ci", "nombres", "apellidos"]
+
+    def get_serializer_class(self):
+        # CAJERO solo usa esto para elegir el cliente de una venta a credito
+        # en Modo Recreo (sin tarjeta escaneada) — no necesita, y no deberia
+        # ver, el resto de los datos de contacto del cliente.
+        if getattr(self.request.user, "rol", None) == "CAJERO":
+            return ClienteBusquedaCajeroSerializer
+        return super().get_serializer_class()
 
     @action(detail=False, methods=["get"], url_path="resumen")
     def resumen(self, request):

@@ -206,7 +206,7 @@ export default function App() {
               <Route path="/dashboard"     element={<Dashboard />} />
               <Route path="/mi-seguridad"  element={<MiSeguridad />} />
               <Route path="/ventas"        element={
-                <PrivateRoute roles={['ADMIN', 'SUPERVISOR', 'CAJERO']}>
+                <PrivateRoute roles={['ADMIN', 'SUPERVISOR']}>
                   <Ventas />
                 </PrivateRoute>
               } />
@@ -231,7 +231,7 @@ export default function App() {
                 </PrivateRoute>
               } />
               <Route path="/tarjetas"      element={
-                <PrivateRoute roles={['ADMIN', 'CAJERO', 'SUPERVISOR', 'COBRADOR']}>
+                <PrivateRoute roles={['ADMIN', 'SUPERVISOR', 'COBRADOR']}>
                   <Tarjetas />
                 </PrivateRoute>
               } />
@@ -241,12 +241,12 @@ export default function App() {
                 </PrivateRoute>
               } />
               <Route path="/cierre-cuentas" element={
-                <PrivateRoute roles={['ADMIN', 'SUPERVISOR', 'CAJERO', 'COBRADOR']}>
+                <PrivateRoute roles={['ADMIN', 'SUPERVISOR', 'COBRADOR']}>
                   <CierreCuentas />
                 </PrivateRoute>
               } />
               <Route path="/clientes"      element={
-                <PrivateRoute roles={['ADMIN', 'CAJERO', 'SUPERVISOR', 'COBRADOR']}>
+                <PrivateRoute roles={['ADMIN', 'SUPERVISOR', 'COBRADOR']}>
                   <Clientes />
                 </PrivateRoute>
               } />

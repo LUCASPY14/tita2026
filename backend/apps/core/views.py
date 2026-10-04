@@ -15,7 +15,8 @@ from rest_framework.response import Response
 
 from common.pagination import CursorResultsSetPagination
 from common.permissions import (
-    IsAdmin, IsAdminOrReadOnly, IsAdminOrSupervisor, IsCajeroOrAdmin, IsStaffOrClienteWeb, IsStaffUser,
+    IsAdmin, IsAdminOrReadOnly, IsAdminOrSupervisor, IsCajeroOrAdmin, IsCobradorSupervisorOrAdmin,
+    IsStaffOrClienteWeb, IsStaffUser,
 )
 from common.throttling import SensitiveEndpointThrottle
 from common.utils.medios_pago import resolver_medio_pago
@@ -74,7 +75,7 @@ class TarjetaViewSet(viewsets.ModelViewSet):
         if self.action == "destroy":
             return [IsAdmin()]
         if self.action == "resumen":
-            return [IsStaffUser()]
+            return [IsCobradorSupervisorOrAdmin()]
         if self.action == "ajustar_saldo":
             return [IsAdminOrSupervisor()]
         if self.action == "renumerar":
@@ -134,6 +135,19 @@ class TarjetaViewSet(viewsets.ModelViewSet):
                 return qs.none()
             return qs.filter(
                 Q(hijo__cliente_responsable_id=user.cliente_id) | Q(cliente_directo_id=user.cliente_id)
+            )
+        if user.rol == "CAJERO" and self.action == "list":
+            # El cajero solo puede buscar tarjetas puntuales por numero/codigo
+            # de barras (lo que usan Modo Recreo y Carga de Saldo al escanear)
+            # — no puede listar todo el padron ni buscar por nombre de
+            # alumno/cliente, para no exponer la cartera completa de saldos
+            # via la API directa. Las acciones de detalle (bloquear, activar,
+            # editar, etc.) no pasan por aca — ya conocen el numero exacto.
+            busqueda = (self.request.query_params.get("search") or "").strip()
+            if not busqueda:
+                return qs.none()
+            return qs.filter(
+                Q(nro_tarjeta__icontains=busqueda) | Q(codigo_barras__icontains=busqueda)
             )
         if self.request.query_params.get("con_deuda") in ("1", "true", "True"):
             # Deuda de cantina o de almuerzo — son dos bolsillos independientes.

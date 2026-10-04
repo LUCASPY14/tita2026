@@ -66,24 +66,27 @@ class TestFiltroYResumen:
         # Sin deuda de cantina, pero sí de almuerzo — es el caso que se estaba perdiendo.
         _tarjeta(cliente, grado, "DF-D3", 10000, saldo_almuerzo=-15000)
 
-    def test_con_deuda_filtra_cantina_o_almuerzo_negativos(self, usuario_cajero, tarjetas):
-        resp = _api(usuario_cajero).get("/api/v1/core/tarjetas/", {"con_deuda": "true"})
+    def test_con_deuda_filtra_cantina_o_almuerzo_negativos(self, usuario_admin, tarjetas):
+        # con_deuda es para la pagina de Tarjetas (listado administrativo) —
+        # un CAJERO ya no tiene acceso a ese listado abierto, solo a buscar
+        # una tarjeta puntual (ver TestBusquedaCajero mas abajo).
+        resp = _api(usuario_admin).get("/api/v1/core/tarjetas/", {"con_deuda": "true"})
         assert sorted(t["nro_tarjeta"] for t in resp.data["results"]) == ["DF-D1", "DF-D2", "DF-D3"]
 
-    def test_sin_filtro_devuelve_todas(self, usuario_cajero, tarjetas):
-        resp = _api(usuario_cajero).get("/api/v1/core/tarjetas/")
+    def test_sin_filtro_devuelve_todas(self, usuario_admin, tarjetas):
+        resp = _api(usuario_admin).get("/api/v1/core/tarjetas/")
         assert resp.data["count"] == 4
 
-    def test_resumen_desglosa_cantina_y_almuerzo(self, usuario_cajero, tarjetas):
-        resp = _api(usuario_cajero).get("/api/v1/core/tarjetas/resumen/")
+    def test_resumen_desglosa_cantina_y_almuerzo(self, usuario_admin, tarjetas):
+        resp = _api(usuario_admin).get("/api/v1/core/tarjetas/resumen/")
         assert resp.status_code == 200
         assert resp.data == {
             "tarjetas_con_deuda_cantina": 2, "deuda_cantina_total": 70000,
             "tarjetas_con_deuda_almuerzo": 1, "deuda_almuerzo_total": 15000,
         }
 
-    def test_resumen_sin_deudas(self, usuario_cajero):
-        resp = _api(usuario_cajero).get("/api/v1/core/tarjetas/resumen/")
+    def test_resumen_sin_deudas(self, usuario_admin):
+        resp = _api(usuario_admin).get("/api/v1/core/tarjetas/resumen/")
         assert resp.data == {
             "tarjetas_con_deuda_cantina": 0, "deuda_cantina_total": 0,
             "tarjetas_con_deuda_almuerzo": 0, "deuda_almuerzo_total": 0,
@@ -105,6 +108,46 @@ class TestFiltroYResumen:
         )
         resp = _api(padre).get("/api/v1/core/tarjetas/", {"con_deuda": "true"})
         # Ve solo las de su propia familia (las de la fixture son del mismo cliente).
+        assert resp.status_code == 200
+
+
+@pytest.mark.django_db
+class TestBusquedaCajero:
+    """Un CAJERO solo puede buscar UNA tarjeta puntual por numero/codigo de
+    barras (lo que usan Modo Recreo y Carga de Saldo al escanear) — no puede
+    listar todo el padron, filtrar por con_deuda sin buscar, ni ver el
+    resumen administrativo de deuda (eso es exclusivo de la pagina de
+    Tarjetas, que un cajero ya no tiene en el menu)."""
+
+    def test_sin_busqueda_no_devuelve_nada(self, usuario_cajero, cliente, grado):
+        _tarjeta(cliente, grado, "BC-1", 5000)
+        resp = _api(usuario_cajero).get("/api/v1/core/tarjetas/")
+        assert resp.data["count"] == 0
+
+    def test_con_deuda_sin_busqueda_tampoco_devuelve_nada(self, usuario_cajero, cliente, grado):
+        _tarjeta(cliente, grado, "BC-2", -5000)
+        resp = _api(usuario_cajero).get("/api/v1/core/tarjetas/", {"con_deuda": "true"})
+        assert resp.data["count"] == 0
+
+    def test_busqueda_por_numero_parcial_funciona(self, usuario_cajero, cliente, grado):
+        _tarjeta(cliente, grado, "BC-3", 5000)
+        resp = _api(usuario_cajero).get("/api/v1/core/tarjetas/", {"search": "BC-3"})
+        assert [t["nro_tarjeta"] for t in resp.data["results"]] == ["BC-3"]
+
+    def test_busqueda_por_nombre_de_alumno_no_funciona(self, usuario_cajero, cliente, grado):
+        _tarjeta(cliente, grado, "BC-4", 5000)  # hijo creado como "H{nro}" "Deuda" en _tarjeta()
+        resp = _api(usuario_cajero).get("/api/v1/core/tarjetas/", {"search": "Deuda"})
+        assert resp.data["count"] == 0
+
+    def test_no_accede_al_resumen(self, usuario_cajero):
+        resp = _api(usuario_cajero).get("/api/v1/core/tarjetas/resumen/")
+        assert resp.status_code == 403
+
+    def test_puede_bloquear_una_tarjeta_conocida(self, usuario_cajero, cliente, grado):
+        # Una accion de detalle (bloquear/activar) no pasa por la busqueda —
+        # el cajero ya tiene el numero exacto en la mano (la tarjeta escaneada).
+        _tarjeta(cliente, grado, "BC-5", 5000)
+        resp = _api(usuario_cajero).post("/api/v1/core/tarjetas/BC-5/bloquear/")
         assert resp.status_code == 200
 
 
