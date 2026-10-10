@@ -42,7 +42,19 @@ def custom_exception_handler(exc, context):
                     non_field.extend(messages)
                 else:
                     field_errors[key] = messages
-        normalized["detail"] = "; ".join(non_field) if non_field else "Error de validación."
+        if non_field:
+            normalized["detail"] = "; ".join(non_field)
+        elif field_errors:
+            # Mostrar el mensaje real del primer error (antes: "Error de validación." genérico).
+            # Si el mensaje no dice de qué campo se trata ("Este campo es obligatorio."),
+            # se antepone el nombre del campo.
+            key, msgs = next(iter(field_errors.items()))
+            msg = msgs[0] if msgs else "Dato inválido."
+            if "campo" in msg.lower() or "field" in msg.lower():
+                msg = f"{key.replace('_', ' ').capitalize()}: {msg}"
+            normalized["detail"] = msg
+        else:
+            normalized["detail"] = "Error de validación."
         normalized["code"] = "validation_error"
         normalized["field_errors"] = field_errors
     elif isinstance(exc, (AuthenticationFailed, NotAuthenticated)):

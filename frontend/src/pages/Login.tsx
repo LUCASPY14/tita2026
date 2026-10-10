@@ -74,8 +74,17 @@ export default function Login({ variant = 'admin' }: Props) {
         setLoading(false)
         queueMicrotask(() => codigoRef.current?.focus())
       }
-    } catch {
-      setErrors({ password: 'CI/RUC o contraseña incorrectos' })
+    } catch (err) {
+      // 401/400 = CI/RUC o contraseña mal (mensaje generico, no revela cual).
+      // Otros (403 fuera de la cantina, cuenta bloqueada, 429 demasiados intentos):
+      // mostrar el mensaje real que manda el sistema.
+      const e = err as { response?: { status?: number; data?: { detail?: string } } }
+      const status = e?.response?.status
+      const detail = e?.response?.data?.detail
+      const msg = status && status !== 401 && status !== 400 && detail
+        ? detail
+        : 'CI/RUC o contraseña incorrectos'
+      setErrors({ password: msg })
       setLoading(false)
     }
   }

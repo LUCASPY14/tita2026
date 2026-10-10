@@ -6,6 +6,7 @@ from rest_framework import serializers
 
 from apps.clientes.models import Cliente
 
+from .ci_utils import ci_equivalente
 from .models import (
     Usuario,
     Empleado,
@@ -138,16 +139,33 @@ class CambiarPasswordSerializer(serializers.Serializer):
     password_actual = serializers.CharField(write_only=True)
     password_nuevo = serializers.CharField(write_only=True, min_length=6)
 
+    def _ci_cliente(self):
+        user = self.context["request"].user
+        return user.cliente.ruc_ci if getattr(user, "cliente_id", None) else None
+
     def validate_password_actual(self, value):
         user = self.context["request"].user
-        if not user.check_password(value):
-            raise serializers.ValidationError("La contraseña actual es incorrecta.")
-        return value
+        if user.check_password(value):
+            return value
+        # Contrasena inicial = CI/RUC: aceptar tambien el "otro" formato
+        ci = self._ci_cliente()
+        if ci and ci_equivalente(value, ci):
+            for candidato in (ci, ci.strip()):
+                if user.check_password(candidato):
+                    return candidato
+        raise serializers.ValidationError(
+            "La contraseña actual es incorrecta. Si es tu primer ingreso, es tu CI o RUC."
+        )
 
     def validate(self, data):
         if data.get("password_nuevo") == data.get("password_actual"):
             raise serializers.ValidationError(
                 {"password_nuevo": "La nueva contraseña debe ser diferente a la actual."}  # nosec B105
+            )
+        ci = self._ci_cliente()
+        if ci and ci_equivalente(data.get("password_nuevo"), ci):
+            raise serializers.ValidationError(
+                {"password_nuevo": "La nueva contraseña no puede ser tu CI o RUC."}  # nosec B105
             )
         return data
 

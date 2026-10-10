@@ -334,10 +334,10 @@ REST_FRAMEWORK["DEFAULT_RENDERER_CLASSES"] = [
     "rest_framework.renderers.JSONRenderer",
 ]
 REST_FRAMEWORK["DEFAULT_THROTTLE_RATES"] = {
-    "anon": "60/hour",
-    "user": "500/hour",
-    "auth": "5/min",            # login: 5 intentos/minuto por IP
-    "sensitive": "50/hour",     # carga de saldo, anulaciones
+    "anon": "3000/hour",
+    "user": "10000/hour",
+    "auth": "60/min",            # login: 60 pedidos/minuto por IP (volumen; el bloqueo real por contrasena es LOGIN_MAX_INTENTOS=5)
+    "sensitive": "1000/hour",     # carga de saldo, anulaciones
     "portal": "300/hour",       # portal de padres (internet-facing): ~5 requests/min
     "bancard_retorno": "20/hour", # retorno Bancard sin auth: máx 20 recargas/hora por IP
 }

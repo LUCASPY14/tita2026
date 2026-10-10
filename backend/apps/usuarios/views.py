@@ -1,10 +1,11 @@
-﻿"""
+"""
 Views para la app usuarios
 """
 
 import base64
 import hashlib
 import hmac as hmac_mod
+import ipaddress
 import json
 import logging
 import secrets
@@ -88,6 +89,7 @@ from .models import (
     CredencialWebAuthn,
     PatronAcceso,
 )
+from .ci_utils import buscar_cliente_portal, ci_equivalente
 from .serializers import (
     UsuarioSerializer,
     UsuarioCreateSerializer,
@@ -259,12 +261,85 @@ def _cache_key_ip(ip: str) -> str:
     return f"login_fail:ip:{ip}"
 
 
+def _ip_contable(ip: str) -> bool:
+    """
+    False para IPs internas (red de Docker 172.x, 127.0.0.1, red local 192.168.x)
+    o invalidas. Detras del proxy, muchos usuarios distintos llegan con la misma
+    IP interna: contarla haria que los errores de unos padres bloqueen a todos.
+    """
+    try:
+        a = ipaddress.ip_address((ip or "").strip())
+    except ValueError:
+        return False
+    return not (a.is_private or a.is_loopback or a.is_unspecified or a.is_link_local)
+
+
+def _max_intentos_ip() -> int:
+    """
+    Umbral por IP publica. Mas alto que por cuenta: las operadoras moviles
+    comparten una misma IP publica entre muchos clientes (CGNAT).
+    """
+    return getattr(django_settings, "LOGIN_MAX_INTENTOS_IP", django_settings.LOGIN_MAX_INTENTOS * 4)
+
+
+def _ip_es_red_local(ip: str) -> bool:
+    """
+    True solo si la IP es de la red interna (cajas por LAN / Docker / localhost).
+    Si la IP no se puede leer, devuelve False (por seguridad, se trata como externa).
+    El trafico de internet llega por Cloudflare con la IP publica real del visitante.
+    """
+    try:
+        a = ipaddress.ip_address((ip or "").strip())
+    except ValueError:
+        return False
+    if a.is_unspecified:
+        return False
+    return a.is_private or a.is_loopback
+
+
+def _roles_solo_red_local():
+    return set(getattr(django_settings, "ROLES_SOLO_RED_LOCAL", ["CAJERO", "COCINA"]))
+
+
+def _rechazo_por_ubicacion(user, request, ip: str = None):
+    """
+    Si el rol del usuario solo puede operar dentro de la cantina y la conexion
+    viene de internet, devuelve una Response 403. Si esta permitido, None.
+    No cuenta como intento fallido de contrasena (no bloquea la cuenta).
+    """
+    if user.rol not in _roles_solo_red_local():
+        return None
+    ip = ip if ip is not None else (get_client_ip(request) or "")
+    if _ip_es_red_local(ip):
+        return None
+    try:
+        IntentoLogin.objects.create(
+            email=user.email, ip_address=ip or "0.0.0.0", exitoso=False,
+            motivo_fallo="Rol solo permitido desde la red de la cantina",
+        )
+    except Exception:
+        logger.warning("No se pudo registrar IntentoLogin (fuera de red local)", exc_info=True)
+    registrar_auditoria(
+        usuario=user, request=request,
+        operacion="LOGIN",
+        tabla="usuarios_usuario",
+        id_registro=user.id_usuario,
+        descripcion=f"Login rechazado fuera de la red local ({user.email}) rol={user.rol} ip={ip}",
+        resultado="FALLA",
+        mensaje_error="Fuera de la red de la cantina",
+    )
+    return Response(
+        {"detail": "Este usuario solo puede ingresar desde las computadoras de la cantina."},
+        status=status.HTTP_403_FORBIDDEN,
+    )
+
+
 def _esta_bloqueado_cache(email: str, ip: str) -> bool:
     """Chequeo O(1) en cache antes de autenticar."""
     max_i = django_settings.LOGIN_MAX_INTENTOS
     if email and cache.get(_cache_key_email(email), 0) >= max_i:
         return True
-    if ip and cache.get(_cache_key_ip(ip), 0) >= max_i:
+    if ip and _ip_contable(ip) and cache.get(_cache_key_ip(ip), 0) >= _max_intentos_ip():
         return True
     return False
 
@@ -284,8 +359,8 @@ def _registrar_fallo_login(email: str, ip: str) -> None:
         count_email = cache.get(_cache_key_email(email), 0) + 1
         cache.set(_cache_key_email(email), count_email, timeout=ventana)
 
-    # Incrementar contador por IP
-    if ip:
+    # Incrementar contador por IP (solo IPs publicas reales)
+    if ip and _ip_contable(ip):
         count_ip = cache.get(_cache_key_ip(ip), 0) + 1
         cache.set(_cache_key_ip(ip), count_ip, timeout=ventana)
 
@@ -316,6 +391,16 @@ def _limpiar_contadores_login(email: str, ip: str) -> None:
         cache.delete(_cache_key_ip(ip))
 
 
+def _desbloquear_usuario(user) -> None:
+    """
+    Levanta los bloqueos activos y borra el contador de fallos del usuario.
+    Se usa cuando la contrasena se restablece (por correo o desde Administracion),
+    para que el usuario pueda ingresar enseguida con la clave nueva.
+    """
+    BloqueoCuenta.objects.filter(usuario=user, estado=True).update(estado=False)
+    _limpiar_contadores_login((user.email or "").lower(), "")
+
+
 # ──────────────────────────────────────────────────────────────────────────────
 
 def _resolver_identificador_login(identifier: str) -> str:
@@ -329,17 +414,17 @@ def _resolver_identificador_login(identifier: str) -> str:
     identifier = (identifier or "").strip()
     if not identifier or "@" in identifier:
         return identifier
+    # 1. Personal interno: CI/RUC exacto (filter().first() evita error si hay duplicados)
+    interno = Usuario.objects.only("email").filter(ci_ruc=identifier).first()
+    if interno:
+        return interno.email
+    # 2. Portal de padres: acepta CI o RUC (con o sin digito verificador)
     try:
-        return Usuario.objects.only("email").get(ci_ruc=identifier).email
-    except Usuario.DoesNotExist:
-        pass
-    try:
-        from apps.clientes.models import Cliente
-        cliente = Cliente.objects.select_related("usuario_portal").get(ruc_ci=identifier)
-        if cliente.usuario_portal:
+        cliente = buscar_cliente_portal(identifier)
+        if cliente:
             return cliente.usuario_portal.email
     except Exception:
-        pass
+        logger.warning("Error resolviendo CI/RUC del portal", exc_info=True)
     return identifier
 
 
@@ -351,7 +436,22 @@ class CustomTokenObtainPairSerializer(TokenObtainPairSerializer):
     """
 
     def validate(self, attrs):
-        attrs[self.username_field] = _resolver_identificador_login(attrs.get(self.username_field, ""))
+        email = _resolver_identificador_login(attrs.get(self.username_field, ""))
+        attrs[self.username_field] = email
+        # Contrasena inicial del portal = CI/RUC cargado en el formulario.
+        # Si el padre escribe el "otro" formato (CI en vez de RUC o al reves),
+        # se valida contra el valor guardado.
+        if email and "@" in email:
+            u = (
+                Usuario.objects.select_related("cliente")
+                .filter(email__iexact=email, debe_cambiar_contrasena=True, cliente__isnull=False)
+                .first()
+            )
+            if u and ci_equivalente(attrs.get("password"), u.cliente.ruc_ci):
+                if u.check_password(u.cliente.ruc_ci):
+                    attrs["password"] = u.cliente.ruc_ci
+                elif u.check_password(u.cliente.ruc_ci.strip()):
+                    attrs["password"] = u.cliente.ruc_ci.strip()
         return super().validate(attrs)
 
 
@@ -395,7 +495,7 @@ class CustomTokenObtainPairView(TokenObtainPairView):
                     else:
                         msg = "Cuenta bloqueada temporalmente."
                         if bloqueo.fecha_desbloqueo:
-                            msg += f" Disponible después de las {bloqueo.fecha_desbloqueo.strftime('%H:%M')}."
+                            msg += f" Disponible después de las {timezone.localtime(bloqueo.fecha_desbloqueo).strftime('%H:%M')}."
                         return Response({"detail": msg}, status=status.HTTP_403_FORBIDDEN)
             except Usuario.DoesNotExist:
                 pass
@@ -436,6 +536,10 @@ class CustomTokenObtainPairView(TokenObtainPairView):
         # ── 4. Login exitoso — limpiar contadores ─────────────────────────────
         user = serializer.user
         _limpiar_contadores_login(email, ip)
+
+        rechazo = _rechazo_por_ubicacion(user, request, ip)
+        if rechazo:
+            return rechazo
 
         tiene_wa = _tiene_webauthn(user)
         if _tiene_2fa_activo(user) or tiene_wa:
@@ -575,6 +679,7 @@ class UsuarioViewSet(viewsets.ModelViewSet):
         usuario.set_password(nueva_password)
         usuario.debe_cambiar_contrasena = True
         usuario.save(update_fields=["password", "debe_cambiar_contrasena"])
+        _desbloquear_usuario(usuario)
         registrar_auditoria(
             request=request,
             operacion="RESET_PASSWORD_PORTAL",
@@ -1035,7 +1140,16 @@ class ConfirmarPasswordView(APIView):
             )
 
         user.set_password(password_nuevo)
-        user.save(update_fields=["password"])
+        user.debe_cambiar_contrasena = False  # ya eligio una clave propia
+        user.save(update_fields=["password", "debe_cambiar_contrasena"])
+        _desbloquear_usuario(user)
+        registrar_auditoria(
+            request=request,
+            operacion="RESET_PASSWORD_EMAIL",
+            tabla="usuarios_usuario",
+            id_registro=user.id_usuario,
+            descripcion=f"Contraseña restablecida por correo ({user.email})",
+        )
         return Response({"detail": "Contraseña restablecida correctamente."})
 
 
@@ -1276,6 +1390,10 @@ class TwoFALoginVerificarView(APIView):
         auth.ultima_verificacion = timezone.now()
         auth.save(update_fields=["ultima_verificacion"])
 
+        rechazo = _rechazo_por_ubicacion(user, request)
+        if rechazo:
+            return rechazo
+
         session_key = _registrar_sesion(user, request)
         registrar_auditoria(
             usuario=user, request=request,
@@ -1483,6 +1601,10 @@ class WebAuthnLoginVerificarView(APIView):
         cred.sign_count = verified.new_sign_count
         cred.ultimo_uso = timezone.now()
         cred.save(update_fields=["sign_count", "ultimo_uso"])
+
+        rechazo = _rechazo_por_ubicacion(user, request)
+        if rechazo:
+            return rechazo
 
         session_key = _registrar_sesion(user, request)
         registrar_auditoria(
