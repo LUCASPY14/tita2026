@@ -35,7 +35,7 @@ export default function ModalHijo({ open, hijo, clienteId, onClose, onSaved }: P
   const fileInputRef = useRef<HTMLInputElement>(null)
 
   useEffect(() => {
-    api.get<{ results?: GradoOption[]; id?: number }[]>('/clientes/grados/')
+    api.get<{ results?: GradoOption[]; id?: number }[]>('/clientes/grados/', { params: { page_size: 100 } })
       .then(res => {
         const data = res.data
         const list = Array.isArray(data)
