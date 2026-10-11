@@ -121,17 +121,24 @@ function PushSetup() {
 
 function AuthMonitor() {
   const navigate = useNavigate()
+  const location = useLocation()
   const { logout, user } = useAuthStore()
 
   useEffect(() => {
     const handle = () => {
       const isPortal = user?.rol === 'CLIENTE_WEB'
       logout()
+      // /pago-completado es pública (la pisa el redirect de Bancard): si la
+      // sesión murió mientras el padre estaba en el banco (ej. catastro de
+      // tarjeta con OTP), no lo saquemos de la pantalla de confirmación sin
+      // que la vea — se queda ahí, y recién al tocar "Volver al portal"
+      // PrivateRoute lo manda a loguearse de nuevo si corresponde.
+      if (location.pathname === '/pago-completado') return
       navigate(isPortal ? '/portal/login' : getAuthDoorRoute(), { replace: true })
     }
     window.addEventListener('auth:logout', handle)
     return () => window.removeEventListener('auth:logout', handle)
-  }, [logout, navigate, user])
+  }, [logout, navigate, user, location.pathname])
 
   return null
 }

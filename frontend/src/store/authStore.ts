@@ -159,6 +159,20 @@ if (typeof window !== 'undefined') {
     window.addEventListener(event, handleActivity, { passive: true })
   )
 
+  // Pausar el timer de inactividad mientras la pestaña está en segundo plano:
+  // si no, un trámite externo (ej. catastro de tarjeta en Bancard, con OTP del
+  // banco de por medio) puede dejar el timer de 60 min corriendo mientras el
+  // navegador suspende el JS en background, y disparar un logout() apenas se
+  // reanuda — justo al volver del banco, sin que el usuario estuviera inactivo
+  // en la app en ningún momento real.
+  document.addEventListener('visibilitychange', () => {
+    if (document.hidden) {
+      clearInactivityTimer()
+    } else if (useAuthStore.getState().isAuthenticated) {
+      useAuthStore.getState().resetInactivityTimer()
+    }
+  })
+
   // Start inactivity timer immediately on page reload if already authenticated
   if (useAuthStore.getState().isAuthenticated) {
     useAuthStore.getState().resetInactivityTimer()
