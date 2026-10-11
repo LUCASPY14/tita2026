@@ -35,6 +35,7 @@ export default function ModalUsuario({ open, editingUser, onClose, onSaved }: Pr
             rol: editingUser.rol,
             password: '',
             is_active: editingUser.is_active,
+            solo_red_local: editingUser.solo_red_local,
           }
         : FORM_INITIAL)
       setShowPassword(false)
@@ -58,6 +59,7 @@ export default function ModalUsuario({ open, editingUser, onClose, onSaved }: Pr
         apellido: form.apellido,
         rol: form.rol,
         is_active: form.is_active,
+        solo_red_local: form.solo_red_local,
       }
       if (form.password) payload.password = form.password
 
@@ -176,6 +178,15 @@ export default function ModalUsuario({ open, editingUser, onClose, onSaved }: Pr
             <div className="absolute top-0.5 left-0.5 w-4 h-4 bg-white rounded-full shadow transition-transform peer-checked:translate-x-4" />
           </div>
           <span className="text-sm text-slate-700">Usuario activo</span>
+        </label>
+
+        <label className="flex items-center gap-3 cursor-pointer">
+          <div className="relative shrink-0">
+            <input type="checkbox" className="sr-only peer" checked={form.solo_red_local} onChange={e => setForm(f => ({ ...f, solo_red_local: e.target.checked }))} />
+            <div className="w-9 h-5 bg-slate-200 rounded-full peer-checked:bg-amber-500 transition-colors" />
+            <div className="absolute top-0.5 left-0.5 w-4 h-4 bg-white rounded-full shadow transition-transform peer-checked:translate-x-4" />
+          </div>
+          <span className="text-sm text-slate-700">Solo puede ingresar desde la red de la cantina</span>
         </label>
       </div>
     </Modal>

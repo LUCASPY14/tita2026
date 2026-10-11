@@ -303,11 +303,12 @@ def _roles_solo_red_local():
 
 def _rechazo_por_ubicacion(user, request, ip: str = None):
     """
-    Si el rol del usuario solo puede operar dentro de la cantina y la conexion
-    viene de internet, devuelve una Response 403. Si esta permitido, None.
+    Si el rol del usuario solo puede operar dentro de la cantina, o la cuenta
+    tiene `solo_red_local` marcado individualmente, y la conexion viene de
+    internet, devuelve una Response 403. Si esta permitido, None.
     No cuenta como intento fallido de contrasena (no bloquea la cuenta).
     """
-    if user.rol not in _roles_solo_red_local():
+    if user.rol not in _roles_solo_red_local() and not user.solo_red_local:
         return None
     ip = ip if ip is not None else (get_client_ip(request) or "")
     if _ip_es_red_local(ip):
@@ -315,7 +316,7 @@ def _rechazo_por_ubicacion(user, request, ip: str = None):
     try:
         IntentoLogin.objects.create(
             email=user.email, ip_address=ip or "0.0.0.0", exitoso=False,
-            motivo_fallo="Rol solo permitido desde la red de la cantina",
+            motivo_fallo="Cuenta restringida a la red de la cantina",
         )
     except Exception:
         logger.warning("No se pudo registrar IntentoLogin (fuera de red local)", exc_info=True)

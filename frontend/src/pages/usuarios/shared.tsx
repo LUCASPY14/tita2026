@@ -29,6 +29,7 @@ export interface Usuario {
   rol: string
   nombre_completo: string
   is_active: boolean
+  solo_red_local: boolean
   empleado_id: number | null
   empleado_nombre: string | null
 }
@@ -55,6 +56,7 @@ export interface UsuarioForm {
   rol: string
   password: string
   is_active: boolean
+  solo_red_local: boolean
 }
 
 export interface OtorgarAccesoForm {
@@ -135,6 +137,7 @@ export const ROLES_PERSONAL = ROLES_SISTEMA.filter(r => r.value !== 'CLIENTE_WEB
 
 export const FORM_INITIAL: UsuarioForm = {
   email: '', ci_ruc: '', nombre: '', apellido: '', rol: 'CLIENTE_WEB', password: '', is_active: true,
+  solo_red_local: false,
 }
 
 export const OTORGAR_ACCESO_INITIAL: OtorgarAccesoForm = {

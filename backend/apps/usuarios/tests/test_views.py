@@ -125,6 +125,47 @@ class TestLogin:
         assert resp.status_code == 200
         assert resp.data["user"]["rol"] == "CAJERO"
 
+    def test_login_cajero_rechazado_desde_internet(self, api_client, usuario_cajero):
+        resp = api_client.post(
+            "/api/token/",
+            {"email": "cajero@test.com", "password": "test1234"},
+            format="json",
+            HTTP_X_REAL_IP="200.1.2.3",
+        )
+        assert resp.status_code == 403
+        assert "computadoras de la cantina" in resp.data["detail"]
+
+    def test_login_cajero_ok_desde_red_local(self, api_client, usuario_cajero):
+        resp = api_client.post(
+            "/api/token/",
+            {"email": "cajero@test.com", "password": "test1234"},
+            format="json",
+            HTTP_X_REAL_IP="192.168.100.50",
+        )
+        assert resp.status_code == 200
+
+    def test_login_admin_con_solo_red_local_rechazado_desde_internet(self, api_client, usuario_admin):
+        usuario_admin.solo_red_local = True
+        usuario_admin.save(update_fields=["solo_red_local"])
+        resp = api_client.post(
+            "/api/token/",
+            {"email": "admin@test.com", "password": "test1234"},
+            format="json",
+            HTTP_X_REAL_IP="200.1.2.3",
+        )
+        assert resp.status_code == 403
+        assert "computadoras de la cantina" in resp.data["detail"]
+
+    def test_login_admin_normal_funciona_desde_internet(self, api_client, usuario_admin):
+        # Por defecto solo_red_local=False: un ADMIN comun sigue entrando desde cualquier lado.
+        resp = api_client.post(
+            "/api/token/",
+            {"email": "admin@test.com", "password": "test1234"},
+            format="json",
+            HTTP_X_REAL_IP="200.1.2.3",
+        )
+        assert resp.status_code == 200
+
     def test_login_emite_token_con_claim_session_key(self, api_client, usuario_cajero):
         import jwt as pyjwt
         resp = api_client.post(

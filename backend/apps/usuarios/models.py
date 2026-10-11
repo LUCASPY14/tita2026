@@ -100,6 +100,14 @@ class Usuario(AbstractBaseUser, PermissionsMixin):
         default=False,
         help_text="Obliga al usuario a cambiar su contraseña en el próximo ingreso",
     )
+    solo_red_local = models.BooleanField(
+        default=False,
+        help_text=(
+            "Restringe el login de esta cuenta puntual a la red interna de la "
+            "cantina, igual que los roles CAJERO/COCINA (ver ROLES_SOLO_RED_LOCAL), "
+            "pero por cuenta individual en vez de por rol."
+        ),
+    )
 
     # Campos de auditoría
     fecha_creacion = models.DateTimeField(auto_now_add=True)

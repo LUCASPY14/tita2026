@@ -59,6 +59,7 @@ class UsuarioSerializer(serializers.ModelSerializer):
             "empleado_id",
             "empleado_nombre",
             "is_active",
+            "solo_red_local",
             "ultimo_acceso",
             "password",
             "tiene_2fa_activo",
