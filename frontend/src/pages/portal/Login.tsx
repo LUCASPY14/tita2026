@@ -28,6 +28,18 @@ export default function PortalLogin() {
   const [enviando, setEnviando] = useState(false)
   const [enviado, setEnviado] = useState(false)
 
+  // Apuntar al manifest del portal acá también: es la pantalla donde el padre
+  // instala la app (antes de loguearse) — si solo se hiciera en PortalLayout
+  // (rutas ya autenticadas), "Agregar a pantalla de inicio" desde el login
+  // instalaría el manifest por defecto (el del POS interno, apunta a
+  // /modo-recreo, al que el padre no tiene acceso).
+  useEffect(() => {
+    const link = document.querySelector<HTMLLinkElement>('link[rel="manifest"]')
+    const prev = link?.getAttribute('href') ?? '/manifest.webmanifest'
+    link?.setAttribute('href', '/portal-manifest.webmanifest')
+    return () => { link?.setAttribute('href', prev) }
+  }, [])
+
   const irLuegoDeLogin = () => {
     const { user } = useAuthStore.getState()
     if (user?.debe_cambiar_contrasena) {
