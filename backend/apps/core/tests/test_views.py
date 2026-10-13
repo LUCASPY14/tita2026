@@ -538,12 +538,12 @@ class TestAjustarSaldoTarjeta:
         assert resp.status_code == 200
         assert Decimal(resp.data["saldo_actual"]) == Decimal("5000")
 
-    def test_supervisor_puede_ajustar(self, api_supervisor, tarjeta_core):
+    def test_supervisor_no_puede_ajustar(self, api_supervisor, tarjeta_core):
         resp = api_supervisor.post(
             f"/api/v1/core/tarjetas/{tarjeta_core.pk}/ajustar-saldo/",
             {"monto": "1000", "motivo": "Corrección"},
         )
-        assert resp.status_code == 200
+        assert resp.status_code == 403
 
     def test_cajero_no_puede_ajustar(self, api_cajero, tarjeta_core):
         resp = api_cajero.post(
@@ -582,12 +582,12 @@ class TestRenumerarTarjetaEndpoint:
         assert resp.data["nro_tarjeta"] == "CORE-NUEVO-1"
         assert not Tarjeta.objects.filter(pk=tarjeta_core.pk).exists()
 
-    def test_supervisor_puede_renumerar(self, api_supervisor, tarjeta_core):
+    def test_supervisor_no_puede_renumerar(self, api_supervisor, tarjeta_core):
         resp = api_supervisor.post(
             f"/api/v1/core/tarjetas/{tarjeta_core.pk}/renumerar/",
             {"nro_nuevo": "CORE-NUEVO-2", "motivo": "EXTRAVIO"},
         )
-        assert resp.status_code == 200
+        assert resp.status_code == 403
 
     def test_cajero_no_puede_renumerar(self, api_cajero, tarjeta_core):
         resp = api_cajero.post(

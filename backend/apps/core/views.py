@@ -15,7 +15,7 @@ from rest_framework.response import Response
 
 from common.pagination import CursorResultsSetPagination
 from common.permissions import (
-    IsAdmin, IsAdminOrReadOnly, IsAdminOrSupervisor, IsCajeroOrAdmin, IsCobradorSupervisorOrAdmin,
+    IsAdmin, IsAdminOrReadOnly, IsCajeroOrAdmin, IsCobradorSupervisorOrAdmin,
     IsStaffOrClienteWeb, IsStaffUser,
 )
 from common.throttling import SensitiveEndpointThrottle
@@ -77,9 +77,9 @@ class TarjetaViewSet(viewsets.ModelViewSet):
         if self.action == "resumen":
             return [IsCobradorSupervisorOrAdmin()]
         if self.action == "ajustar_saldo":
-            return [IsAdminOrSupervisor()]
+            return [IsAdmin()]
         if self.action == "renumerar":
-            return [IsAdminOrSupervisor()]
+            return [IsAdmin()]
         return super().get_permissions()
 
     @action(detail=False, methods=["get"], url_path="resumen")
@@ -184,7 +184,7 @@ class TarjetaViewSet(viewsets.ModelViewSet):
 
     @action(detail=True, methods=["post"], url_path="ajustar-saldo", throttle_classes=[SensitiveEndpointThrottle])
     def ajustar_saldo(self, request, pk=None):
-        """Corrección administrativa del saldo de cantina — solo ADMIN/SUPERVISOR."""
+        """Corrección administrativa del saldo de cantina — solo ADMIN."""
         tarjeta = self.get_object()
         try:
             monto = Decimal(str(request.data.get("monto", "")))
@@ -209,7 +209,7 @@ class TarjetaViewSet(viewsets.ModelViewSet):
 
     @action(detail=True, methods=["post"], url_path="renumerar", throttle_classes=[SensitiveEndpointThrottle])
     def renumerar(self, request, pk=None):
-        """Corrige/reemplaza el número de una tarjeta — solo ADMIN/SUPERVISOR."""
+        """Corrige/reemplaza el número de una tarjeta — solo ADMIN."""
         tarjeta = self.get_object()
         nro_actual = tarjeta.pk
         nro_nuevo = (request.data.get("nro_nuevo") or "").strip()

@@ -17,7 +17,7 @@ import ModalRenumerar from './tarjetas/ModalRenumerar'
 export default function Tarjetas() {
   const { t } = useTranslation()
   const { user } = useAuthStore()
-  const puedeAjustarSaldo = user?.rol === 'ADMIN' || user?.rol === 'SUPERVISOR'
+  const puedeAjustarSaldo = user?.rol === 'ADMIN'
   const [tarjetas, setTarjetas] = useState<Tarjeta[]>([])
   const [loading, setLoading] = useState(false)
   const [search, setSearch] = useState('')
