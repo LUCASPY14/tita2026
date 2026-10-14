@@ -1,4 +1,4 @@
-#Requires -RunAsAdministrator
+﻿#Requires -RunAsAdministrator
 <#
 .SYNOPSIS
   Descarga e instala windows_exporter como servicio de Windows.
@@ -80,7 +80,7 @@ if (-not $rule) {
         -Direction Inbound `
         -Protocol TCP `
         -LocalPort 9182 `
-        -RemoteAddress "127.0.0.1,172.16.0.0/12,192.168.0.0/16" `
+        -RemoteAddress "127.0.0.1", "172.16.0.0/12", "192.168.0.0/16" `
         -Action Allow `
         -Profile Any | Out-Null
     Write-Host "Regla de firewall creada (acepta 127.0.0.1 y redes 172.x / 192.168.x)." -ForegroundColor Green
