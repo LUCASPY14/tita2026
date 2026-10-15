@@ -251,6 +251,58 @@ class TestHijoViewSetClienteWeb:
         data = resp.data.get("results", resp.data)
         assert len(data) == 0
 
+    def test_responsable_secundario_ve_el_hijo(
+        self, api_client, hijo_fixture, tipo_cliente, lista_precio,
+    ):
+        """Bug real (15-oct-2026): un responsable no titular (ej. el otro
+        padre/madre, vinculado via AlumnoResponsable) no veía al hijo en el
+        portal — solo filtraba por Hijo.cliente_responsable (el titular)."""
+        from apps.clientes.models import AlumnoResponsable, Cliente
+        from apps.usuarios.models import Usuario
+        segundo = Cliente.objects.create(
+            nombres="Segundo", apellidos="Responsable", ruc_ci="SEC001",
+            tipo_cliente=tipo_cliente, lista_precio=lista_precio,
+        )
+        AlumnoResponsable.objects.create(
+            hijo=hijo_fixture, cliente=segundo,
+            parentesco=AlumnoResponsable.Parentesco.MADRE,
+            es_titular=False, activo=True,
+        )
+        usuario = Usuario.objects.create_user(
+            email="segundo@test.com", password="x",
+            nombre="Segundo", apellido="Responsable",
+            rol=Usuario.Rol.CLIENTE_WEB, cliente=segundo,
+        )
+        api_client.force_authenticate(user=usuario)
+
+        resp = api_client.get("/api/v1/clientes/hijos/")
+
+        assert resp.status_code == 200
+        ids = [h["id_hijo"] for h in resp.data.get("results", resp.data)]
+        assert hijo_fixture.pk in ids
+
+    def test_admin_lista_hijos_de_responsable_secundario_por_cliente_responsable(
+        self, api_admin, hijo_fixture, tipo_cliente, lista_precio,
+    ):
+        """El modal "Estudiantes" (?cliente_responsable=<id>) también debe
+        traer a los hijos donde ese cliente es responsable secundario."""
+        from apps.clientes.models import AlumnoResponsable, Cliente
+        segundo = Cliente.objects.create(
+            nombres="Segundo", apellidos="Modal", ruc_ci="SEC002",
+            tipo_cliente=tipo_cliente, lista_precio=lista_precio,
+        )
+        AlumnoResponsable.objects.create(
+            hijo=hijo_fixture, cliente=segundo,
+            parentesco=AlumnoResponsable.Parentesco.PADRE,
+            es_titular=False, activo=True,
+        )
+
+        resp = api_admin.get(f"/api/v1/clientes/hijos/?cliente_responsable={segundo.pk}")
+
+        assert resp.status_code == 200
+        ids = [h["id_hijo"] for h in resp.data.get("results", resp.data)]
+        assert hijo_fixture.pk in ids
+
 
 # ── RestriccionHijoViewSet — CLIENTE_WEB filter ───────────────────────────────
 

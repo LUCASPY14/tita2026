@@ -325,3 +325,47 @@ class TestResolverOrigenPagoCC:
 
         origen = resolver_origen_pago_cc(cliente, "CANTINA", Decimal("70000"))
         assert origen == "CANTINA"
+
+
+# ── hijos_visibles_para_cliente ───────────────────────────────────────────────
+# Bug real (15-oct-2026): el responsable secundario (AlumnoResponsable no
+# titular) no veía al hijo en ningún lado — admin, portal ni Bancard — porque
+# todo filtraba solo por Hijo.cliente_responsable (el titular).
+
+@pytest.mark.django_db
+class TestHijosVisiblesParaCliente:
+
+    def test_titular_ve_al_hijo(self, hijo_con_responsables):
+        from apps.clientes.services import hijos_visibles_para_cliente
+        hijo, titular, _secundario = hijo_con_responsables
+        assert hijo in hijos_visibles_para_cliente(titular)
+
+    def test_responsable_secundario_ve_al_hijo(self, hijo_con_responsables):
+        from apps.clientes.services import hijos_visibles_para_cliente
+        hijo, _titular, secundario = hijo_con_responsables
+        assert hijo in hijos_visibles_para_cliente(secundario)
+
+    def test_responsable_inactivo_no_ve_al_hijo(self, hijo_con_responsables):
+        from apps.clientes.services import hijos_visibles_para_cliente
+        from apps.clientes.models import AlumnoResponsable
+        hijo, _titular, secundario = hijo_con_responsables
+        AlumnoResponsable.objects.filter(hijo=hijo, cliente=secundario).update(activo=False)
+        assert hijo not in hijos_visibles_para_cliente(secundario)
+
+    def test_cliente_sin_vinculo_no_ve_nada(self, hijo_con_responsables, tipo_cliente, lista_precio):
+        from apps.clientes.models import Cliente
+        from apps.clientes.services import hijos_visibles_para_cliente
+        hijo, _titular, _secundario = hijo_con_responsables
+        ajeno = Cliente.objects.create(
+            nombres="Ajeno", apellidos="Sin vinculo", ruc_ci="0000001",
+            tipo_cliente=tipo_cliente, lista_precio=lista_precio,
+        )
+        assert hijo not in hijos_visibles_para_cliente(ajeno)
+
+    def test_no_duplica_cuando_hay_fk_directo_y_alumnoresponsable(self, hijo_con_responsables):
+        """El titular matchea Q(cliente_responsable=...) Y Q(responsables__cliente=...)
+        a la vez (el fixture le crea ambos) — un Q(OR) sobre dos relaciones
+        duplica filas en el JOIN; distinct() lo evita."""
+        from apps.clientes.services import hijos_visibles_para_cliente
+        hijo, titular, _secundario = hijo_con_responsables
+        assert list(hijos_visibles_para_cliente(titular)) == [hijo]

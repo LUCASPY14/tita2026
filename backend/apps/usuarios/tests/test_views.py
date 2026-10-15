@@ -372,6 +372,37 @@ class TestPortalMiHijo:
         assert resp.status_code == 200
         assert resp.data["cliente"]["saldo_cuenta_corriente"] == 25000
 
+    def test_responsable_secundario_ve_al_hijo(self, api_client, hijo_portal):
+        """Bug real (15-oct-2026): el otro padre/madre (AlumnoResponsable no
+        titular) entraba al portal y no veía ningún hijo — la vista solo
+        miraba Hijo.cliente_responsable (el titular)."""
+        from apps.clientes.models import AlumnoResponsable, Cliente, TipoCliente
+        from apps.productos.models import ListaPrecio
+        from apps.usuarios.models import Usuario
+        tipo = TipoCliente.objects.first() or TipoCliente.objects.create(nombre="Familia test")
+        lista = ListaPrecio.objects.first() or ListaPrecio.objects.create(nombre="General test", activo=True)
+        segundo = Cliente.objects.create(
+            nombres="Segundo", apellidos="Portal", ruc_ci="SECPORTAL1",
+            tipo_cliente=tipo, lista_precio=lista,
+        )
+        AlumnoResponsable.objects.create(
+            hijo=hijo_portal, cliente=segundo,
+            parentesco=AlumnoResponsable.Parentesco.PADRE,
+            es_titular=False, activo=True,
+        )
+        usuario = Usuario.objects.create_user(
+            email="segundoportal@test.com", password="x",
+            nombre="Segundo", apellido="Portal",
+            rol=Usuario.Rol.CLIENTE_WEB, cliente=segundo,
+        )
+        api_client.force_authenticate(user=usuario)
+
+        resp = api_client.get("/api/v1/usuarios/portal/mi-hijo/")
+
+        assert resp.status_code == 200
+        assert len(resp.data["hijos"]) == 1
+        assert resp.data["hijos"][0]["id_hijo"] == hijo_portal.pk
+
 
 # ── PortalHistorialCantina ────────────────────────────────────────────────────
 

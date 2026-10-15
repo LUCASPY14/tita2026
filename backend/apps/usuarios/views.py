@@ -741,13 +741,14 @@ class PortalMiHijoView(APIView):
 
         from django.db.models import Count, Sum
         from apps.clientes.models import RestriccionHijo
+        from apps.clientes.services import hijos_visibles_para_cliente
         from apps.almuerzos.models import RegistroConsumoAlmuerzo, SaldoAlmuerzo
         from apps.ventas.models import DetalleVenta, Venta
 
         hoy = timezone.localdate()
         hijos_data = []
 
-        for hijo in user.cliente.hijos.filter(activo=True):
+        for hijo in hijos_visibles_para_cliente(user.cliente).filter(activo=True):
             # Tarjeta
             tarjeta_data = None
             try:
@@ -847,6 +848,7 @@ class PortalHistorialConsumos(APIView):
 
     def get(self, request):
         from apps.almuerzos.models import RegistroConsumoAlmuerzo, SaldoAlmuerzo
+        from apps.clientes.services import hijos_visibles_para_cliente
 
         user = request.user
         if not user.cliente:
@@ -857,7 +859,7 @@ class PortalHistorialConsumos(APIView):
         anio = int(request.query_params.get("anio", hoy.year))
         mes = int(request.query_params.get("mes", hoy.month))
 
-        hijo = user.cliente.hijos.filter(id_hijo=hijo_id, activo=True).first()
+        hijo = hijos_visibles_para_cliente(user.cliente).filter(id_hijo=hijo_id, activo=True).first()
         if not hijo:
             return Response({"detail": "Hijo no encontrado."}, status=404)
 
@@ -909,6 +911,7 @@ class PortalHistorialCantina(APIView):
 
     def get(self, request):
         from apps.ventas.models import Venta
+        from apps.clientes.services import hijos_visibles_para_cliente
 
         user = request.user
         if not user.cliente:
@@ -918,7 +921,7 @@ class PortalHistorialCantina(APIView):
         if not hijo_id:
             return Response({"detail": "Se requiere hijo_id."}, status=400)
 
-        hijo = user.cliente.hijos.filter(id_hijo=hijo_id, activo=True).first()
+        hijo = hijos_visibles_para_cliente(user.cliente).filter(id_hijo=hijo_id, activo=True).first()
         if not hijo:
             return Response({"detail": "Hijo no encontrado."}, status=404)
 
@@ -972,6 +975,7 @@ class PortalHistorialRecargas(APIView):
     def get(self, request):
         from apps.core.models import CargaSaldo
         from apps.almuerzos.models import RecargaSaldoAlmuerzo
+        from apps.clientes.services import hijos_visibles_para_cliente
 
         user = request.user
         if not user.cliente:
@@ -981,7 +985,7 @@ class PortalHistorialRecargas(APIView):
         if not hijo_id:
             return Response({"detail": "Se requiere hijo_id."}, status=400)
 
-        hijo = user.cliente.hijos.filter(id_hijo=hijo_id, activo=True).first()
+        hijo = hijos_visibles_para_cliente(user.cliente).filter(id_hijo=hijo_id, activo=True).first()
         if not hijo:
             return Response({"detail": "Hijo no encontrado."}, status=404)
 

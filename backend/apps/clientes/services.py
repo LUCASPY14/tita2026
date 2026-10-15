@@ -6,6 +6,7 @@ Operaciones que involucran múltiples modelos o reglas de negocio complejas.
 import logging
 
 from django.db import transaction
+from django.db.models import Q
 from django.utils import timezone
 from rest_framework.exceptions import ValidationError
 
@@ -14,6 +15,22 @@ from .models import AlumnoResponsable, Cliente, Hijo, RestriccionHijo, TipoClien
 logger = logging.getLogger(__name__)
 
 _ORIGENES_CC_VALIDOS = {"CANTINA", "ALMUERZO"}
+
+
+def hijos_visibles_para_cliente(cliente):
+    """Hijos de los que `cliente` es responsable — titular (Hijo.cliente_responsable)
+    o secundario activo vía AlumnoResponsable (ej. el otro padre/madre).
+
+    Usar en cualquier vista que responda "qué hijos tiene este cliente": filtrar
+    solo por cliente_responsable deja invisible al responsable secundario (bug
+    real encontrado 15-oct-2026 — casos Sellitti/Gomez, Ammatuna Vega,
+    Estigarribia, Bonzi: el segundo padre no veía nada ni en el admin ni en el
+    portal, pese a estar vinculado y activo).
+    """
+    return Hijo.objects.filter(
+        Q(cliente_responsable=cliente)
+        | Q(responsables__cliente=cliente, responsables__activo=True)
+    ).distinct()
 
 
 def resolver_origen_pago_cc(cliente, origen_solicitado, monto) -> str:

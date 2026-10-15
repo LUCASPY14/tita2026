@@ -68,7 +68,7 @@ from .serializers import (
 from . import promocion as promo
 from .services import (
     cambiar_titular, crear_responsable_con_cliente_nuevo, crear_usuario_portal,
-    purgar_alumno, sincronizar_usuario_portal,
+    hijos_visibles_para_cliente, purgar_alumno, sincronizar_usuario_portal,
 )
 
 
@@ -260,7 +260,7 @@ class HijoViewSet(viewsets.ModelViewSet):
     serializer_class = HijoSerializer
     permission_classes = [IsStaffOrClienteWeb]
     filter_backends = [DjangoFilterBackend, SearchFilter]
-    filterset_fields = ["activo", "cliente_responsable"]
+    filterset_fields = ["activo"]
     search_fields = ["nombre", "apellido"]
 
     def get_permissions(self):
@@ -271,7 +271,7 @@ class HijoViewSet(viewsets.ModelViewSet):
         return super().get_permissions()
 
     def get_queryset(self):
-        from django.db.models import Prefetch
+        from django.db.models import Prefetch, Q
         qs = Hijo.objects.select_related("cliente_responsable", "grado").prefetch_related(
             Prefetch(
                 "responsables",
@@ -284,7 +284,25 @@ class HijoViewSet(viewsets.ModelViewSet):
             cliente = getattr(self.request.user, "cliente", None)
             if cliente is None:
                 return qs.none()
-            qs = qs.filter(cliente_responsable=cliente)
+            return hijos_visibles_para_cliente(cliente).select_related(
+                "cliente_responsable", "grado",
+            ).prefetch_related(
+                Prefetch(
+                    "responsables",
+                    queryset=AlumnoResponsable.objects.filter(activo=True)
+                        .select_related("cliente")
+                        .order_by("orden_cobro"),
+                )
+            )
+        # "cliente_responsable" ya no es un filterset_field de FK estricto: un
+        # cliente responsable secundario (AlumnoResponsable) también debe
+        # aparecer en el modal "Estudiantes" de ese cliente, no solo el titular.
+        cliente_param = self.request.query_params.get("cliente_responsable")
+        if cliente_param:
+            qs = qs.filter(
+                Q(cliente_responsable_id=cliente_param)
+                | Q(responsables__cliente_id=cliente_param, responsables__activo=True)
+            ).distinct()
         return qs
 
     def perform_create(self, serializer):
@@ -571,7 +589,7 @@ class RestriccionHijoViewSet(viewsets.ModelViewSet):
             cliente = getattr(self.request.user, "cliente", None)
             if cliente is None:
                 return qs.none()
-            qs = qs.filter(hijo__cliente_responsable=cliente)
+            qs = qs.filter(hijo__in=hijos_visibles_para_cliente(cliente))
         return qs
 
 

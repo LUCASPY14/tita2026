@@ -190,8 +190,10 @@ def bancard_iniciar_almuerzo(request):
     if monto <= 0:
         return Response({"detail": "El monto debe ser mayor a cero."}, status=status.HTTP_400_BAD_REQUEST)
 
-    # Verificar que el hijo pertenece al cliente autenticado
+    # Verificar que el hijo pertenece al cliente autenticado (titular o
+    # responsable secundario vía AlumnoResponsable)
     from apps.clientes.models import Hijo
+    from apps.clientes.services import hijos_visibles_para_cliente
 
     cliente = getattr(request.user, "cliente", None)
     if cliente is None:
@@ -201,7 +203,7 @@ def bancard_iniciar_almuerzo(request):
         )
 
     try:
-        hijo = Hijo.objects.get(pk=hijo_id, cliente_responsable=cliente)
+        hijo = hijos_visibles_para_cliente(cliente).get(pk=hijo_id)
     except Hijo.DoesNotExist:
         return Response({"detail": "Estudiante no encontrado."}, status=status.HTTP_404_NOT_FOUND)
 
@@ -1175,6 +1177,7 @@ def bancard_pagar_almuerzo_con_tarjeta(request):
         return Response({"detail": "El monto debe ser mayor a cero."}, status=status.HTTP_400_BAD_REQUEST)
 
     from apps.clientes.models import Hijo
+    from apps.clientes.services import hijos_visibles_para_cliente
 
     cliente = getattr(request.user, "cliente", None)
     if cliente is None:
@@ -1184,7 +1187,7 @@ def bancard_pagar_almuerzo_con_tarjeta(request):
         )
 
     try:
-        hijo = Hijo.objects.get(pk=hijo_id, cliente_responsable=cliente)
+        hijo = hijos_visibles_para_cliente(cliente).get(pk=hijo_id)
     except Hijo.DoesNotExist:
         return Response({"detail": "Estudiante no encontrado."}, status=status.HTTP_404_NOT_FOUND)
 
