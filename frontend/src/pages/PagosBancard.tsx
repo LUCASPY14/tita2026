@@ -180,7 +180,7 @@ export default function PagosBancard() {
     { title: 'Cliente', key: 'cliente', dataIndex: 'cliente_nombre' },
     {
       title: 'Referencia', key: 'ref',
-      render: (_, r) => r.tarjeta_nro ?? (r.cuenta_almuerzo_id_display ? `Cuenta #${r.cuenta_almuerzo_id_display}` : '—'),
+      render: (_, r) => r.tarjeta_nro ?? r.hijo_nombre ?? '—',
     },
     { title: 'Monto', key: 'monto', render: (_, r) => <span className="tabular-nums font-semibold">{formatGs(r.monto)}</span> },
     {

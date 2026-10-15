@@ -9,7 +9,7 @@ export interface PagoBancard {
   descripcion:                string
   cliente_nombre:             string
   tarjeta_nro:                string | null
-  cuenta_almuerzo_id_display: number | null
+  hijo_nombre:                string | null
   fecha_creacion:             string
   fecha_confirmacion:         string | null
   card_id_bancard:            number | null

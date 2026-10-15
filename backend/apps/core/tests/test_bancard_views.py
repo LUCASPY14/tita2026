@@ -1573,6 +1573,24 @@ def pago_aprobado_hoy(db, cliente, hijo_con_tarjeta):
     )
 
 
+@pytest.fixture
+def pago_almuerzo_aprobado(db, cliente, hijo_con_tarjeta):
+    """PagoBancard tipo ALMUERZO — no guarda tarjeta propia, solo el hijo
+    (que sí tiene una tarjeta física, vía hijo_con_tarjeta)."""
+    from django.utils import timezone
+    from apps.core.models import PagoBancard
+    hijo, _tarjeta = hijo_con_tarjeta
+    return PagoBancard.objects.create(
+        tipo=PagoBancard.Tipo.ALMUERZO,
+        hijo=hijo,
+        cliente=cliente,
+        shop_process_id="pago-almuerzo-001",
+        monto=Decimal("30000"),
+        estado=PagoBancard.Estado.APROBADO,
+        fecha_confirmacion=timezone.now(),
+    )
+
+
 # ─── Tests: listado de pagos Bancard ──────────────────────────────────────────
 
 @pytest.mark.django_db
@@ -1605,6 +1623,17 @@ class TestBancardPagosList:
         resp = client.get('/api/v1/core/bancard/pagos/', {'estado': 'RECHAZADO'})
         assert resp.status_code == 200
         assert resp.data['count'] == 0
+
+    def test_pago_almuerzo_expone_tarjeta_del_hijo_como_referencia(self, api_admin, pago_almuerzo_aprobado):
+        """Bug real (15-oct-2026): el serializer sourceaba a un campo
+        inexistente (cuenta_almuerzo_id) — DRF lo omitía en silencio y la
+        columna "Referencia" del admin siempre mostraba "—" para almuerzo."""
+        client, _ = api_admin
+        resp = client.get('/api/v1/core/bancard/pagos/')
+        assert resp.status_code == 200
+        pago_data = resp.data['results'][0]
+        assert pago_data['tarjeta_nro'] == 'BANCARD001'
+        assert pago_data['hijo_nombre'] == 'Ana García'
 
 
 # ─── Tests: anular pago Bancard ────────────────────────────────────────────────
@@ -2114,3 +2143,14 @@ class TestBancardPagosExportarCSV:
         content = resp.content.decode('utf-8-sig')
         assert 'pago-pendiente-001' in content
         assert 'pago-hoy-001' not in content
+
+    def test_pago_almuerzo_usa_tarjeta_del_hijo_como_referencia(self, api_admin, pago_almuerzo_aprobado):
+        """Bug real (15-oct-2026): el CSV accedía a pago.cuenta_almuerzo_id,
+        un campo que nunca existió en el modelo — reventaba con AttributeError
+        apenas había un pago de almuerzo en el export."""
+        client, _ = api_admin
+        resp = client.get('/api/v1/core/bancard/pagos/', {'formato': 'csv'})
+        assert resp.status_code == 200
+        content = resp.content.decode('utf-8-sig')
+        assert 'BANCARD001' in content  # tarjeta del hijo, no "Cuenta #None"
+        assert 'pago-almuerzo-001' in content

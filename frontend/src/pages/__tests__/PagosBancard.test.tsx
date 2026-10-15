@@ -28,7 +28,7 @@ const PAGO_HOY: PagoBancard = {
   descripcion: 'Recarga tarjeta 01024',
   cliente_nombre: 'Luis Palau',
   tarjeta_nro: '01024',
-  cuenta_almuerzo_id_display: null,
+  hijo_nombre: null,
   fecha_creacion: HOY,
   fecha_confirmacion: HOY,
   card_id_bancard: null,

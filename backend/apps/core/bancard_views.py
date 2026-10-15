@@ -879,7 +879,7 @@ class BancardPagosListView(generics.ListAPIView):
     permission_classes = [IsAdminOrSupervisor]
 
     def get_queryset(self):
-        qs = PagoBancard.objects.select_related("cliente", "tarjeta").order_by("-fecha_creacion")
+        qs = PagoBancard.objects.select_related("cliente", "tarjeta", "hijo", "hijo__tarjeta").order_by("-fecha_creacion")
         estado = self.request.query_params.get("estado")
         if estado:
             qs = qs.filter(estado=estado)
@@ -905,10 +905,15 @@ class BancardPagosListView(generics.ListAPIView):
         writer.writerow(["Fecha", "Tipo", "Estado", "Cliente", "Referencia", "Monto (Gs)", "Shop Process ID"])
         for pago in self.get_queryset():
             fecha = pago.fecha_confirmacion or pago.fecha_creacion
-            referencia = (
-                pago.tarjeta.nro_tarjeta if pago.tarjeta_id
-                else (f"Cuenta #{pago.cuenta_almuerzo_id}" if pago.cuenta_almuerzo_id else "—")
-            )
+            tarjeta_hijo = getattr(pago.hijo, "tarjeta", None) if pago.hijo_id else None
+            if pago.tarjeta_id:
+                referencia = pago.tarjeta.nro_tarjeta
+            elif tarjeta_hijo:
+                referencia = tarjeta_hijo.nro_tarjeta
+            elif pago.hijo_id:
+                referencia = pago.hijo.nombre_completo
+            else:
+                referencia = "—"
             writer.writerow([
                 timezone.localtime(fecha).strftime("%Y-%m-%d %H:%M"),
                 pago.get_tipo_display(),
