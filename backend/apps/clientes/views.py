@@ -66,7 +66,10 @@ from .serializers import (
     TipoClienteSerializer,
 )
 from . import promocion as promo
-from .services import cambiar_titular, crear_responsable_con_cliente_nuevo, crear_usuario_portal, purgar_alumno
+from .services import (
+    cambiar_titular, crear_responsable_con_cliente_nuevo, crear_usuario_portal,
+    purgar_alumno, sincronizar_usuario_portal,
+)
 
 
 class ClienteViewSet(viewsets.ModelViewSet):
@@ -133,6 +136,7 @@ class ClienteViewSet(viewsets.ModelViewSet):
 
     def perform_update(self, serializer):
         cliente = serializer.save()
+        sincronizar_usuario_portal(cliente)
         registrar_auditoria(
             request=self.request,
             operacion="MODIFICAR_CLIENTE",

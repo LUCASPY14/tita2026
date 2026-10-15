@@ -49,7 +49,7 @@ from django.core.management.base import BaseCommand, CommandError
 from django.db import transaction
 
 from apps.clientes.models import Ciudad, Cliente, Grado, Hijo, TipoCliente
-from apps.clientes.services import crear_usuario_portal
+from apps.clientes.services import crear_usuario_portal, sincronizar_usuario_portal
 from apps.core.models import Tarjeta
 from apps.productos.models import ListaPrecio
 
@@ -201,6 +201,7 @@ class Command(BaseCommand):
                 cliente.direccion = (fila.get("cliente_direccion") or "").strip() or cliente.direccion
                 cliente.ciudad = ciudad or cliente.ciudad
                 cliente.save()
+                sincronizar_usuario_portal(cliente)
                 stats["clientes_actualizados"] += 1
 
         for n in nros_hijo:

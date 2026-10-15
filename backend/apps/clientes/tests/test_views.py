@@ -851,6 +851,29 @@ class TestCrearUsuarioPortal:
         crear_usuario_portal(cliente)  # debe ser no-op
         assert Usuario.objects.count() == before
 
+    def test_patch_cliente_sincroniza_email_del_usuario_portal(
+        self, api_admin, tipo_cliente, lista_precio,
+    ):
+        """Editar el email de un Cliente con portal ya creado propaga el
+        cambio al Usuario — bug recurrente (Gonzalez, Oviedo, Roa)."""
+        from apps.clientes.models import Cliente
+        from apps.clientes.services import crear_usuario_portal
+        cliente = Cliente.objects.create(
+            nombres="Pedro", apellidos="Gómez", ruc_ci="SYNC001",
+            email="viejo@test.com", tipo_cliente=tipo_cliente, lista_precio=lista_precio,
+        )
+        crear_usuario_portal(cliente)
+        usuario_id = cliente.usuario_portal.pk
+
+        resp = api_admin.patch(
+            f"/api/v1/clientes/clientes/{cliente.pk}/",
+            {"email": "nuevo@test.com"},
+            format="json",
+        )
+        assert resp.status_code == 200
+        from apps.usuarios.models import Usuario
+        assert Usuario.objects.get(pk=usuario_id).email == "nuevo@test.com"
+
 
 # ── AlumnoResponsableViewSet.set_titular — ValueError ────────────────────────
 

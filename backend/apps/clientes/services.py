@@ -3,11 +3,15 @@ Servicios de dominio para la app clientes.
 Operaciones que involucran múltiples modelos o reglas de negocio complejas.
 """
 
+import logging
+
 from django.db import transaction
 from django.utils import timezone
 from rest_framework.exceptions import ValidationError
 
 from .models import AlumnoResponsable, Cliente, Hijo, RestriccionHijo, TipoCliente
+
+logger = logging.getLogger(__name__)
 
 _ORIGENES_CC_VALIDOS = {"CANTINA", "ALMUERZO"}
 
@@ -165,6 +169,45 @@ def crear_usuario_portal(cliente):
         debe_cambiar_contrasena=True,
         cliente=cliente,
     )
+
+
+def sincronizar_usuario_portal(cliente):
+    """Propaga email/nombre/apellido del Cliente a su Usuario del portal.
+
+    crear_usuario_portal() solo copia esos datos una vez, al crear el acceso
+    — si el Cliente se edita después, el Usuario queda desincronizado (bug
+    recurrente: casos Gonzalez, Oviedo, Roa, Sept-Oct 2026). No toca nada si
+    el cliente no tiene usuario_portal, ni el email nuevo si ya está en uso
+    por otra cuenta.
+    """
+    from apps.usuarios.models import Usuario
+
+    if not hasattr(cliente, "usuario_portal"):
+        return
+
+    usuario = cliente.usuario_portal
+    campos = []
+
+    nuevo_email = (cliente.email or "").strip()
+    if nuevo_email and nuevo_email != usuario.email:
+        if Usuario.objects.filter(email=nuevo_email).exclude(pk=usuario.pk).exists():
+            logger.warning(
+                "No se pudo sincronizar el email del portal: cliente %s, "
+                "%s ya está en uso por otro usuario.", cliente.id_cliente, nuevo_email,
+            )
+        else:
+            usuario.email = nuevo_email
+            campos.append("email")
+
+    if cliente.nombres and cliente.nombres != usuario.nombre:
+        usuario.nombre = cliente.nombres
+        campos.append("nombre")
+    if cliente.apellidos and cliente.apellidos != usuario.apellido:
+        usuario.apellido = cliente.apellidos
+        campos.append("apellido")
+
+    if campos:
+        usuario.save(update_fields=campos)
 
 
 def crear_responsable_con_cliente_nuevo(
