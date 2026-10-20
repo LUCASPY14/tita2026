@@ -506,7 +506,7 @@ class CustomTokenObtainPairView(TokenObtainPairView):
         try:
             serializer.is_valid(raise_exception=True)
         except TokenError as e:
-            raise InvalidToken(e.args[0])
+            raise InvalidToken(e.args[0] if e.args else str(e))
         except Exception as e:
             # Con ATOMIC_REQUESTS=True, un re-raise haría rollback de los registros
             # de auditoría. Retornamos la Response directamente para que la transacción

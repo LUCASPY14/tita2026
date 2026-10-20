@@ -206,6 +206,17 @@ LOGGING = {
             "level": "INFO",
             "propagate": False,
         },
+        "common.exceptions": {
+            "handlers": ["console", "error_file", "mail_admins"],
+            "level": "ERROR",
+            "propagate": False,
+        },
+    },
+    # Red de seguridad: cualquier otro logger no listado arriba (p.ej. uno nuevo
+    # que se agregue a futuro) cae acá en vez de perderse sin dejar rastro.
+    "root": {
+        "handlers": ["console", "file", "error_file"],
+        "level": "INFO",
     },
 }
 
