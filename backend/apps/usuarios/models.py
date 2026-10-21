@@ -251,6 +251,10 @@ class Rol(models.Model):
 class Autenticacion2FA(models.Model):
     """Autenticación de dos factores para usuarios."""
 
+    class Metodo(models.TextChoices):
+        TOTP = "TOTP", "App de autenticación"
+        WHATSAPP = "WHATSAPP", "Código por WhatsApp"
+
     id_2fa = models.AutoField(primary_key=True)
     usuario = models.OneToOneField(
         Usuario,
@@ -259,6 +263,7 @@ class Autenticacion2FA(models.Model):
         unique=True,
     )
     secret_key = models.CharField(max_length=64)
+    metodo = models.CharField(max_length=10, choices=Metodo.choices, default=Metodo.TOTP)
     backup_codes = models.JSONField(default=list, blank=True)
     habilitado = models.BooleanField(default=False)
     fecha_activacion = models.DateTimeField(null=True, blank=True)

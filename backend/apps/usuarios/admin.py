@@ -119,7 +119,7 @@ class RolAdmin(admin.ModelAdmin):
 
 @admin.register(Autenticacion2FA)
 class Autenticacion2FAAdmin(admin.ModelAdmin):
-    list_display = ["usuario_link", "habilitado", "fecha_activacion", "ultima_verificacion"]
+    list_display = ["usuario_link", "metodo", "habilitado", "fecha_activacion", "ultima_verificacion"]
     list_filter = ["habilitado"]
     search_fields = ["usuario__email"]
     readonly_fields = ["fecha_creacion", "secret_key", "backup_codes"]

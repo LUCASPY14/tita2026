@@ -103,6 +103,31 @@ describe('authStore', () => {
     expect(useAuthStore.getState().pending2FA).toBeNull()
   })
 
+  it('login sets pendingMetodo2FA from the server response', async () => {
+    vi.mocked(axios.post).mockResolvedValueOnce({
+      data: { requires_2fa: true, pre_auth_token: 'pre_tok_123', metodo_2fa: 'WHATSAPP' },
+    })
+    await useAuthStore.getState().login('user@test.com', 'pass')
+    expect(useAuthStore.getState().pendingMetodo2FA).toBe('WHATSAPP')
+  })
+
+  it('enviarCodigoWhatsapp2FA posts the pre_auth_token and returns the masked phone', async () => {
+    useAuthStore.setState({ pending2FA: 'pre_tok_123' })
+    vi.mocked(api.post).mockResolvedValueOnce({ data: { telefono: '••• •••4567' } })
+
+    const telefono = await useAuthStore.getState().enviarCodigoWhatsapp2FA()
+
+    expect(api.post).toHaveBeenCalledWith('/usuarios/2fa/login/whatsapp/enviar/', {
+      pre_auth_token: 'pre_tok_123',
+    })
+    expect(telefono).toBe('••• •••4567')
+  })
+
+  it('enviarCodigoWhatsapp2FA throws when no pending2FA token', async () => {
+    useAuthStore.setState({ pending2FA: null })
+    await expect(useAuthStore.getState().enviarCodigoWhatsapp2FA()).rejects.toThrow('No hay 2FA pendiente')
+  })
+
   it('logout clears tokens and resets state', () => {
     localStorage.setItem('access_token', 'tok')
     localStorage.setItem('refresh_token', 'ref')

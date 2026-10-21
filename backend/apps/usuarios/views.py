@@ -69,6 +69,63 @@ def _verify_totp(secret_b32, codigo, step=30, tolerance=1):
 def _generate_backup_codes(n=8):
     return [secrets.token_hex(3).upper() for _ in range(n)]
 
+
+# ── WhatsApp OTP helpers (2FA sin app externa) ─────────────────────────────────
+
+_WHATSAPP_2FA_TTL = 300  # 5 min, igual que el pre_auth_token de 2FA
+
+
+def _cache_key_whatsapp_2fa(user_id) -> str:
+    return f"2fa_whatsapp:{user_id}"
+
+
+def _normalizar_numero_py(telefono: str) -> str:
+    """Normaliza un teléfono guardado en formato local ('0981234567') al
+    formato internacional sin '+' que espera WAHA ('595981234567')."""
+    numero = (telefono or "").strip().lstrip("+").replace(" ", "").replace("-", "")
+    if numero.startswith("0"):
+        numero = "595" + numero[1:]
+    elif not numero.startswith("595"):
+        numero = "595" + numero
+    return numero
+
+
+def _enviar_codigo_whatsapp_2fa(user) -> tuple[bool, str | None]:
+    """
+    Genera un código de 6 dígitos, lo guarda en cache (TTL 5 min) y lo envía
+    por WhatsApp al teléfono del cliente asociado al usuario.
+    Devuelve (ok, telefono_enmascarado). ok=False si no hay teléfono registrado.
+    Puede propagar la excepción de enviar_whatsapp (WAHA caído/sin configurar)
+    para que el llamador decida cómo informarlo — a diferencia de
+    notificaciones.services.whatsapp_cliente(), aquí sí nos interesa saber si
+    el envío falló, porque sin eso el usuario no puede completar el login.
+    """
+    from apps.notificaciones.services import enviar_whatsapp
+
+    cliente = getattr(user, "cliente", None)
+    telefono = getattr(cliente, "telefono", None) if cliente else None
+    if not telefono:
+        return False, None
+
+    codigo = f"{secrets.randbelow(1_000_000):06d}"
+    cache.set(_cache_key_whatsapp_2fa(user.id_usuario), codigo, timeout=_WHATSAPP_2FA_TTL)
+
+    numero = _normalizar_numero_py(telefono)
+    mensaje = f"Cantina Tita: tu código de verificación es {codigo}. Vence en 5 minutos."
+    enviar_whatsapp(numero, mensaje)
+
+    telefono_oculto = f"••• •••{telefono[-4:]}" if len(telefono) >= 4 else "••••••"
+    return True, telefono_oculto
+
+
+def _verificar_codigo_whatsapp_2fa(user_id, codigo: str) -> bool:
+    clave = _cache_key_whatsapp_2fa(user_id)
+    esperado = cache.get(clave)
+    valido = bool(esperado) and hmac_mod.compare_digest((codigo or "").strip(), esperado)
+    if valido:
+        cache.delete(clave)
+    return valido
+
 from django.conf import settings as django_settings
 from django.core.cache import cache
 
@@ -552,7 +609,11 @@ class CustomTokenObtainPairView(TokenObtainPairView):
                 id_registro=user.id_usuario,
                 descripcion=f"Login paso 1 OK — esperando 2FA ({user.email})",
             )
-            return Response({"requires_2fa": True, "pre_auth_token": pre_auth, "tiene_webauthn": tiene_wa})
+            metodo_2fa = user.auth_2fa.metodo if _tiene_2fa_activo(user) else None
+            return Response({
+                "requires_2fa": True, "pre_auth_token": pre_auth,
+                "tiene_webauthn": tiene_wa, "metodo_2fa": metodo_2fa,
+            })
 
         session_key = _registrar_sesion(user, request)
         try:
@@ -1171,12 +1232,13 @@ class TwoFAEstadoView(APIView):
             auth = request.user.auth_2fa
             return Response({
                 "habilitado": auth.habilitado,
+                "metodo": auth.metodo if auth.habilitado else None,
                 "fecha_activacion": auth.fecha_activacion,
                 "ultima_verificacion": auth.ultima_verificacion,
                 "tiene_backup_codes": bool(auth.backup_codes),
             })
         except Exception:
-            return Response({"habilitado": False, "fecha_activacion": None,
+            return Response({"habilitado": False, "metodo": None, "fecha_activacion": None,
                              "ultima_verificacion": None, "tiene_backup_codes": False})
 
 
@@ -1198,10 +1260,11 @@ class TwoFAConfigurarView(APIView):
 
         auth, _ = Autenticacion2FA.objects.get_or_create(usuario=request.user)
         auth.secret_key = secret
+        auth.metodo = Autenticacion2FA.Metodo.TOTP
         auth.backup_codes = backup_codes
         auth.habilitado = False
         auth.fecha_activacion = None
-        auth.save(update_fields=["secret_key", "backup_codes", "habilitado", "fecha_activacion"])
+        auth.save(update_fields=["secret_key", "metodo", "backup_codes", "habilitado", "fecha_activacion"])
 
         email_safe = request.user.email.replace("@", "%40")
         otp_uri = (
@@ -1256,6 +1319,83 @@ class TwoFAActivarView(APIView):
         return Response({"detail": "2FA activado correctamente."})
 
 
+class TwoFAWhatsappEnviarView(APIView):
+    """
+    POST /api/usuarios/2fa/whatsapp/enviar/
+    Envía (o reenvía) el código de activación por WhatsApp al teléfono del
+    cliente asociado al usuario autenticado. Paso 1 del setup por WhatsApp.
+    """
+    permission_classes = [IsAuthenticated]
+    throttle_classes = [SensitiveEndpointThrottle]
+
+    def post(self, request):
+        from .models import Autenticacion2FA
+        try:
+            ok, telefono_oculto = _enviar_codigo_whatsapp_2fa(request.user)
+        except Exception:
+            logger.warning("No se pudo enviar código 2FA por WhatsApp (setup)", exc_info=True)
+            return Response(
+                {"error": "No se pudo enviar el código por WhatsApp. Intentá de nuevo en un momento."},
+                status=status.HTTP_502_BAD_GATEWAY,
+            )
+        if not ok:
+            return Response(
+                {"error": "No tenés un número de WhatsApp registrado. Contactá a la cantina para actualizarlo."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        # Se generan ya en este paso (no tienen costo, a diferencia del envío
+        # del código) para poder mostrarlos junto al campo de código, igual
+        # que en el setup de TOTP — si se generaran recién al activar, el
+        # usuario nunca llegaría a verlos antes de que la pantalla navegue a /portal.
+        auth, _ = Autenticacion2FA.objects.get_or_create(usuario=request.user)
+        if not auth.backup_codes:
+            auth.backup_codes = _generate_backup_codes()
+            auth.save(update_fields=["backup_codes"])
+
+        return Response({
+            "detail": "Código enviado por WhatsApp.",
+            "telefono": telefono_oculto,
+            "backup_codes": auth.backup_codes,
+        })
+
+
+class TwoFAWhatsappActivarView(APIView):
+    """
+    POST /api/usuarios/2fa/whatsapp/activar/
+    Body: {"codigo": "123456"}
+    Confirma el código enviado por TwoFAWhatsappEnviarView y activa el 2FA
+    por WhatsApp para el usuario.
+    """
+    permission_classes = [IsAuthenticated]
+    throttle_classes = [SensitiveEndpointThrottle]
+
+    def post(self, request):
+        from .models import Autenticacion2FA, Intento2FA
+        codigo = (request.data.get("codigo") or "").strip()
+        ip = get_client_ip(request)
+
+        valido = _verificar_codigo_whatsapp_2fa(request.user.id_usuario, codigo)
+        Intento2FA.objects.create(
+            usuario=request.user, ip_address=ip,
+            codigo_ingresado=codigo, exitoso=valido,
+        )
+        if not valido:
+            return Response({"error": "Código inválido o expirado."}, status=status.HTTP_400_BAD_REQUEST)
+
+        auth, _ = Autenticacion2FA.objects.get_or_create(usuario=request.user)
+        auth.metodo = Autenticacion2FA.Metodo.WHATSAPP
+        auth.habilitado = True
+        auth.fecha_activacion = timezone.now()
+        if not auth.backup_codes:
+            auth.backup_codes = _generate_backup_codes()
+        auth.save(update_fields=["metodo", "habilitado", "fecha_activacion", "backup_codes"])
+        return Response({
+            "detail": "Verificación por WhatsApp activada.",
+            "backup_codes": auth.backup_codes,
+        })
+
+
 class TwoFAVerificarView(APIView):
     """
     POST /api/usuarios/2fa/verificar/
@@ -1265,7 +1405,7 @@ class TwoFAVerificarView(APIView):
     permission_classes = [IsAuthenticated]
 
     def post(self, request):
-        from .models import Intento2FA
+        from .models import Autenticacion2FA, Intento2FA
         codigo = (request.data.get("codigo") or "").strip().upper()
         ip = get_client_ip(request)
 
@@ -1277,10 +1417,12 @@ class TwoFAVerificarView(APIView):
         if not auth.habilitado:
             return Response({"error": "2FA no está activo para este usuario."}, status=status.HTTP_400_BAD_REQUEST)
 
-        # Verificar TOTP
-        valido = _verify_totp(auth.secret_key, codigo.lower())
+        if auth.metodo == Autenticacion2FA.Metodo.WHATSAPP:
+            valido = _verificar_codigo_whatsapp_2fa(request.user.id_usuario, codigo)
+        else:
+            valido = _verify_totp(auth.secret_key, codigo.lower())
 
-        # Verificar backup code si TOTP falla
+        # Verificar backup code si el método principal falla
         if not valido and codigo in auth.backup_codes:
             valido = True
             new_codes = [c for c in auth.backup_codes if c != codigo]
@@ -1342,7 +1484,7 @@ class TwoFALoginVerificarView(APIView):
     throttle_classes = [LoginRateThrottle]
 
     def post(self, request):
-        from .models import Intento2FA
+        from .models import Autenticacion2FA, Intento2FA
 
         pre_auth = request.data.get("pre_auth_token", "")
         codigo = (request.data.get("codigo") or "").strip()
@@ -1369,7 +1511,10 @@ class TwoFALoginVerificarView(APIView):
             return Response({"error": "2FA no configurado."}, status=status.HTTP_400_BAD_REQUEST)
 
         codigo_upper = codigo.upper()
-        valido = _verify_totp(auth.secret_key, codigo.lower())
+        if auth.metodo == Autenticacion2FA.Metodo.WHATSAPP:
+            valido = _verificar_codigo_whatsapp_2fa(user.id_usuario, codigo)
+        else:
+            valido = _verify_totp(auth.secret_key, codigo.lower())
 
         if not valido and codigo_upper in auth.backup_codes:
             valido = True
@@ -1409,6 +1554,37 @@ class TwoFALoginVerificarView(APIView):
         )
         tokens = _emitir_tokens_con_sesion(user, session_key)
         return Response({**tokens, "user": _user_data(user), "session_key": session_key})
+
+
+class TwoFALoginWhatsappEnviarView(APIView):
+    """
+    POST /api/usuarios/2fa/login/whatsapp/enviar/
+    Body: {"pre_auth_token": "..."}
+    Envía (o reenvía) el código de verificación por WhatsApp durante el
+    segundo paso del login, para usuarios con 2FA por WhatsApp habilitado.
+    """
+    permission_classes = [AllowAny]
+    throttle_classes = [LoginRateThrottle]
+
+    def post(self, request):
+        pre_auth = request.data.get("pre_auth_token", "")
+        try:
+            data = signing.loads(pre_auth, salt="2fa-pre-auth", max_age=300)
+            user = Usuario.objects.get(pk=data["user_id"], is_active=True)
+        except (signing.BadSignature, Usuario.DoesNotExist):
+            return Response({"error": "Token inválido o expirado."}, status=status.HTTP_400_BAD_REQUEST)
+
+        try:
+            ok, telefono_oculto = _enviar_codigo_whatsapp_2fa(user)
+        except Exception:
+            logger.warning("No se pudo enviar código 2FA por WhatsApp (login)", exc_info=True)
+            return Response(
+                {"error": "No se pudo enviar el código por WhatsApp. Intentá de nuevo en un momento."},
+                status=status.HTTP_502_BAD_GATEWAY,
+            )
+        if not ok:
+            return Response({"error": "No hay un número de WhatsApp registrado."}, status=status.HTTP_400_BAD_REQUEST)
+        return Response({"detail": "Código enviado por WhatsApp.", "telefono": telefono_oculto})
 
 
 # ==============================================================================

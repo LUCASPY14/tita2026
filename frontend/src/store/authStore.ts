@@ -23,10 +23,14 @@ interface AuthState {
   pending2FA: string | null
   /** true si la cuenta con pending2FA también tiene huella/Face ID configurada */
   pendingTieneWebauthn: boolean
+  /** método de 2FA configurado para la cuenta con pending2FA ('TOTP' | 'WHATSAPP' | null) */
+  pendingMetodo2FA: string | null
   /** true → full login done; false → 2FA step required (pending2FA is set) */
   login: (email: string, password: string) => Promise<boolean>
   verify2FA: (codigo: string) => Promise<void>
   verifyWebAuthn: (credential: unknown) => Promise<void>
+  /** reenvía el código de 2FA por WhatsApp durante el login; devuelve el teléfono enmascarado */
+  enviarCodigoWhatsapp2FA: () => Promise<string>
   cancelPending2FA: () => void
   logout: () => void
   loadUser: () => Promise<void>
@@ -57,17 +61,22 @@ export const useAuthStore = create<AuthState>((set, get) => ({
   isAuthenticated: !!localStorage.getItem('access_token'),
   pending2FA: null,
   pendingTieneWebauthn: false,
+  pendingMetodo2FA: null,
 
   login: async (email: string, password: string): Promise<boolean> => {
     const { data } = await axios.post('/api/token/', { email, password })
     if (data.requires_2fa) {
-      set({ pending2FA: data.pre_auth_token, pendingTieneWebauthn: !!data.tiene_webauthn })
+      set({
+        pending2FA: data.pre_auth_token,
+        pendingTieneWebauthn: !!data.tiene_webauthn,
+        pendingMetodo2FA: data.metodo_2fa ?? null,
+      })
       return false
     }
     localStorage.setItem('access_token', data.access)
     localStorage.setItem('refresh_token', data.refresh)
     if (data.session_key) localStorage.setItem('session_key', data.session_key)
-    set({ isAuthenticated: true, user: data.user || null, pending2FA: null, pendingTieneWebauthn: false })
+    set({ isAuthenticated: true, user: data.user || null, pending2FA: null, pendingTieneWebauthn: false, pendingMetodo2FA: null })
     get().resetInactivityTimer()
     return true
   },
@@ -82,7 +91,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
     localStorage.setItem('access_token', data.access)
     localStorage.setItem('refresh_token', data.refresh)
     if (data.session_key) localStorage.setItem('session_key', data.session_key)
-    set({ isAuthenticated: true, user: data.user || null, pending2FA: null, pendingTieneWebauthn: false })
+    set({ isAuthenticated: true, user: data.user || null, pending2FA: null, pendingTieneWebauthn: false, pendingMetodo2FA: null })
     get().resetInactivityTimer()
   },
 
@@ -96,12 +105,21 @@ export const useAuthStore = create<AuthState>((set, get) => ({
     localStorage.setItem('access_token', data.access)
     localStorage.setItem('refresh_token', data.refresh)
     if (data.session_key) localStorage.setItem('session_key', data.session_key)
-    set({ isAuthenticated: true, user: data.user || null, pending2FA: null, pendingTieneWebauthn: false })
+    set({ isAuthenticated: true, user: data.user || null, pending2FA: null, pendingTieneWebauthn: false, pendingMetodo2FA: null })
     get().resetInactivityTimer()
   },
 
+  enviarCodigoWhatsapp2FA: async (): Promise<string> => {
+    const preAuthToken = get().pending2FA
+    if (!preAuthToken) throw new Error('No hay 2FA pendiente')
+    const { data } = await api.post('/usuarios/2fa/login/whatsapp/enviar/', {
+      pre_auth_token: preAuthToken,
+    })
+    return data.telefono ?? ''
+  },
+
   cancelPending2FA: () => {
-    set({ pending2FA: null, pendingTieneWebauthn: false })
+    set({ pending2FA: null, pendingTieneWebauthn: false, pendingMetodo2FA: null })
   },
 
   logout: () => {

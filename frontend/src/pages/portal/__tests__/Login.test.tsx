@@ -6,6 +6,7 @@ import { describe, it, expect, vi, beforeEach } from 'vitest'
 const mockLogin = vi.fn()
 const mockVerify2FA = vi.fn()
 const mockVerifyWebAuthn = vi.fn()
+const mockEnviarCodigoWhatsapp2FA = vi.fn()
 const mockCancelPending2FA = vi.fn()
 const mockNavigate = vi.fn()
 const mockPlatformAvailable = vi.fn()
@@ -14,15 +15,18 @@ const mockStartAuthentication = vi.fn()
 let mockUser: Record<string, unknown> | null = null
 let mockPending2FA: string | null = null
 let mockPendingTieneWebauthn = false
+let mockPendingMetodo2FA: string | null = null
 
 vi.mock('../../../store/authStore', () => {
   const useAuthStore = () => ({
     login: mockLogin,
     verify2FA: mockVerify2FA,
     verifyWebAuthn: mockVerifyWebAuthn,
+    enviarCodigoWhatsapp2FA: mockEnviarCodigoWhatsapp2FA,
     cancelPending2FA: mockCancelPending2FA,
     pending2FA: mockPending2FA,
     pendingTieneWebauthn: mockPendingTieneWebauthn,
+    pendingMetodo2FA: mockPendingMetodo2FA,
   })
   useAuthStore.getState = () => ({ user: mockUser })
   return { useAuthStore }
@@ -69,6 +73,7 @@ beforeEach(() => {
   mockUser = null
   mockPending2FA = null
   mockPendingTieneWebauthn = false
+  mockPendingMetodo2FA = null
   mockPlatformAvailable.mockResolvedValue(false)
 })
 
@@ -166,6 +171,78 @@ describe('Portal Login — segundo paso 2FA', () => {
     await waitFor(() => {
       expect(screen.getByRole('button', { name: 'Ingresar' })).toBeInTheDocument()
     })
+  })
+})
+
+describe('Portal Login — segundo paso 2FA por WhatsApp', () => {
+  it('cuenta con método WhatsApp ofrece enviar el código (sin pedirlo directo)', async () => {
+    mockPending2FA = 'preauth-token'
+    mockPendingMetodo2FA = 'WHATSAPP'
+    renderPortalLogin()
+
+    expect(await screen.findByRole('button', { name: /enviar código por whatsapp/i })).toBeInTheDocument()
+    expect(screen.queryByLabelText(/código/i)).not.toBeInTheDocument()
+  })
+
+  it('al enviar, muestra el campo de código', async () => {
+    mockPending2FA = 'preauth-token'
+    mockPendingMetodo2FA = 'WHATSAPP'
+    mockEnviarCodigoWhatsapp2FA.mockResolvedValueOnce('••• •••4567')
+    renderPortalLogin()
+
+    await userEvent.click(await screen.findByRole('button', { name: /enviar código por whatsapp/i }))
+
+    expect(mockEnviarCodigoWhatsapp2FA).toHaveBeenCalled()
+    expect(await screen.findByLabelText(/código de whatsapp/i)).toBeInTheDocument()
+    expect(screen.getByText(/enviado al ••• •••4567/i)).toBeInTheDocument()
+  })
+
+  it('código de whatsapp válido llama a verify2FA y redirige', async () => {
+    mockPending2FA = 'preauth-token'
+    mockPendingMetodo2FA = 'WHATSAPP'
+    mockUser = { debe_cambiar_contrasena: false, tiene_2fa_activo: true }
+    mockEnviarCodigoWhatsapp2FA.mockResolvedValueOnce('')
+    mockVerify2FA.mockResolvedValueOnce(undefined)
+    renderPortalLogin()
+
+    await userEvent.click(await screen.findByRole('button', { name: /enviar código por whatsapp/i }))
+    await userEvent.type(await screen.findByLabelText(/código de whatsapp/i), '123456')
+    await userEvent.click(screen.getByRole('button', { name: 'Verificar' }))
+
+    await waitFor(() => {
+      expect(mockVerify2FA).toHaveBeenCalledWith('123456')
+      expect(mockNavigate).toHaveBeenCalledWith('/portal')
+    })
+  })
+
+  it('si falla el envío, muestra un toast y no avanza de pantalla', async () => {
+    mockPending2FA = 'preauth-token'
+    mockPendingMetodo2FA = 'WHATSAPP'
+    mockEnviarCodigoWhatsapp2FA.mockRejectedValueOnce({
+      response: { data: { error: 'No hay un número de WhatsApp registrado.' } },
+    })
+    renderPortalLogin()
+
+    await userEvent.click(await screen.findByRole('button', { name: /enviar código por whatsapp/i }))
+
+    const toast = vi.mocked(await import('react-hot-toast')).default
+    await waitFor(() => {
+      expect(toast.error).toHaveBeenCalledWith('No hay un número de WhatsApp registrado.')
+    })
+    expect(screen.queryByLabelText(/código de whatsapp/i)).not.toBeInTheDocument()
+  })
+
+  it('"Reenviar código" vuelve a llamar a enviarCodigoWhatsapp2FA', async () => {
+    mockPending2FA = 'preauth-token'
+    mockPendingMetodo2FA = 'WHATSAPP'
+    mockEnviarCodigoWhatsapp2FA.mockResolvedValue('')
+    renderPortalLogin()
+
+    await userEvent.click(await screen.findByRole('button', { name: /enviar código por whatsapp/i }))
+    await screen.findByLabelText(/código de whatsapp/i)
+    await userEvent.click(screen.getByText(/reenviar código/i))
+
+    expect(mockEnviarCodigoWhatsapp2FA).toHaveBeenCalledTimes(2)
   })
 })
 

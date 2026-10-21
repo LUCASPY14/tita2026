@@ -1,7 +1,7 @@
 import { useEffect, useState, useCallback } from 'react'
 import { useNavigate } from 'react-router-dom'
 import toast from 'react-hot-toast'
-import { ShieldCheck, Eye, EyeOff, Copy, CheckCircle2, Fingerprint } from 'lucide-react'
+import { ShieldCheck, Eye, EyeOff, Copy, CheckCircle2, Fingerprint, MessageCircle } from 'lucide-react'
 import { QRCodeSVG } from 'qrcode.react'
 import { browserSupportsWebAuthn, platformAuthenticatorIsAvailable, startRegistration } from '@simplewebauthn/browser'
 import api from '../../services/api'
@@ -9,7 +9,7 @@ import { useAuthStore } from '../../store/authStore'
 import Button from '../../components/ui/Button'
 import Input from '../../components/ui/Input'
 
-type Metodo = 'cargando' | 'huella' | 'totp'
+type Metodo = 'cargando' | 'huella' | 'whatsapp' | 'totp'
 
 export default function PortalConfigurar2FA() {
   const navigate = useNavigate()
@@ -24,6 +24,11 @@ export default function PortalConfigurar2FA() {
   const [otpCode, setOtpCode] = useState('')
   const [showSecret, setShowSecret] = useState(false)
   const [error, setError] = useState('')
+
+  // WhatsApp
+  const [waEnviando, setWaEnviando] = useState(false)
+  const [waEnviado, setWaEnviado] = useState(false)
+  const [waTelefono, setWaTelefono] = useState('')
 
   const iniciarSetupTotp = useCallback(async () => {
     setMetodo('totp')
@@ -40,6 +45,51 @@ export default function PortalConfigurar2FA() {
     }
   }, [])
 
+  const iniciarSetupWhatsapp = useCallback(() => {
+    setMetodo('whatsapp')
+    setWaEnviado(false)
+    setOtpCode('')
+    setError('')
+  }, [])
+
+  const enviarCodigoWhatsapp = useCallback(async () => {
+    setWaEnviando(true)
+    try {
+      const { data } = await api.post('/usuarios/2fa/whatsapp/enviar/')
+      setWaTelefono(data.telefono ?? '')
+      setBackupCodes(data.backup_codes ?? [])
+      setWaEnviado(true)
+    } catch (err: unknown) {
+      const msg = (err as { response?: { data?: { error?: string } } })
+        ?.response?.data?.error ?? 'No se pudo enviar el código por WhatsApp.'
+      toast.error(msg)
+    } finally {
+      setWaEnviando(false)
+    }
+  }, [])
+
+  const activarWhatsapp = async (e: { preventDefault(): void }) => {
+    e.preventDefault()
+    if (otpCode.length !== 6) {
+      setError('Ingresá el código de 6 dígitos')
+      return
+    }
+    setLoading(true)
+    try {
+      const { data } = await api.post('/usuarios/2fa/whatsapp/activar/', { codigo: otpCode })
+      setBackupCodes(data.backup_codes ?? [])
+      await loadUser()
+      toast.success('Verificación en dos pasos activada')
+      navigate('/portal', { replace: true })
+    } catch (err) {
+      const e = err as { response?: { data?: { error?: string } } }
+      setError(e?.response?.data?.error || 'Código inválido')
+      setOtpCode('')
+    } finally {
+      setLoading(false)
+    }
+  }
+
   useEffect(() => {
     let cancelado = false
     async function decidirMetodo() {
@@ -49,7 +99,7 @@ export default function PortalConfigurar2FA() {
       const disponible = browserSupportsWebAuthn() && await platformAuthenticatorIsAvailable()
       if (cancelado) return
       if (disponible) setMetodo('huella')
-      else iniciarSetupTotp()
+      else iniciarSetupWhatsapp()
     }
     decidirMetodo()
     return () => { cancelado = true }
@@ -103,6 +153,8 @@ export default function PortalConfigurar2FA() {
           <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-green-100 mb-4">
             {metodo === 'huella'
               ? <Fingerprint className="w-8 h-8 text-green-600" />
+              : metodo === 'whatsapp'
+              ? <MessageCircle className="w-8 h-8 text-green-600" />
               : <ShieldCheck className="w-8 h-8 text-green-600" />}
           </div>
           <h1 className="text-2xl font-bold text-gray-800">Activá la verificación en dos pasos</h1>
@@ -125,10 +177,89 @@ export default function PortalConfigurar2FA() {
             <Button variant="primary" block size="lg" loading={registrandoHuella} onClick={registrarHuella}>
               <Fingerprint className="w-5 h-5" /> Activar con tu huella
             </Button>
+            <div className="flex flex-col gap-2">
+              <button
+                type="button"
+                onClick={iniciarSetupWhatsapp}
+                className="text-sm text-slate-400 hover:text-slate-600 transition-colors cursor-pointer"
+              >
+                Prefiero un código por WhatsApp
+              </button>
+              <button
+                type="button"
+                onClick={iniciarSetupTotp}
+                className="text-sm text-slate-400 hover:text-slate-600 transition-colors cursor-pointer"
+              >
+                Prefiero usar una app de autenticación
+              </button>
+            </div>
+          </div>
+        )}
+
+        {metodo === 'whatsapp' && (
+          <div className="space-y-4">
+            {!waEnviado ? (
+              <div className="space-y-4 text-center">
+                <p className="text-sm text-slate-600">
+                  Te enviamos un código de 6 dígitos por WhatsApp para confirmar tu número.
+                </p>
+                <Button variant="primary" block size="lg" loading={waEnviando} onClick={enviarCodigoWhatsapp}>
+                  <MessageCircle className="w-5 h-5" /> Enviar código por WhatsApp
+                </Button>
+              </div>
+            ) : (
+              <form onSubmit={activarWhatsapp} className="space-y-4">
+                <p className="text-sm text-slate-600 text-center">
+                  Te enviamos un código por WhatsApp{waTelefono ? ` al ${waTelefono}` : ''}. Ingresalo acá abajo.
+                </p>
+                <Input
+                  label="Código de 6 dígitos"
+                  type="text"
+                  inputMode="numeric"
+                  pattern="[0-9]*"
+                  maxLength={6}
+                  placeholder="123456"
+                  value={otpCode}
+                  onChange={e => {
+                    setOtpCode(e.target.value.replace(/\D/g, '').slice(0, 6))
+                    if (error) setError('')
+                  }}
+                  error={error}
+                  className="text-center text-2xl font-mono tracking-widest"
+                  autoFocus
+                  autoComplete="one-time-code"
+                />
+
+                {backupCodes.length > 0 && (
+                  <div className="bg-amber-50 border border-amber-200 rounded-xl p-4">
+                    <p className="text-xs font-semibold text-amber-800 mb-2">
+                      Guardá estos códigos de respaldo — te van a servir si perdés el celular
+                    </p>
+                    <div className="grid grid-cols-4 gap-1">
+                      {backupCodes.map(c => (
+                        <code key={c} className="text-xs bg-white border border-amber-200 rounded px-2 py-1 text-center">{c}</code>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                <Button variant="primary" block size="lg" loading={loading} type="submit" disabled={otpCode.length !== 6}>
+                  <CheckCircle2 className="w-4 h-4" /> Activar y continuar
+                </Button>
+                <button
+                  type="button"
+                  onClick={enviarCodigoWhatsapp}
+                  disabled={waEnviando}
+                  className="w-full text-sm text-slate-400 hover:text-slate-600 transition-colors cursor-pointer disabled:opacity-50"
+                >
+                  Reenviar código
+                </button>
+              </form>
+            )}
             <button
               type="button"
               onClick={iniciarSetupTotp}
-              className="text-sm text-slate-400 hover:text-slate-600 transition-colors cursor-pointer"
+              className="w-full text-sm text-slate-400 hover:text-slate-600 transition-colors cursor-pointer"
             >
               Prefiero usar una app de autenticación
             </button>
