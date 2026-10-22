@@ -90,7 +90,16 @@ class SesionActivaJWTAuthentication(JWTAuthentication):
                 code="sesion_expirada",
             )
 
-        # Actualizar timestamp de actividad (bypass auto_now vía update directo)
-        SesionActiva.objects.filter(pk=sesion.pk).update(
-            ultima_actividad=timezone.now()
-        )
+        # Actualizar timestamp de actividad (bypass auto_now vía update directo).
+        # Se omite si ya se refrescó hace poco: bajo polling frecuente desde la
+        # misma pestaña (varios requests del mismo admin en pocos segundos,
+        # p.ej. la pantalla de estado de WhatsApp) cada request intenta el
+        # mismo UPDATE sobre la misma fila — si una de esas transacciones tarda
+        # (por una llamada externa lenta), las siguientes quedan esperando el
+        # lock y pueden superar el lock_timeout de la DB. El margen de 30s es
+        # irrelevante para el propósito real (expirar sesiones tras 8h de
+        # inactividad) pero evita la contención.
+        if timezone.now() - sesion.ultima_actividad >= timedelta(seconds=30):
+            SesionActiva.objects.filter(pk=sesion.pk).update(
+                ultima_actividad=timezone.now()
+            )

@@ -25,7 +25,7 @@ export default function TabWhatsApp() {
   const [conectando, setConectando] = useState(false)
   const [cerrandoSesion, setCerrandoSesion] = useState(false)
   const [qrTick, setQrTick] = useState(0)
-  const pollRef = useRef<ReturnType<typeof setInterval> | undefined>(undefined)
+  const pollRef = useRef<ReturnType<typeof setTimeout> | undefined>(undefined)
 
   const cargarEstado = useCallback(async () => {
     setLoadingEstado(true)
@@ -47,17 +47,29 @@ export default function TabWhatsApp() {
 
   // Mientras se está esperando el escaneo del QR, refrescar estado + QR solos
   // cada 5s (el QR de WAHA rota) — se corta apenas queda conectado.
+  // setTimeout recursivo (no setInterval) para que cada tick espere a que
+  // termine el request anterior antes de programar el siguiente: con
+  // setInterval, si cargarEstado() tarda más de 5s, los ticks se acumulan y
+  // disparan varios requests en paralelo que pelean por el lock de la misma
+  // fila de sesiones_activas (ver LockNotAvailable en Sentry, 22-oct).
   useEffect(() => {
     const esperandoQR = estado?.estado === 'SCAN_QR_CODE'
     if (!esperandoQR) {
-      clearInterval(pollRef.current)
+      clearTimeout(pollRef.current)
       return
     }
-    pollRef.current = setInterval(() => {
-      cargarEstado()
+    let cancelado = false
+    const tick = async () => {
+      await cargarEstado()
+      if (cancelado) return
       setQrTick(t => t + 1)
-    }, 5000)
-    return () => clearInterval(pollRef.current)
+      pollRef.current = setTimeout(tick, 5000)
+    }
+    pollRef.current = setTimeout(tick, 5000)
+    return () => {
+      cancelado = true
+      clearTimeout(pollRef.current)
+    }
   }, [estado?.estado, cargarEstado])
 
   const conectar = async () => {
