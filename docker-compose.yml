@@ -211,8 +211,13 @@ services:
       - cantina_net
 
   # ── WAHA (WhatsApp self-hosted) ─────────────────────────────────────────────
+  # Motor NOWEB (protocolo WhatsApp multi-dispositivo directo, sin Chromium):
+  # la variante anterior (latest-2026.6.2, motor WEBJS/Chromium headless)
+  # dejó de ser compatible con el JS interno de WhatsApp Web ("Cmd.refreshQR
+  # is not a function"), tirando la sesión justo después de escanear el QR.
+  # Mismo API REST — no requiere cambios en el código del backend.
   waha:
-    image: devlikeapro/waha:latest-2026.6.2
+    image: devlikeapro/waha:noweb-2026.9.2
     environment:
       WHATSAPP_API_KEY: "${WAHA_API_KEY:-}"
     ports:
