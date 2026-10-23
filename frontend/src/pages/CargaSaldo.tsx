@@ -8,6 +8,7 @@ import {
 } from 'lucide-react'
 import api from '../services/api'
 import tarjetasService from '../services/tarjetas'
+import { useAuthStore } from '../store/authStore'
 import { METODOS_PAGO as METODOS } from '../constants/mediosPago'
 import Badge from '../components/ui/Badge'
 import Button from '../components/ui/Button'
@@ -15,13 +16,17 @@ import Input from '../components/ui/Input'
 import Table, { type Column } from '../components/ui/Table'
 import {
   extractErrorMessage, formatGs, formatFecha, abrirRecibo,
-  type Tarjeta, type Movimiento, type CargaReciente, type UltimaCarga,
+  type Tarjeta, type Movimiento, type CargaReciente, type RecargaAlmuerzoReciente, type UltimaCarga,
   MONTOS_RAPIDOS, TIPO_COLOR, ESTADO_COLOR,
 } from './cargasaldo/shared'
 import ModalConfirmarCarga from './cargasaldo/ModalConfirmarCarga'
+import ModalAnularCarga from './cargasaldo/ModalAnularCarga'
+import ModalAnularRecargaAlmuerzo from './cargasaldo/ModalAnularRecargaAlmuerzo'
 
 export default function CargaSaldo() {
   const { t } = useTranslation()
+  const { user } = useAuthStore()
+  const isAdmin = user?.rol === 'ADMIN'
   const [searchParams] = useSearchParams()
   // ── Búsqueda de tarjeta ──────────────────────────────────────────
   const [busqueda, setBusqueda] = useState(() => searchParams.get('tarjeta') ?? '')
@@ -51,14 +56,19 @@ export default function CargaSaldo() {
   // ── Historial ────────────────────────────────────────────────────
   const [movimientos, setMovimientos] = useState<Movimiento[]>([])
   const [cargas, setCargas] = useState<CargaReciente[]>([])
+  const [recargasAlmuerzo, setRecargasAlmuerzo] = useState<RecargaAlmuerzoReciente[]>([])
   const [loadingHistorial, setLoadingHistorial] = useState(false)
-  const [historialTab, setHistorialTab] = useState<'movimientos' | 'cargas'>('movimientos')
+  const [historialTab, setHistorialTab] = useState<'movimientos' | 'cargas' | 'recargasAlmuerzo'>('movimientos')
+  const [anularRecargaAlmuerzo, setAnularRecargaAlmuerzo] = useState<RecargaAlmuerzoReciente | null>(null)
 
   // ── Última operación exitosa ─────────────────────────────────────
   const [ultimaCarga, setUltimaCarga] = useState<UltimaCarga | null>(null)
 
   // ── Confirmar carga pendiente ─────────────────────────────────────
   const [confirmCargaId, setConfirmCargaId] = useState<number | null>(null)
+
+  // ── Anular carga confirmada (solo ADMIN) ───────────────────────────
+  const [anularCarga, setAnularCarga] = useState<CargaReciente | null>(null)
 
   // ── Cargar historial ─────────────────────────────────────────────
   const cargarHistorial = useCallback(async (nro: string) => {
@@ -77,6 +87,17 @@ export default function CargaSaldo() {
     }
   }, [])
 
+  const cargarRecargasAlmuerzo = useCallback(async (hijoId: number) => {
+    try {
+      const { data } = await api.get('/almuerzos/recargas-saldo/', {
+        params: { hijo: hijoId, page_size: 20 },
+      })
+      setRecargasAlmuerzo(data.results ?? data ?? [])
+    } catch {
+      // historial es secundario, no bloquear
+    }
+  }, [])
+
   // ── Buscar tarjeta ────────────────────────────────────────────────
   const buscarTarjeta = useCallback(async (overrideQuery?: string) => {
     const q = (overrideQuery ?? busqueda).trim()
@@ -85,6 +106,8 @@ export default function CargaSaldo() {
     setTarjeta(null)
     setMovimientos([])
     setCargas([])
+    setRecargasAlmuerzo([])
+    setHistorialTab('movimientos')
     setUltimaCarga(null)
     try {
       const { data } = await tarjetasService.buscar<Tarjeta>(q)
@@ -101,6 +124,7 @@ export default function CargaSaldo() {
       cargarHistorial(found.nro_tarjeta)
 
       if (found.hijo) {
+        cargarRecargasAlmuerzo(found.hijo)
         try {
           const { data } = await api.get('/almuerzos/saldos/', { params: { hijo: found.hijo } })
           const item = (data.results ?? data)[0]
@@ -116,7 +140,7 @@ export default function CargaSaldo() {
     } finally {
       setBuscando(false)
     }
-  }, [busqueda, cargarHistorial])
+  }, [busqueda, cargarHistorial, cargarRecargasAlmuerzo])
 
   // Auto-focus al inicio, o búsqueda automática si vino con ?tarjeta= (desde
   // ModoRecreo): disparar la búsqueda sincrónicamente al montar es intencional.
@@ -168,6 +192,7 @@ export default function CargaSaldo() {
       const { data: saldoRes } = await api.get('/almuerzos/saldos/', { params: { hijo: tarjeta.hijo } })
       const item = (saldoRes.results ?? saldoRes)[0]
       setSaldoAlmuerzo(item ? Number(item.saldo_actual) : montoNum)
+      cargarRecargasAlmuerzo(tarjeta.hijo)
 
       setUltimaCargaAlmuerzo({
         monto: montoNum,
@@ -194,7 +219,7 @@ export default function CargaSaldo() {
     } finally {
       setCargando(false)
     }
-  }, [tarjeta, monto, metodo, tipoCobro, referencia, emitirFacturaCarga, nroFacturaCarga])
+  }, [tarjeta, monto, metodo, tipoCobro, referencia, emitirFacturaCarga, nroFacturaCarga, cargarRecargasAlmuerzo])
 
   // ── Realizar carga de saldo de cantina (tarjeta) ────────────────────────────
   const handleCargar = useCallback(async () => {
@@ -274,6 +299,8 @@ export default function CargaSaldo() {
     setNroFacturaCarga('')
     setMovimientos([])
     setCargas([])
+    setRecargasAlmuerzo([])
+    setHistorialTab('movimientos')
     setUltimaCarga(null)
     setTipoSaldo('CANTINA')
     setSaldoAlmuerzo(null)
@@ -358,9 +385,59 @@ export default function CargaSaldo() {
       title: '',
       key: 'accion',
       width: 110,
-      render: (_, r) => r.estado === 'PENDIENTE' ? (
-        <Button size="sm" variant="primary" onClick={() => setConfirmCargaId(r.id_carga)}>
-          Confirmar
+      render: (_, r) => {
+        if (r.estado === 'PENDIENTE') {
+          return (
+            <Button size="sm" variant="primary" onClick={() => setConfirmCargaId(r.id_carga)}>
+              Confirmar
+            </Button>
+          )
+        }
+        if (r.estado === 'CONFIRMADA' && isAdmin) {
+          return (
+            <Button size="sm" variant="danger" onClick={() => setAnularCarga(r)}>
+              Anular
+            </Button>
+          )
+        }
+        return null
+      },
+    },
+  ]
+
+  const colsRecargasAlmuerzo: Column<RecargaAlmuerzoReciente>[] = [
+    {
+      title: 'Fecha',
+      key: 'fecha',
+      render: (_, r) => <span className="text-sm text-slate-400">{formatFecha(r.fecha_carga)}</span>,
+    },
+    {
+      title: 'Monto',
+      key: 'monto',
+      render: (_, r) => <span className="tabular-nums font-semibold text-orange-700">{formatGs(r.monto_cargado)}</span>,
+    },
+    {
+      title: 'Método',
+      key: 'metodo',
+      render: (_, r) => {
+        const label = r.metodo_pago === 'CUENTA_CORRIENTE'
+          ? 'Cuenta Corriente'
+          : (METODOS.find(m => m.value === r.metodo_pago)?.label ?? r.metodo_pago)
+        return <span className="text-sm text-slate-600">{label}</span>
+      },
+    },
+    {
+      title: 'Estado',
+      key: 'estado',
+      render: (_, r) => <Badge color={ESTADO_COLOR[r.estado] ?? 'default'}>{r.estado}</Badge>,
+    },
+    {
+      title: '',
+      key: 'accion',
+      width: 110,
+      render: (_, r) => r.estado === 'CONFIRMADA' && isAdmin ? (
+        <Button size="sm" variant="danger" onClick={() => setAnularRecargaAlmuerzo(r)}>
+          Anular
         </Button>
       ) : null,
     },
@@ -778,7 +855,11 @@ export default function CargaSaldo() {
                 <span className="text-base font-bold text-slate-700">Historial — {tarjeta.hijo_nombre}</span>
               </div>
               <div className="border-b border-slate-100 flex">
-                {(['movimientos', 'cargas'] as const).map(tab => (
+                {(
+                  tarjeta.hijo
+                    ? (['movimientos', 'cargas', 'recargasAlmuerzo'] as const)
+                    : (['movimientos', 'cargas'] as const)
+                ).map(tab => (
                   <button
                     key={tab}
                     onClick={() => setHistorialTab(tab)}
@@ -788,7 +869,7 @@ export default function CargaSaldo() {
                         : 'border-transparent text-slate-500 hover:text-slate-700'
                     }`}
                   >
-                    {tab === 'movimientos' ? 'Movimientos' : 'Cargas de saldo'}
+                    {tab === 'movimientos' ? 'Movimientos' : tab === 'cargas' ? 'Cargas de saldo' : 'Recargas de almuerzo'}
                   </button>
                 ))}
               </div>
@@ -797,8 +878,10 @@ export default function CargaSaldo() {
                   <div className="py-10 text-center text-slate-400 text-base">Cargando historial...</div>
                 ) : historialTab === 'movimientos' ? (
                   <Table columns={colsMovimientos} dataSource={movimientos} rowKey="id_movimiento_tarjeta" pageSize={8} />
-                ) : (
+                ) : historialTab === 'cargas' ? (
                   <Table columns={colsCargas} dataSource={cargas} rowKey="id_carga" pageSize={8} />
+                ) : (
+                  <Table columns={colsRecargasAlmuerzo} dataSource={recargasAlmuerzo} rowKey="id_recarga_almuerzo" pageSize={8} />
                 )}
               </div>
             </div>
@@ -814,6 +897,31 @@ export default function CargaSaldo() {
             const { data } = await tarjetasService.getByNro<Tarjeta>(tarjeta.nro_tarjeta)
             setTarjeta(data)
             cargarHistorial(tarjeta.nro_tarjeta)
+          }
+        }}
+      />
+
+      <ModalAnularCarga
+        carga={anularCarga}
+        onClose={() => setAnularCarga(null)}
+        onSaved={async () => {
+          if (tarjeta) {
+            const { data } = await tarjetasService.getByNro<Tarjeta>(tarjeta.nro_tarjeta)
+            setTarjeta(data)
+            cargarHistorial(tarjeta.nro_tarjeta)
+          }
+        }}
+      />
+
+      <ModalAnularRecargaAlmuerzo
+        recarga={anularRecargaAlmuerzo}
+        onClose={() => setAnularRecargaAlmuerzo(null)}
+        onSaved={async () => {
+          if (tarjeta?.hijo) {
+            cargarRecargasAlmuerzo(tarjeta.hijo)
+            const { data } = await api.get('/almuerzos/saldos/', { params: { hijo: tarjeta.hijo } })
+            const item = (data.results ?? data)[0]
+            setSaldoAlmuerzo(item ? Number(item.saldo_actual) : null)
           }
         }}
       />

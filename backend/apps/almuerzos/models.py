@@ -637,6 +637,7 @@ class RecargaSaldoAlmuerzo(models.Model):
         PENDIENTE = "PENDIENTE", "Pendiente"
         CONFIRMADA = "CONFIRMADA", "Confirmada"
         RECHAZADA = "RECHAZADA", "Rechazada"
+        ANULADA = "ANULADA", "Anulada"
 
     id_recarga_almuerzo = models.BigAutoField(primary_key=True)
     hijo = models.ForeignKey(

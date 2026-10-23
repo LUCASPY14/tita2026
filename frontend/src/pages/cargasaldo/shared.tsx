@@ -64,6 +64,14 @@ export interface CargaReciente {
   fecha_carga: string
 }
 
+export interface RecargaAlmuerzoReciente {
+  id_recarga_almuerzo: number
+  monto_cargado: string | number
+  metodo_pago: string
+  estado: string
+  fecha_carga: string
+}
+
 export interface UltimaCarga {
   monto: number
   metodo: string
@@ -78,7 +86,7 @@ export const TIPO_COLOR: Record<string, BadgeColor> = {
 }
 
 export const ESTADO_COLOR: Record<string, BadgeColor> = {
-  CONFIRMADA: 'green', PENDIENTE: 'yellow', RECHAZADA: 'red',
+  CONFIRMADA: 'green', PENDIENTE: 'yellow', RECHAZADA: 'red', ANULADA: 'red',
 }
 
 export const MONTOS_RAPIDOS = [10000, 20000, 50000, 100000, 200000]

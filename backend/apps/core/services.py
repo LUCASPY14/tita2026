@@ -186,6 +186,60 @@ class TarjetaService:
             return carga
 
     @staticmethod
+    def anular_carga_saldo(*, carga: CargaSaldo, anulado_por) -> CargaSaldo:
+        """
+        Anula una CargaSaldo CONFIRMADA: revierte el monto acreditado a la
+        tarjeta con un MovimientoTarjeta REVERSO y marca la carga como
+        ANULADA. Mismo patrón que ventas.anular_venta — pensado para
+        corregir cargas en efectivo duplicadas/erróneas desde el POS.
+
+        Si la carga viene de un pago Bancard todavía APROBADO, se bloquea:
+        esa plata hay que devolverla pidiéndole el rollback real a Bancard
+        (ventanilla de Pagos Bancard), no solo descontándola localmente.
+        """
+        if carga.estado != CargaSaldo.Estado.CONFIRMADA:
+            raise ValidationError({"error": "Solo se pueden anular cargas CONFIRMADAS."})
+
+        if carga.factura and carga.factura.estado == "EMITIDA":
+            raise ValidationError({
+                "error": "La carga tiene una factura EMITIDA. Anulá primero la factura."
+            })
+
+        pago_bancard = getattr(carga, "pago_bancard", None)
+        if pago_bancard and pago_bancard.estado == pago_bancard.Estado.APROBADO:
+            raise ValidationError({
+                "error": "Esta carga viene de un pago Bancard aprobado — anulala desde Pagos Bancard."
+            })
+
+        with transaction.atomic():
+            carga = CargaSaldo.objects.select_for_update().get(pk=carga.pk)
+            if carga.estado != CargaSaldo.Estado.CONFIRMADA:
+                raise ValidationError({"error": "Solo se pueden anular cargas CONFIRMADAS."})
+
+            tarjeta = Tarjeta.objects.select_for_update().get(pk=carga.tarjeta_id)
+
+            # El trigger fn_sync_saldo_tarjeta (core/migrations/0015) recalcula
+            # Tarjeta.saldo_actual sumando TODOS los MovimientoTarjeta de la
+            # tarjeta, tratando RECARGA/AJUSTE/REVERSO como "+monto" (con
+            # signo) y CONSUMO como "-monto" — no se toca saldo_actual a mano
+            # acá, ni se fuerza saldo_anterior: se deja que MovimientoTarjeta
+            # .save() lo calcule solo a partir del último movimiento del
+            # ledger, que es la misma fuente que usa el trigger.
+            MovimientoTarjeta.objects.create(
+                tarjeta=tarjeta,
+                tipo=MovimientoTarjeta.Tipo.REVERSO,
+                monto=-carga.monto_cargado,
+                carga=carga,
+                descripcion=f"Anulación de carga #{carga.pk}",
+                creado_por=anulado_por,
+            )
+
+            carga.estado = CargaSaldo.Estado.ANULADA
+            carga.save(update_fields=["estado"])
+
+            return carga
+
+    @staticmethod
     def ajustar_saldo(*, tarjeta, monto: Decimal, motivo: str, usuario) -> MovimientoTarjeta:
         """
         Corrección administrativa del saldo de cantina — no es una recarga real

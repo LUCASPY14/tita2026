@@ -93,6 +93,9 @@ const tarjetasService = {
 
   confirmarCarga: (id: number, nro_factura?: string) =>
     api.post(`/core/cargas-saldo/${id}/confirmar/`, nro_factura ? { nro_factura } : {}),
+
+  anularCarga: (id: number) =>
+    api.post(`/core/cargas-saldo/${id}/anular/`),
 }
 
 export default tarjetasService

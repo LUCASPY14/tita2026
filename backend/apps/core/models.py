@@ -251,6 +251,7 @@ class CargaSaldo(models.Model):
         PENDIENTE = "PENDIENTE", "Pendiente"
         CONFIRMADA = "CONFIRMADA", "Confirmada"
         RECHAZADA = "RECHAZADA", "Rechazada"
+        ANULADA = "ANULADA", "Anulada"
 
     id_carga = models.BigAutoField(primary_key=True)
     tarjeta = models.ForeignKey(

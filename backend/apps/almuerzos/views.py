@@ -22,7 +22,7 @@ from rest_framework.response import Response
 from rest_framework.views import APIView
 
 from common.permissions import (
-    IsAdminOrReadOnly, IsAdminOrSupervisor, IsCajeroOrAdmin, IsCajeroCobradorOrAdmin, IsCajeroCocinaSupervisorOrAdmin,
+    IsAdmin, IsAdminOrReadOnly, IsAdminOrSupervisor, IsCajeroOrAdmin, IsCajeroCobradorOrAdmin, IsCajeroCocinaSupervisorOrAdmin,
     IsStaffOrClienteWeb, IsStaffUser,
 )
 from common.utils.medios_pago import resolver_medio_pago
@@ -818,6 +818,11 @@ class RecargaSaldoAlmuerzoViewSet(viewsets.ModelViewSet):
     filterset_fields = ["hijo", "estado"]
     ordering = ["-fecha_carga"]
 
+    def get_permissions(self):
+        if self.action == "anular":
+            return [IsAdmin()]
+        return super().get_permissions()
+
     def create(self, request, *args, **kwargs):
         serializer = self.get_serializer(data=request.data)
         serializer.is_valid(raise_exception=True)
@@ -998,6 +1003,23 @@ class RecargaSaldoAlmuerzoViewSet(viewsets.ModelViewSet):
         if cierre_caja is None:
             out["advertencia"] = ADVERTENCIA_SIN_CAJA
         return Response(out)
+
+    @action(detail=True, methods=["post"], url_path="anular")
+    def anular(self, request, pk=None):
+        """POST /api/v1/almuerzos/recargas-saldo/<id>/anular/ — anula una recarga CONFIRMADA (solo ADMIN)."""
+        recarga = self.get_object()
+        recarga_anulada = AlmuerzoService.anular_recarga_almuerzo(recarga=recarga, anulado_por=request.user)
+        registrar_auditoria(
+            request=request,
+            operacion="ANULAR_RECARGA_ALMUERZO",
+            tabla="almuerzos_recargasaldoalmuerzo",
+            id_registro=recarga_anulada.id_recarga_almuerzo,
+            descripcion=(
+                f"Anulación recarga #{recarga_anulada.id_recarga_almuerzo}"
+                f" ({recarga_anulada.monto_cargado} Gs.) en saldo de almuerzo de hijo={recarga_anulada.hijo_id}"
+            ),
+        )
+        return Response(self.get_serializer(recarga_anulada).data)
 
 
 # ==============================================================================

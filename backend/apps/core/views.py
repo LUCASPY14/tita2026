@@ -276,6 +276,11 @@ class CargaSaldoViewSet(viewsets.ModelViewSet):
     filter_backends = [DjangoFilterBackend]
     filterset_fields = ["tarjeta", "estado"]
 
+    def get_permissions(self):
+        if self.action == "anular":
+            return [IsAdmin()]
+        return super().get_permissions()
+
     def create(self, request, *args, **kwargs):
         serializer = self.get_serializer(data=request.data)
         serializer.is_valid(raise_exception=True)
@@ -466,6 +471,23 @@ class CargaSaldoViewSet(viewsets.ModelViewSet):
             ),
         )
         return Response(self.get_serializer(carga_confirmada).data)
+
+    @action(detail=True, methods=["post"], url_path="anular")
+    def anular(self, request, pk=None):
+        """POST /api/core/cargas-saldo/<id>/anular/ — anula una carga CONFIRMADA (solo ADMIN)."""
+        carga = self.get_object()
+        carga_anulada = TarjetaService.anular_carga_saldo(carga=carga, anulado_por=request.user)
+        registrar_auditoria(
+            request=request,
+            operacion="ANULAR_CARGA_SALDO",
+            tabla="core_cargasaldo",
+            id_registro=carga_anulada.id_carga,
+            descripcion=(
+                f"Anulación carga #{carga_anulada.id_carga} ({carga_anulada.monto_cargado} Gs.)"
+                f" en tarjeta {carga_anulada.tarjeta_id}"
+            ),
+        )
+        return Response(self.get_serializer(carga_anulada).data)
 
 
 class MedioPagoViewSet(viewsets.ModelViewSet):

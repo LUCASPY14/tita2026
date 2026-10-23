@@ -308,6 +308,56 @@ class AlmuerzoService:
             return recarga
 
     @staticmethod
+    def anular_recarga_almuerzo(*, recarga: RecargaSaldoAlmuerzo, anulado_por) -> RecargaSaldoAlmuerzo:
+        """
+        Anula una RecargaSaldoAlmuerzo CONFIRMADA: revierte el monto
+        acreditado con un MovimientoSaldoAlmuerzo tipo AJUSTE (este modelo
+        no tiene un tipo REVERSO propio) y marca la recarga como ANULADA.
+        Mismo patrón que TarjetaService.anular_carga_saldo.
+
+        Si la recarga viene de un pago Bancard todavía APROBADO, se
+        bloquea: anularla desde Pagos Bancard (ahí se pide el rollback
+        real a Bancard, acá no).
+        """
+        if recarga.estado != RecargaSaldoAlmuerzo.Estado.CONFIRMADA:
+            raise ValidationError({"error": "Solo se pueden anular recargas CONFIRMADAS."})
+
+        if recarga.factura and recarga.factura.estado == "EMITIDA":
+            raise ValidationError({
+                "error": "La recarga tiene una factura EMITIDA. Anulá primero la factura."
+            })
+
+        pago_bancard = getattr(recarga, "pago_bancard", None)
+        if pago_bancard and pago_bancard.estado == pago_bancard.Estado.APROBADO:
+            raise ValidationError({
+                "error": "Esta recarga viene de un pago Bancard aprobado — anulala desde Pagos Bancard."
+            })
+
+        with transaction.atomic():
+            recarga = RecargaSaldoAlmuerzo.objects.select_for_update().get(pk=recarga.pk)
+            if recarga.estado != RecargaSaldoAlmuerzo.Estado.CONFIRMADA:
+                raise ValidationError({"error": "Solo se pueden anular recargas CONFIRMADAS."})
+
+            saldo, _ = SaldoAlmuerzo.objects.get_or_create(hijo=recarga.hijo)
+            saldo = SaldoAlmuerzo.objects.select_for_update().get(pk=saldo.pk)
+            saldo.saldo_actual -= recarga.monto_cargado
+            saldo.save(update_fields=["saldo_actual"])
+
+            MovimientoSaldoAlmuerzo.objects.create(
+                saldo=saldo,
+                tipo=MovimientoSaldoAlmuerzo.Tipo.AJUSTE,
+                monto=-recarga.monto_cargado,
+                saldo_resultante=saldo.saldo_actual,
+                recarga=recarga,
+                observaciones=f"Anulación de recarga #{recarga.pk} ({anulado_por.email})",
+            )
+
+            recarga.estado = RecargaSaldoAlmuerzo.Estado.ANULADA
+            recarga.save(update_fields=["estado"])
+
+            return recarga
+
+    @staticmethod
     def ajustar_saldo(*, hijo, monto: Decimal, motivo: str, usuario) -> MovimientoSaldoAlmuerzo:
         """
         Corrección administrativa del saldo de almuerzo — no es una recarga

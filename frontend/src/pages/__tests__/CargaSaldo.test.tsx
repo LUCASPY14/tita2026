@@ -20,6 +20,11 @@ vi.mock('react-hot-toast', () => ({
   default: { error: vi.fn(), success: vi.fn() },
 }))
 
+let mockUser: { rol: string } | null = null
+vi.mock('../../store/authStore', () => ({
+  useAuthStore: () => ({ user: mockUser }),
+}))
+
 import api from '../../services/api'
 import toast from 'react-hot-toast'
 
@@ -46,14 +51,16 @@ function mockBuscarSuccess() {
 
 function mockBuscarSuccessConHijo(saldoAlmuerzo = -15000) {
   vi.mocked(api.get)
-    .mockResolvedValueOnce({ data: { results: [TARJETA_CON_HIJO] } })
-    .mockResolvedValueOnce({ data: { results: [] } })
-    .mockResolvedValueOnce({ data: { results: [] } })
-    .mockResolvedValueOnce({ data: { results: [{ saldo_actual: saldoAlmuerzo }] } })
+    .mockResolvedValueOnce({ data: { results: [TARJETA_CON_HIJO] } }) // buscar
+    .mockResolvedValueOnce({ data: { results: [] } })                 // movimientos
+    .mockResolvedValueOnce({ data: { results: [] } })                 // cargas
+    .mockResolvedValueOnce({ data: { results: [] } })                 // recargas-saldo almuerzo
+    .mockResolvedValueOnce({ data: { results: [{ saldo_actual: saldoAlmuerzo }] } }) // saldo almuerzo
 }
 
 beforeEach(() => {
   vi.clearAllMocks()
+  mockUser = null
 })
 
 // ─── Búsqueda ──────────────────────────────────────────────────────────────────
@@ -235,14 +242,14 @@ describe('CargaSaldo — saldo de almuerzo', () => {
     const user = await renderConTarjetaConHijo()
     expect(screen.getByText('Tipo de cobro')).toBeInTheDocument()
 
-    await user.click(screen.getByRole('button', { name: /Almuerzo/i }))
+    await user.click(screen.getByRole('button', { name: 'Almuerzo' }))
 
     expect(screen.getByText('Tipo de cobro')).toBeInTheDocument()
   })
 
   it('recargar saldo de almuerzo llama a /almuerzos/recargas-saldo/ con hijo_id', async () => {
     const user = await renderConTarjetaConHijo(-15000)
-    await user.click(screen.getByRole('button', { name: /Almuerzo/i }))
+    await user.click(screen.getByRole('button', { name: 'Almuerzo' }))
 
     vi.mocked(api.post).mockResolvedValueOnce({ data: { id: 1, estado: 'CONFIRMADA' } })
     vi.mocked(api.get).mockResolvedValueOnce({ data: { results: [{ saldo_actual: 10000 }] } })
@@ -262,7 +269,7 @@ describe('CargaSaldo — saldo de almuerzo', () => {
 
   it('almuerzo con Crédito CC llama a /almuerzos/recargas-saldo/ con CUENTA_CORRIENTE', async () => {
     const user = await renderConTarjetaConHijo(-15000)
-    await user.click(screen.getByRole('button', { name: /Almuerzo/i }))
+    await user.click(screen.getByRole('button', { name: 'Almuerzo' }))
     await user.click(screen.getByRole('button', { name: /Crédito CC/i }))
 
     vi.mocked(api.post).mockResolvedValueOnce({ data: { id: 1, estado: 'CONFIRMADA' } })
@@ -278,5 +285,152 @@ describe('CargaSaldo — saldo de almuerzo', () => {
       )
     })
     await screen.findByText('Recarga de almuerzo realizada')
+  })
+})
+
+// ─── Anular carga confirmada ────────────────────────────────────────────────
+
+const CARGA_CONFIRMADA = {
+  id_carga: 55,
+  monto_cargado: 20000,
+  metodo_pago: 'EFECTIVO',
+  estado: 'CONFIRMADA',
+  fecha_carga: '2026-10-20T10:00:00Z',
+}
+
+function mockBuscarSuccessConCarga() {
+  vi.mocked(api.get)
+    .mockResolvedValueOnce({ data: { results: [TARJETA] } })
+    .mockResolvedValueOnce({ data: { results: [] } })
+    .mockResolvedValueOnce({ data: { results: [CARGA_CONFIRMADA] } })
+}
+
+async function irATabCargas() {
+  const user = userEvent.setup()
+  renderCargaSaldo()
+  await user.type(screen.getByPlaceholderText('Nro. de tarjeta...'), 'T-00001')
+  await user.keyboard('{Enter}')
+  await screen.findByText('Juan Pérez')
+  await user.click(screen.getByRole('button', { name: 'Cargas de saldo' }))
+  return user
+}
+
+describe('CargaSaldo — anular carga confirmada', () => {
+  it('ADMIN ve el botón Anular en una carga CONFIRMADA', async () => {
+    mockUser = { rol: 'ADMIN' }
+    mockBuscarSuccessConCarga()
+    await irATabCargas()
+    expect(await screen.findByRole('button', { name: 'Anular' })).toBeInTheDocument()
+  })
+
+  it('un rol que no es ADMIN no ve el botón Anular', async () => {
+    mockUser = { rol: 'CAJERO' }
+    mockBuscarSuccessConCarga()
+    await irATabCargas()
+    await screen.findByText('Gs. 20.000')
+    expect(screen.queryByRole('button', { name: 'Anular' })).not.toBeInTheDocument()
+  })
+
+  it('confirmar la anulación llama al endpoint y refresca el historial', async () => {
+    mockUser = { rol: 'ADMIN' }
+    mockBuscarSuccessConCarga()
+    const user = await irATabCargas()
+
+    await user.click(await screen.findByRole('button', { name: 'Anular' }))
+    expect(await screen.findByText('Esta acción es irreversible')).toBeInTheDocument()
+
+    vi.mocked(api.post).mockResolvedValueOnce({ data: { id_carga: 55, estado: 'ANULADA' } })
+    vi.mocked(api.get)
+      .mockResolvedValueOnce({ data: { results: [TARJETA] } })
+      .mockResolvedValueOnce({ data: { results: [] } })
+      .mockResolvedValueOnce({ data: { results: [{ ...CARGA_CONFIRMADA, estado: 'ANULADA' }] } })
+
+    await user.click(screen.getByRole('button', { name: 'Confirmar anulación' }))
+
+    await waitFor(() => {
+      expect(vi.mocked(api.post)).toHaveBeenCalledWith('/core/cargas-saldo/55/anular/')
+      expect(vi.mocked(toast.success)).toHaveBeenCalledWith('Carga #55 anulada')
+    })
+  })
+})
+
+// ─── Anular recarga de almuerzo ─────────────────────────────────────────────
+
+const RECARGA_ALMUERZO_CONFIRMADA = {
+  id_recarga_almuerzo: 77,
+  monto_cargado: 15000,
+  metodo_pago: 'EFECTIVO',
+  estado: 'CONFIRMADA',
+  fecha_carga: '2026-10-20T10:00:00Z',
+}
+
+function mockBuscarConHijoYRecarga() {
+  vi.mocked(api.get)
+    .mockResolvedValueOnce({ data: { results: [TARJETA_CON_HIJO] } })          // buscar
+    .mockResolvedValueOnce({ data: { results: [] } })                          // movimientos
+    .mockResolvedValueOnce({ data: { results: [] } })                          // cargas
+    .mockResolvedValueOnce({ data: { results: [RECARGA_ALMUERZO_CONFIRMADA] } }) // recargas-saldo almuerzo
+    .mockResolvedValueOnce({ data: { results: [{ saldo_actual: 5000 }] } })     // saldo almuerzo
+}
+
+async function irATabRecargasAlmuerzo() {
+  const user = userEvent.setup()
+  renderCargaSaldo()
+  await user.type(screen.getByPlaceholderText('Nro. de tarjeta...'), 'T-00001')
+  await user.keyboard('{Enter}')
+  await screen.findByText('Juan Pérez')
+  await user.click(screen.getByRole('button', { name: 'Recargas de almuerzo' }))
+  return user
+}
+
+describe('CargaSaldo — anular recarga de almuerzo', () => {
+  it('ADMIN ve el botón Anular en una recarga de almuerzo CONFIRMADA', async () => {
+    mockUser = { rol: 'ADMIN' }
+    mockBuscarConHijoYRecarga()
+    await irATabRecargasAlmuerzo()
+    expect(await screen.findByRole('button', { name: 'Anular' })).toBeInTheDocument()
+  })
+
+  it('un rol que no es ADMIN no ve el botón Anular', async () => {
+    mockUser = { rol: 'CAJERO' }
+    mockBuscarConHijoYRecarga()
+    await irATabRecargasAlmuerzo()
+    await screen.findByText('Gs. 15.000')
+    expect(screen.queryByRole('button', { name: 'Anular' })).not.toBeInTheDocument()
+  })
+
+  it('confirmar la anulación llama al endpoint de almuerzo y refresca', async () => {
+    mockUser = { rol: 'ADMIN' }
+    mockBuscarConHijoYRecarga()
+    const user = await irATabRecargasAlmuerzo()
+
+    await user.click(await screen.findByRole('button', { name: 'Anular' }))
+    expect(await screen.findByText('Esta acción es irreversible')).toBeInTheDocument()
+
+    vi.mocked(api.post).mockResolvedValueOnce({ data: { id_recarga_almuerzo: 77, estado: 'ANULADA' } })
+    vi.mocked(api.get)
+      .mockResolvedValueOnce({ data: { results: [{ ...RECARGA_ALMUERZO_CONFIRMADA, estado: 'ANULADA' }] } })
+      .mockResolvedValueOnce({ data: { results: [{ saldo_actual: 0 }] } })
+
+    await user.click(screen.getByRole('button', { name: 'Confirmar anulación' }))
+
+    await waitFor(() => {
+      expect(vi.mocked(api.post)).toHaveBeenCalledWith('/almuerzos/recargas-saldo/77/anular/')
+      expect(vi.mocked(toast.success)).toHaveBeenCalledWith('Recarga #77 anulada')
+    })
+  })
+
+  it('tarjeta sin hijo no muestra la pestaña "Recargas de almuerzo"', async () => {
+    mockUser = { rol: 'ADMIN' }
+    vi.mocked(api.get)
+      .mockResolvedValueOnce({ data: { results: [TARJETA] } })
+      .mockResolvedValueOnce({ data: { results: [] } })
+      .mockResolvedValueOnce({ data: { results: [] } })
+    const user = userEvent.setup()
+    renderCargaSaldo()
+    await user.type(screen.getByPlaceholderText('Nro. de tarjeta...'), 'T-00001')
+    await user.keyboard('{Enter}')
+    await screen.findByText('Juan Pérez')
+    expect(screen.queryByRole('button', { name: 'Recargas de almuerzo' })).not.toBeInTheDocument()
   })
 })
