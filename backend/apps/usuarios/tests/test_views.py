@@ -918,6 +918,54 @@ class TestPortalHistorialConsumos:
         resp = api_portal.get("/api/v1/usuarios/portal/historial-consumos/")
         assert resp.status_code == 404
 
+    def test_ajuste_manual_del_mes_se_ve_con_motivo_sin_exponer_al_admin(
+        self, api_portal, hijo_portal, usuario_cajero
+    ):
+        from apps.almuerzos.models import SaldoAlmuerzo, MovimientoSaldoAlmuerzo
+        saldo = SaldoAlmuerzo.objects.create(hijo=hijo_portal, saldo_actual=0)
+        MovimientoSaldoAlmuerzo.objects.create(
+            saldo=saldo,
+            tipo=MovimientoSaldoAlmuerzo.Tipo.AJUSTE,
+            monto=10000,
+            saldo_resultante=10000,
+            fecha="2026-07-10T10:00:00Z",
+            observaciones=f"Corrección manual (ajuste manual: {usuario_cajero.email})",
+        )
+        resp = api_portal.get(
+            "/api/v1/usuarios/portal/historial-consumos/",
+            {"hijo_id": hijo_portal.pk, "anio": 2026, "mes": 7},
+        )
+        assert resp.status_code == 200
+        assert len(resp.data["ajustes"]) == 1
+        ajuste = resp.data["ajustes"][0]
+        assert ajuste["motivo"] == "Corrección manual"
+        assert usuario_cajero.email not in ajuste["motivo"]
+        assert ajuste["monto"] == 10000
+
+    def test_ajuste_ligado_a_anulacion_de_recarga_no_se_muestra(self, api_portal, hijo_portal):
+        # La reversión de una recarga anulada ya se ve como tal (recarga
+        # ANULADA) en el tab Historial — no duplicarla acá como "ajuste".
+        from apps.almuerzos.models import SaldoAlmuerzo, MovimientoSaldoAlmuerzo, RecargaSaldoAlmuerzo
+        saldo = SaldoAlmuerzo.objects.create(hijo=hijo_portal, saldo_actual=0)
+        recarga = RecargaSaldoAlmuerzo.objects.create(
+            hijo=hijo_portal, monto_cargado=10000, estado=RecargaSaldoAlmuerzo.Estado.ANULADA,
+        )
+        MovimientoSaldoAlmuerzo.objects.create(
+            saldo=saldo,
+            tipo=MovimientoSaldoAlmuerzo.Tipo.AJUSTE,
+            monto=-10000,
+            saldo_resultante=0,
+            fecha="2026-07-10T10:00:00Z",
+            recarga=recarga,
+            observaciones="Anulación de recarga #1 (admin@test.com)",
+        )
+        resp = api_portal.get(
+            "/api/v1/usuarios/portal/historial-consumos/",
+            {"hijo_id": hijo_portal.pk, "anio": 2026, "mes": 7},
+        )
+        assert resp.status_code == 200
+        assert resp.data["ajustes"] == []
+
     def test_registro_que_no_cobra_no_se_muestra_al_padre(self, api_portal, hijo_portal, usuario_cajero):
         # El 2do/3er ingreso del mismo día (ya_cobrado=False) es "repetir" y es
         # solo control interno de comedor — no debe llegar al portal de padres.
@@ -1338,6 +1386,76 @@ class TestPortalHistorialCantinaConVentas:
         )
         assert resp.status_code == 200
         assert resp.data["count"] >= 1
+
+    def test_ajuste_manual_se_ve_con_motivo_sin_exponer_al_admin(
+        self, api_portal, hijo_portal, usuario_cajero
+    ):
+        from apps.core.models import Tarjeta, MovimientoTarjeta
+        tarjeta = Tarjeta.objects.create(
+            nro_tarjeta="T-AJ-1", hijo=hijo_portal, estado=Tarjeta.Estado.ACTIVA, saldo_actual=0,
+        )
+        MovimientoTarjeta.objects.create(
+            tarjeta=tarjeta,
+            tipo=MovimientoTarjeta.Tipo.AJUSTE,
+            monto=-5000,
+            saldo_anterior=0,
+            saldo_resultante=-5000,
+            descripcion=f"Corrección por error de cobro (ajuste manual: {usuario_cajero.email})",
+            creado_por=usuario_cajero,
+        )
+        resp = api_portal.get(
+            "/api/v1/usuarios/portal/historial-cantina/",
+            {"hijo_id": hijo_portal.pk},
+        )
+        assert resp.status_code == 200
+        assert resp.data["count"] == 1
+        item = resp.data["results"][0]
+        assert item["tipo"] == "AJUSTE"
+        assert item["motivo"] == "Corrección por error de cobro"
+        assert usuario_cajero.email not in item["motivo"]
+        assert item["monto_total"] == -5000
+
+    def test_ajuste_sin_descripcion_usa_motivo_generico(self, api_portal, hijo_portal, usuario_cajero):
+        from apps.core.models import Tarjeta, MovimientoTarjeta
+        tarjeta = Tarjeta.objects.create(
+            nro_tarjeta="T-AJ-3", hijo=hijo_portal, estado=Tarjeta.Estado.ACTIVA, saldo_actual=0,
+        )
+        MovimientoTarjeta.objects.create(
+            tarjeta=tarjeta,
+            tipo=MovimientoTarjeta.Tipo.AJUSTE,
+            monto=1000,
+            saldo_anterior=0,
+            saldo_resultante=1000,
+            descripcion="",
+            creado_por=usuario_cajero,
+        )
+        resp = api_portal.get(
+            "/api/v1/usuarios/portal/historial-cantina/",
+            {"hijo_id": hijo_portal.pk},
+        )
+        assert resp.data["results"][0]["motivo"] == "Ajuste de saldo"
+
+    def test_ajuste_sin_creado_por_no_se_muestra(self, api_portal, hijo_portal):
+        # Reversos automáticos (p.ej. rollback de Bancard) no llevan
+        # creado_por — no son un "ajuste administrativo manual" visible acá.
+        from apps.core.models import Tarjeta, MovimientoTarjeta
+        tarjeta = Tarjeta.objects.create(
+            nro_tarjeta="T-AJ-2", hijo=hijo_portal, estado=Tarjeta.Estado.ACTIVA, saldo_actual=0,
+        )
+        MovimientoTarjeta.objects.create(
+            tarjeta=tarjeta,
+            tipo=MovimientoTarjeta.Tipo.AJUSTE,
+            monto=-5000,
+            saldo_anterior=0,
+            saldo_resultante=-5000,
+            descripcion="Reverso por anulación de pago Bancard #abc123",
+        )
+        resp = api_portal.get(
+            "/api/v1/usuarios/portal/historial-cantina/",
+            {"hijo_id": hijo_portal.pk},
+        )
+        assert resp.status_code == 200
+        assert resp.data["count"] == 0
 
 
 # ── UsuarioViewSet — guarda de hard-delete ──────────────────────────────────────

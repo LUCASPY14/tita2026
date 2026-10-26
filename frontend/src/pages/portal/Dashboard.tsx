@@ -36,10 +36,18 @@ interface ConsumoHistorial {
   costo_almuerzo: string | number
 }
 
+interface AjusteSaldo {
+  id: number
+  fecha: string
+  monto: number
+  motivo: string
+}
+
 interface HistorialData {
   anio: number
   mes: number
   consumos: ConsumoHistorial[]
+  ajustes: AjusteSaldo[]
   saldo_almuerzo: number
   total: number
   monto_total: number
@@ -92,11 +100,22 @@ interface DetalleCantina {
 }
 
 interface VentaCantina {
-  id_venta: number
+  id: string
+  tipo: 'VENTA'
   fecha: string
   monto_total: number
   detalles: DetalleCantina[]
 }
+
+interface AjusteCantina {
+  id: string
+  tipo: 'AJUSTE'
+  fecha: string
+  monto_total: number
+  motivo: string
+}
+
+type EventoCantina = VentaCantina | AjusteCantina
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 
@@ -436,6 +455,34 @@ function AlmuerzosTab({
           </div>
         </>
       )}
+
+      {/* Ajustes administrativos del mes — correcciones manuales de saldo,
+          separadas de los ingresos al comedor (que son el cobro normal) */}
+      {(data?.ajustes ?? []).length > 0 && (
+        <div className="bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden">
+          <div className="px-4 py-3 border-b border-slate-100 bg-slate-50">
+            <p className="text-sm font-semibold text-slate-500 uppercase tracking-wide">Ajustes de saldo</p>
+          </div>
+          <div className="divide-y divide-slate-100">
+            {(data?.ajustes ?? []).map(a => (
+              <div key={a.id} className="flex items-center justify-between px-4 py-3">
+                <div className="flex items-center gap-3 min-w-0">
+                  <div className="w-8 h-8 rounded-full bg-slate-100 flex items-center justify-center shrink-0">
+                    <Wallet className="w-4 h-4 text-slate-500" />
+                  </div>
+                  <div className="min-w-0">
+                    <p className="text-sm font-medium text-slate-800 truncate">{a.motivo}</p>
+                    <p className="text-sm text-slate-400">{formatFecha(a.fecha)}</p>
+                  </div>
+                </div>
+                <p className={`text-sm font-semibold tabular-nums shrink-0 ml-2 ${a.monto < 0 ? 'text-red-700' : 'text-emerald-700'}`}>
+                  {a.monto < 0 ? '-' : '+'}{formatGs(Math.abs(a.monto))}
+                </p>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
     </div>
   )
 }
@@ -508,12 +555,12 @@ function CantinaTab({
   expandedId,
   onToggle,
 }: {
-  ventas: VentaCantina[] | undefined
+  ventas: EventoCantina[] | undefined
   loading: boolean
   hasMore: boolean
   onLoadMore: () => void
-  expandedId: number | null
-  onToggle: (id: number) => void
+  expandedId: string | null
+  onToggle: (id: string) => void
 }) {
   if (loading && !ventas) return <Spinner className="mt-8" />
 
@@ -528,11 +575,26 @@ function CantinaTab({
 
   return (
     <div className="space-y-2">
-      {ventas.map(v => (
-        <div key={v.id_venta} className="bg-white rounded-xl border border-slate-100 overflow-hidden">
+      {ventas.map(v => v.tipo === 'AJUSTE' ? (
+        <div key={v.id} className="bg-white rounded-xl border border-slate-100 px-4 py-3 flex items-center justify-between">
+          <div className="flex items-center gap-3 min-w-0">
+            <div className="w-8 h-8 rounded-full bg-slate-100 flex items-center justify-center shrink-0">
+              <Wallet className="w-4 h-4 text-slate-500" />
+            </div>
+            <div className="min-w-0">
+              <p className="text-sm font-medium text-slate-800 truncate">{v.motivo}</p>
+              <p className="text-xs text-slate-400">{formatDateTime(v.fecha)}</p>
+            </div>
+          </div>
+          <p className={`text-sm font-semibold tabular-nums shrink-0 ml-2 ${v.monto_total < 0 ? 'text-red-700' : 'text-emerald-700'}`}>
+            {v.monto_total < 0 ? '-' : '+'}{formatGs(Math.abs(v.monto_total))}
+          </p>
+        </div>
+      ) : (
+        <div key={v.id} className="bg-white rounded-xl border border-slate-100 overflow-hidden">
           <button
             type="button"
-            onClick={() => onToggle(v.id_venta)}
+            onClick={() => onToggle(v.id)}
             className="w-full flex items-center justify-between px-4 py-3 text-left cursor-pointer hover:bg-slate-50 transition-colors"
           >
             <div>
@@ -541,12 +603,12 @@ function CantinaTab({
             </div>
             <div className="flex items-center gap-2 shrink-0">
               <p className="text-sm font-semibold text-emerald-700 tabular-nums">{formatGs(v.monto_total)}</p>
-              {expandedId === v.id_venta
+              {expandedId === v.id
                 ? <ChevronUp className="w-4 h-4 text-slate-400" />
                 : <ChevronDown className="w-4 h-4 text-slate-400" />}
             </div>
           </button>
-          {expandedId === v.id_venta && (
+          {expandedId === v.id && (
             <div className="border-t border-slate-100 divide-y divide-slate-50">
               {v.detalles.map((d, i) => (
                 <div key={i} className="flex items-center justify-between px-4 py-2">
@@ -602,10 +664,10 @@ export default function PortalDashboard() {
   const [almuerzosMes, setAlmuerzosMes] = useState<Record<number, { anio: number; mes: number }>>({})
 
   // Cantina tab state
-  const [cantina, setCantina] = useState<Record<number, VentaCantina[]>>({})
+  const [cantina, setCantina] = useState<Record<number, EventoCantina[]>>({})
   const [loadingCantina, setLoadingCantina] = useState<Record<number, boolean>>({})
   const [hasMoreCantina, setHasMoreCantina] = useState<Record<number, boolean>>({})
-  const [expandedCantinaId, setExpandedCantinaId] = useState<Record<number, number | null>>({})
+  const [expandedCantinaId, setExpandedCantinaId] = useState<Record<number, string | null>>({})
   const cantinaRequestedRef = useRef<Set<number>>(new Set())
   const pageCantinaRef = useRef<Record<number, number>>({})
 
@@ -676,7 +738,7 @@ export default function PortalDashboard() {
     }
   }, [])
 
-  const toggleCantinaRow = useCallback((hijoId: number, ventaId: number) => {
+  const toggleCantinaRow = useCallback((hijoId: number, ventaId: string) => {
     setExpandedCantinaId(prev => ({
       ...prev,
       [hijoId]: prev[hijoId] === ventaId ? null : ventaId,

@@ -437,7 +437,8 @@ describe('PortalDashboard — tabs', () => {
         return Promise.resolve({
           data: {
             results: [{
-              id_venta: 1,
+              id: 'venta-1',
+              tipo: 'VENTA',
               fecha: '2026-09-23T14:30:00-03:00',
               monto_total: 15000,
               detalles: [{ producto_nombre: 'Sandwich', cantidad: 1, precio_unitario: 15000, subtotal: 15000 }],
@@ -461,6 +462,49 @@ describe('PortalDashboard — tabs', () => {
     // demostrarle a un padre exactamente cuándo se hizo la compra.
     await screen.findByText(/23\/09\/2026/)
     expect(screen.queryByText(/Invalid Date/i)).not.toBeInTheDocument()
+  })
+
+  it('tab Cantina → muestra un ajuste administrativo de saldo con su motivo', async () => {
+    setupPortal({ hijos: [HIJO_CON_CUENTA] })
+    vi.mocked(api.get).mockImplementation((url: string) => {
+      if (url === '/usuarios/portal/mi-hijo/') return Promise.resolve({ data: PORTAL_DATA })
+      if (url === '/usuarios/portal/historial-cantina/') {
+        return Promise.resolve({
+          data: {
+            results: [{
+              id: 'ajuste-7',
+              tipo: 'AJUSTE',
+              fecha: '2026-09-20T09:00:00-03:00',
+              monto_total: -5000,
+              motivo: 'Corrección por error de cobro',
+            }],
+            next: null,
+          },
+        })
+      }
+      return Promise.resolve({ data: {} })
+    })
+    renderDashboard()
+    await screen.findByText('Juan García')
+
+    await userEvent.click(screen.getByRole('tab', { name: /Cantina/i }))
+
+    await screen.findByText('Corrección por error de cobro')
+    expect(screen.getByText('-Gs. 5.000')).toBeInTheDocument()
+  })
+
+  it('tab Almuerzos → muestra "Ajustes de saldo" cuando hay un ajuste administrativo del mes', async () => {
+    setupPortal({}, {
+      ajustes: [{ id: 3, fecha: '2026-07-12T10:00:00Z', monto: 10000, motivo: 'Corrección manual' }],
+    })
+    renderDashboard()
+    await screen.findByText('Juan García')
+
+    await userEvent.click(screen.getByRole('tab', { name: /Almuerzos/i }))
+
+    await screen.findByText('Ajustes de saldo')
+    expect(screen.getByText('Corrección manual')).toBeInTheDocument()
+    expect(screen.getByText('+Gs. 10.000')).toBeInTheDocument()
   })
 
   it('tab Historial → "Ver más" pide la página siguiente', async () => {

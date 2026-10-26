@@ -8,6 +8,7 @@ import hmac as hmac_mod
 import ipaddress
 import json
 import logging
+import re
 import secrets
 import struct
 import time
@@ -899,6 +900,18 @@ class PortalMiHijoView(APIView):
         return resp
 
 
+def _motivo_ajuste_publico(texto):
+    """
+    El padre ve el motivo de un ajuste administrativo, no quién lo hizo —
+    tanto TarjetaService.ajustar_saldo como el admin de Django guardan el
+    email del admin entre paréntesis al final del texto.
+    """
+    if not texto:
+        return "Ajuste de saldo"
+    limpio = re.sub(r"\s*\([^)]*\)\s*$", "", texto).strip()
+    return limpio or "Ajuste de saldo"
+
+
 class PortalHistorialConsumos(APIView):
     """
     GET /api/v1/usuarios/portal/historial-consumos/?hijo_id=X&anio=2026&mes=5
@@ -908,7 +921,7 @@ class PortalHistorialConsumos(APIView):
     throttle_classes = [PortalRateThrottle]
 
     def get(self, request):
-        from apps.almuerzos.models import RegistroConsumoAlmuerzo, SaldoAlmuerzo
+        from apps.almuerzos.models import MovimientoSaldoAlmuerzo, RegistroConsumoAlmuerzo, SaldoAlmuerzo
         from apps.clientes.services import hijos_visibles_para_cliente
 
         user = request.user
@@ -951,11 +964,35 @@ class PortalHistorialConsumos(APIView):
         saldo = SaldoAlmuerzo.objects.filter(hijo=hijo).first()
         saldo_almuerzo = int(saldo.saldo_actual) if saldo else 0
 
+        # Ajustes administrativos manuales (AlmuerzoService.ajustar_saldo) —
+        # se distinguen de las reversiones automáticas (anulación de recarga
+        # o de consumo, que ya se ven como tal en su propio historial) porque
+        # esas sí llevan `recarga`/`registro_consumo` vinculado y esta no.
+        ajustes_qs = (
+            MovimientoSaldoAlmuerzo.objects
+            .filter(
+                saldo__hijo=hijo, tipo=MovimientoSaldoAlmuerzo.Tipo.AJUSTE,
+                recarga__isnull=True, registro_consumo__isnull=True,
+                fecha__year=anio, fecha__month=mes,
+            )
+            .order_by("-fecha")
+        )
+        ajustes = [
+            {
+                "id": a.id_movimiento_almuerzo,
+                "fecha": a.fecha.isoformat(),
+                "monto": int(a.monto),
+                "motivo": _motivo_ajuste_publico(a.observaciones),
+            }
+            for a in ajustes_qs
+        ]
+
         return Response({
             "anio": anio,
             "mes": mes,
             "hijo": {"id_hijo": hijo.id_hijo, "nombre": hijo.nombre_completo},
             "consumos": consumos,
+            "ajustes": ajustes,
             "saldo_almuerzo": saldo_almuerzo,
             "total": len(consumos),
             "monto_total": sum(int(c["costo_almuerzo"]) for c in consumos),
@@ -965,12 +1002,14 @@ class PortalHistorialConsumos(APIView):
 class PortalHistorialCantina(APIView):
     """
     GET /api/usuarios/portal/historial-cantina/?hijo_id=X&page=1&page_size=15
-    Historial de compras en cantina (ventas con tarjeta RFID) del hijo autenticado.
+    Historial combinado de compras en cantina (ventas con tarjeta RFID) y
+    ajustes administrativos de saldo de la tarjeta del hijo autenticado.
     """
     permission_classes = [IsAuthenticated]
     throttle_classes = [PortalRateThrottle]
 
     def get(self, request):
+        from apps.core.models import MovimientoTarjeta
         from apps.ventas.models import Venta
         from apps.clientes.services import hijos_visibles_para_cliente
 
@@ -989,38 +1028,65 @@ class PortalHistorialCantina(APIView):
         page_size = min(int(request.query_params.get("page_size", 15)), 50)
         page = max(int(request.query_params.get("page", 1)), 1)
         offset = (page - 1) * page_size
+        limite = offset + page_size
 
-        qs = (
+        ventas_qs = (
             Venta.objects
             .filter(hijo=hijo, estado=Venta.Estado.ACTIVA)
             .prefetch_related("detalles", "detalles__producto")
-            .order_by("-fecha")
         )
-        total = qs.count()
-        ventas = qs[offset:offset + page_size]
+        # Ajustes administrativos manuales (TarjetaService.ajustar_saldo o el
+        # admin de Django) — se distinguen de los reversos automáticos (p.ej.
+        # rollback de un pago Bancard) porque esos no llevan creado_por.
+        ajustes_qs = MovimientoTarjeta.objects.filter(
+            tarjeta__hijo=hijo, tipo=MovimientoTarjeta.Tipo.AJUSTE, creado_por__isnull=False,
+        )
 
-        results = []
-        for v in ventas:
-            detalles = [
-                {
-                    "producto_nombre": d.producto.descripcion if d.producto else "—",
-                    "cantidad": int(d.cantidad),
-                    "precio_unitario": int(d.precio_unitario),
-                    "subtotal": int(d.subtotal),
-                }
-                for d in v.detalles.all()
-            ]
-            results.append({
-                "id_venta": v.id_venta,
+        # Mismo patrón que PortalHistorialRecargas: el top (offset+page_size)
+        # combinado solo puede salir del top (offset+page_size) de cada
+        # fuente por separado.
+        ventas = list(ventas_qs.order_by("-fecha")[:limite])
+        ajustes = list(
+            ajustes_qs.order_by("-fecha")
+            .values("id_movimiento_tarjeta", "fecha", "monto", "descripcion")[:limite]
+        )
+
+        combinado = [
+            {
+                "id": f"venta-{v.id_venta}",
+                "tipo": "VENTA",
                 "fecha": v.fecha.isoformat(),
                 "monto_total": int(v.monto_total),
-                "detalles": detalles,
-            })
+                "detalles": [
+                    {
+                        "producto_nombre": d.producto.descripcion if d.producto else "—",
+                        "cantidad": int(d.cantidad),
+                        "precio_unitario": int(d.precio_unitario),
+                        "subtotal": int(d.subtotal),
+                    }
+                    for d in v.detalles.all()
+                ],
+            }
+            for v in ventas
+        ] + [
+            {
+                "id": f"ajuste-{a['id_movimiento_tarjeta']}",
+                "tipo": "AJUSTE",
+                "fecha": a["fecha"].isoformat(),
+                "monto_total": int(a["monto"]),
+                "motivo": _motivo_ajuste_publico(a["descripcion"]),
+            }
+            for a in ajustes
+        ]
+        combinado.sort(key=lambda x: x["fecha"], reverse=True)
+
+        total = ventas_qs.count() + ajustes_qs.count()
+        pagina = combinado[offset:offset + page_size]
 
         return Response({
             "count": total,
             "next": total > offset + page_size,
-            "results": results,
+            "results": pagina,
         })
 
 
