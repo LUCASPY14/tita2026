@@ -12,6 +12,7 @@ interface Props {
   modoPago: ModoPago
   tarjetaInput: string
   buscandoTarjeta: boolean
+  resultadosTarjeta: Tarjeta[]
   clienteDirecto: ClienteBasico | null
   clienteSearch: string
   clienteResultados: ClienteBasico[]
@@ -19,6 +20,7 @@ interface Props {
   scannerRef: React.RefObject<HTMLInputElement | null>
   onChangeTarjetaInput: (v: string) => void
   onScanEnter: () => void
+  onSeleccionarTarjeta: (t: Tarjeta) => void
   onChangeClienteSearch: (v: string) => void
   onSelectCliente: (c: ClienteBasico) => void
   onClearCliente: () => void
@@ -27,9 +29,9 @@ interface Props {
 
 export default function PanelAlumno({
   tarjeta, saldoDisponible, saldoTrasCompra, hasItems, modoPago,
-  tarjetaInput, buscandoTarjeta,
+  tarjetaInput, buscandoTarjeta, resultadosTarjeta,
   clienteDirecto, clienteSearch, clienteResultados, buscandoCliente,
-  scannerRef, onChangeTarjetaInput, onScanEnter,
+  scannerRef, onChangeTarjetaInput, onScanEnter, onSeleccionarTarjeta,
   onChangeClienteSearch, onSelectCliente, onClearCliente, onVentaStartTime,
 }: Props) {
   const [focused, setFocused] = useState(false)
@@ -47,7 +49,7 @@ export default function PanelAlumno({
           onKeyDown={e => { if (e.key === 'Enter') onScanEnter() }}
           onFocus={() => setFocused(true)}
           onBlur={() => setFocused(false)}
-          placeholder="Escanear tarjeta o código…"
+          placeholder="Escanear tarjeta, o nombre del alumno…"
           disabled={buscandoTarjeta}
           className={[
             'w-full bg-slate-50 border-2 rounded-xl px-4 py-3 text-base text-slate-900 placeholder:text-slate-400 outline-none transition-all',
@@ -180,6 +182,29 @@ export default function PanelAlumno({
               </div>
             )}
           </>
+        ) : resultadosTarjeta.length > 0 ? (
+          <div className="space-y-2">
+            <p className="text-slate-500 text-sm font-bold uppercase tracking-wide">
+              {resultadosTarjeta.length} alumnos encontrados — elegí uno
+            </p>
+            <ul className="border border-slate-200 rounded-xl overflow-hidden divide-y divide-slate-100">
+              {resultadosTarjeta.map(t => (
+                <li key={t.nro_tarjeta}>
+                  <button
+                    type="button"
+                    onClick={() => onSeleccionarTarjeta(t)}
+                    className="w-full text-left px-3 py-2.5 hover:bg-blue-50 cursor-pointer flex items-center justify-between gap-2"
+                  >
+                    <span>
+                      <p className="text-sm font-semibold text-slate-800">{t.hijo_nombre ?? t.cliente_nombre}</p>
+                      <p className="text-xs text-slate-400">{t.hijo_grado ?? 'Docente / Funcionario'}</p>
+                    </span>
+                    <span className="text-xs font-mono text-slate-300 shrink-0">{t.nro_tarjeta}</span>
+                  </button>
+                </li>
+              ))}
+            </ul>
+          </div>
         ) : (modoPago === 'MEDIO' || modoPago === 'CREDITO') ? (
           <div className="space-y-3">
             {clienteDirecto ? (
@@ -241,7 +266,7 @@ export default function PanelAlumno({
           <div className="flex flex-col items-center justify-center h-56 text-center">
             <CreditCard size={72} className="text-slate-200 mb-4" />
             <p className="text-slate-600 text-xl font-bold">Sin alumno</p>
-            <p className="text-slate-400 text-base mt-1">Escanear tarjeta para comenzar</p>
+            <p className="text-slate-400 text-base mt-1">Escaneá la tarjeta, o escribí el nombre arriba</p>
           </div>
         )}
       </div>

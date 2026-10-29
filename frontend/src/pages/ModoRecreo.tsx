@@ -49,6 +49,7 @@ export default function ModoRecreo() {
   const [tarjetaInput, setTarjetaInput] = useState('')
   const [tarjeta, setTarjeta] = useState<Tarjeta | null>(null)
   const [buscandoTarjeta, setBuscandoTarjeta] = useState(false)
+  const [resultadosTarjeta, setResultadosTarjeta] = useState<Tarjeta[]>([])
   const [preciosCliente, setPreciosCliente] = useState<Record<number, number>>({})
 
   const [clienteDirecto, setClienteDirecto] = useState<ClienteBasico | null>(null)
@@ -249,38 +250,49 @@ export default function ModoRecreo() {
     setClienteDirecto(null); setClienteSearch(''); setClienteResultados([])
   }, [])
 
+  const aplicarTarjeta = useCallback(async (found: Tarjeta) => {
+    if (found.estado !== 'ACTIVA') { sfx.error(); toast.error(`Tarjeta ${found.estado.toLowerCase()}`); return }
+    sfx.card()
+    setTarjeta(found)
+    setResultadosTarjeta([])
+    setCarrito([])
+    setClienteDirecto(null); setClienteSearch(''); setClienteResultados([])
+    setPreciosCliente({})
+    if (!found.lista_es_default && found.lista_precio_id) {
+      try {
+        const { data } = await api.get('/productos/productos/', {
+          params: { lista_precio_id: found.lista_precio_id, activo: true },
+        })
+        const prods: Producto[] = data.results ?? data
+        const mapa: Record<number, number> = {}
+        prods.forEach(p => { mapa[p.id_producto] = Number(p.precio_actual) || 0 })
+        setPreciosCliente(mapa)
+      } catch { /* precio por defecto como fallback */ }
+    }
+    const criticas = (found.hijo_restricciones ?? []).filter((r: RestriccionHijo) => r.severidad === 'CRITICA')
+    if (criticas.length > 0) {
+      sfx.restrict(); toast.error(`⚠️ ${criticas.length} restricción CRÍTICA`, { duration: 4000 })
+    }
+    if (Number(found.saldo_disponible || found.saldo_actual) < 5000) {
+      sfx.lowBal(); toast(`Saldo bajo: ${gs(found.saldo_disponible || found.saldo_actual)}`, { icon: '⚠️' })
+    }
+    ventaStartTime.current = performance.now()
+  }, [])
+
   const buscarTarjeta = useCallback(async (nro: string) => {
     if (!nro || buscandoTarjeta) return
     setBuscandoTarjeta(true)
+    setResultadosTarjeta([])
     try {
       const { data } = await tarjetasService.buscar<Tarjeta>(nro)
-      const found = (data.results ?? []).find((t) => t.nro_tarjeta === nro)
-      if (!found) { sfx.error(); toast.error('Tarjeta no encontrada'); return }
-      if (found.estado !== 'ACTIVA') { sfx.error(); toast.error(`Tarjeta ${found.estado.toLowerCase()}`); return }
-      sfx.card()
-      setTarjeta(found)
-      setCarrito([])
-      setClienteDirecto(null); setClienteSearch(''); setClienteResultados([])
-      setPreciosCliente({})
-      if (!found.lista_es_default && found.lista_precio_id) {
-        try {
-          const { data } = await api.get('/productos/productos/', {
-            params: { lista_precio_id: found.lista_precio_id, activo: true },
-          })
-          const prods: Producto[] = data.results ?? data
-          const mapa: Record<number, number> = {}
-          prods.forEach(p => { mapa[p.id_producto] = Number(p.precio_actual) || 0 })
-          setPreciosCliente(mapa)
-        } catch { /* precio por defecto como fallback */ }
-      }
-      const criticas = (found.hijo_restricciones ?? []).filter((r: RestriccionHijo) => r.severidad === 'CRITICA')
-      if (criticas.length > 0) {
-        sfx.restrict(); toast.error(`⚠️ ${criticas.length} restricción CRÍTICA`, { duration: 4000 })
-      }
-      if (Number(found.saldo_disponible || found.saldo_actual) < 5000) {
-        sfx.lowBal(); toast(`Saldo bajo: ${gs(found.saldo_disponible || found.saldo_actual)}`, { icon: '⚠️' })
-      }
-      ventaStartTime.current = performance.now()
+      const resultados = data.results ?? []
+      if (resultados.length === 0) { sfx.error(); toast.error('Tarjeta no encontrada'); return }
+      if (resultados.length === 1) { await aplicarTarjeta(resultados[0]); return }
+      // Varias coincidencias (búsqueda por nombre/apellido): el cajero elige.
+      const activas = resultados.filter(t => t.estado === 'ACTIVA')
+      if (activas.length === 0) { sfx.error(); toast.error('No hay tarjetas activas que coincidan'); return }
+      if (activas.length === 1) { await aplicarTarjeta(activas[0]); return }
+      setResultadosTarjeta(activas)
     } catch {
       sfx.error(); toast.error('Error al buscar tarjeta')
     } finally {
@@ -288,7 +300,7 @@ export default function ModoRecreo() {
       setTarjetaInput('')
       setTimeout(() => scannerRef.current?.focus(), 50)
     }
-  }, [buscandoTarjeta])
+  }, [buscandoTarjeta, aplicarTarjeta])
 
   const handleAgregar = useCallback((producto: Producto) => {
     const restriccion = isRestricto(producto)
@@ -437,7 +449,7 @@ export default function ModoRecreo() {
     clearTimeout(flashTimer.current)
     setFlash('none'); setCarrito([]); setTarjeta(null); setPreciosCliente({})
     clearCliente()
-    setTarjetaInput(''); setProdSearch('')
+    setTarjetaInput(''); setProdSearch(''); setResultadosTarjeta([])
     setMontoEfectivo(''); setReferencia(''); setNroFacturaVenta('')
     ventaStartTime.current = 0
     setTimeout(() => scannerRef.current?.focus(), 60)
@@ -579,13 +591,15 @@ export default function ModoRecreo() {
           modoPago={modoPago}
           tarjetaInput={tarjetaInput}
           buscandoTarjeta={buscandoTarjeta}
+          resultadosTarjeta={resultadosTarjeta}
           clienteDirecto={clienteDirecto}
           clienteSearch={clienteSearch}
           clienteResultados={clienteResultados}
           buscandoCliente={buscandoCliente}
           scannerRef={scannerRef}
-          onChangeTarjetaInput={setTarjetaInput}
+          onChangeTarjetaInput={v => { setTarjetaInput(v); if (resultadosTarjeta.length) setResultadosTarjeta([]) }}
           onScanEnter={() => processScan(tarjetaInput)}
+          onSeleccionarTarjeta={aplicarTarjeta}
           onChangeClienteSearch={setClienteSearch}
           onSelectCliente={(c) => { setClienteDirecto(c); setClienteSearch(c.nombre_completo); setClienteResultados([]) }}
           onClearCliente={clearCliente}

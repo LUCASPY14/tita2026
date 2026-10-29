@@ -447,6 +447,64 @@ describe('ModoRecreo — búsqueda de tarjeta', () => {
     await screen.findByText('Ana López')
     expect(screen.queryByText(/Hoy cumple años/i)).not.toBeInTheDocument()
   })
+
+  it('con un solo resultado por nombre, selecciona directo sin mostrar lista', async () => {
+    setupData()
+    mockTarjetasBuscar.mockResolvedValueOnce({ data: { results: [TARJETA_ACTIVA] } })
+    render(<ModoRecreo />)
+    await waitForProducts()
+
+    const scannerInput = screen.getByPlaceholderText(/Escanear tarjeta/i)
+    await userEvent.type(scannerInput, 'Lopez{Enter}')
+    expect(await screen.findByText('Ana López')).toBeInTheDocument()
+    expect(screen.queryByText(/encontrados — elegí uno/i)).not.toBeInTheDocument()
+  })
+
+  it('con varios resultados por nombre, muestra una lista para elegir', async () => {
+    setupData()
+    const OTRA = { ...TARJETA_ACTIVA, nro_tarjeta: 'T-00002', hijo_nombre: 'Ana Gómez', hijo_grado: '2° B' }
+    mockTarjetasBuscar.mockResolvedValueOnce({ data: { results: [TARJETA_ACTIVA, OTRA] } })
+    render(<ModoRecreo />)
+    await waitForProducts()
+
+    const scannerInput = screen.getByPlaceholderText(/Escanear tarjeta/i)
+    await userEvent.type(scannerInput, 'Ana{Enter}')
+    expect(await screen.findByText('2 alumnos encontrados — elegí uno')).toBeInTheDocument()
+    expect(screen.getByText('Ana López')).toBeInTheDocument()
+    expect(screen.getByText('Ana Gómez')).toBeInTheDocument()
+
+    await userEvent.click(screen.getByText('Ana Gómez'))
+    expect(await screen.findByText('2° B')).toBeInTheDocument()
+    expect(screen.queryByText(/encontrados — elegí uno/i)).not.toBeInTheDocument()
+  })
+
+  it('con un único resultado bloqueado, muestra el error de estado (no "no encontrada")', async () => {
+    setupData()
+    const BLOQUEADA = { ...TARJETA_ACTIVA, nro_tarjeta: 'T-00003', estado: 'BLOQUEADA' }
+    mockTarjetasBuscar.mockResolvedValueOnce({ data: { results: [BLOQUEADA] } })
+    render(<ModoRecreo />)
+    await waitForProducts()
+
+    const scannerInput = screen.getByPlaceholderText(/Escanear tarjeta/i)
+    await userEvent.type(scannerInput, 'Lopez{Enter}')
+    expect(await screen.findByText('Modo Recreo')).toBeInTheDocument()
+    expect(vi.mocked(toast.error)).toHaveBeenCalledWith(`Tarjeta ${BLOQUEADA.estado.toLowerCase()}`)
+  })
+
+  it('si todas las coincidencias por nombre están inactivas, avisa y no muestra lista', async () => {
+    setupData()
+    const BLOQUEADA = { ...TARJETA_ACTIVA, nro_tarjeta: 'T-00003', estado: 'BLOQUEADA' }
+    const OTRA_BLOQUEADA = { ...TARJETA_ACTIVA, nro_tarjeta: 'T-00004', hijo_nombre: 'Ana Gómez', estado: 'BLOQUEADA' }
+    mockTarjetasBuscar.mockResolvedValueOnce({ data: { results: [BLOQUEADA, OTRA_BLOQUEADA] } })
+    render(<ModoRecreo />)
+    await waitForProducts()
+
+    const scannerInput = screen.getByPlaceholderText(/Escanear tarjeta/i)
+    await userEvent.type(scannerInput, 'Ana{Enter}')
+    expect(await screen.findByText('Modo Recreo')).toBeInTheDocument()
+    expect(vi.mocked(toast.error)).toHaveBeenCalledWith('No hay tarjetas activas que coincidan')
+    expect(screen.queryByText(/encontrados — elegí uno/i)).not.toBeInTheDocument()
+  })
 })
 
 // ─── Tests: quitar del carrito ────────────────────────────────────────────────
