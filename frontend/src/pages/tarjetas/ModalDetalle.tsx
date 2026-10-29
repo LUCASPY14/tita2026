@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from 'react'
 import toast from 'react-hot-toast'
 import { Lock, Unlock, ArrowUp, ArrowDown } from 'lucide-react'
+import api from '../../services/api'
 import tarjetasService from '../../services/tarjetas'
 import { METODO_PAGO_LABEL } from '../../constants/mediosPago'
 import Badge from '../../components/ui/Badge'
@@ -9,7 +10,7 @@ import Table, { type Column } from '../../components/ui/Table'
 import Modal from '../../components/ui/Modal'
 import {
   extractErrorMessage, formatGs, formatFecha, formatFechaCorta,
-  type Tarjeta, type MovimientoTarjeta, type CargaSaldo,
+  type Tarjeta, type MovimientoTarjeta, type CargaSaldo, type RecargaAlmuerzo,
   ESTADO_COLOR, TIPO_MOV_LABEL, TIPO_MOV_COLOR, ESTADO_CARGA_COLOR, describirDisponible,
 } from './shared'
 
@@ -26,9 +27,10 @@ const inputClass = 'border border-slate-200 rounded-xl px-3 py-1.5 text-sm text-
 const labelClass = 'block text-sm font-semibold text-slate-500 uppercase tracking-wide mb-1.5'
 
 export default function ModalDetalle({ tarjeta, toggling, onToggleEstado, onClose, onTarjetaUpdated, onListReload }: Props) {
-  const [detailTab, setDetailTab] = useState<'movimientos' | 'cargas'>('movimientos')
+  const [detailTab, setDetailTab] = useState<'movimientos' | 'cargas' | 'recargasAlmuerzo'>('movimientos')
   const [movimientos, setMovimientos] = useState<MovimientoTarjeta[]>([])
   const [cargas, setCargas] = useState<CargaSaldo[]>([])
+  const [recargasAlmuerzo, setRecargasAlmuerzo] = useState<RecargaAlmuerzo[]>([])
   const [loadingDetail, setLoadingDetail] = useState(false)
   const [tipoMovFilter, setTipoMovFilter] = useState('')
 
@@ -51,9 +53,13 @@ export default function ModalDetalle({ tarjeta, toggling, onToggleEstado, onClos
     Promise.all([
       tarjetasService.getMovimientos<MovimientoTarjeta>(tarjeta.nro_tarjeta, 200),
       tarjetasService.getCargas<CargaSaldo>(tarjeta.nro_tarjeta, 200),
-    ]).then(([movRes, cargaRes]) => {
+      tarjeta.hijo
+        ? api.get('/almuerzos/recargas-saldo/', { params: { hijo: tarjeta.hijo, page_size: 200 } })
+        : Promise.resolve(null),
+    ]).then(([movRes, cargaRes, recargaRes]) => {
       setMovimientos(movRes.data.results ?? [])
       setCargas(cargaRes.data.results ?? [])
+      setRecargasAlmuerzo(recargaRes?.data.results ?? [])
     }).catch(() => toast.error('Error al cargar historial'))
       .finally(() => setLoadingDetail(false))
   }, [tarjeta?.nro_tarjeta]) // eslint-disable-line react-hooks/exhaustive-deps
@@ -170,6 +176,31 @@ export default function ModalDetalle({ tarjeta, toggling, onToggleEstado, onClos
     },
   ]
 
+  const colsRecargasAlmuerzo: Column<RecargaAlmuerzo>[] = [
+    {
+      title: 'Fecha', key: 'fecha',
+      render: (_, r) => <span className="text-xs text-slate-500">{formatFecha(r.fecha_carga)}</span>,
+    },
+    {
+      title: 'Monto', key: 'monto',
+      render: (_, r) => (
+        <span className="tabular-nums font-semibold text-orange-700">{formatGs(r.monto_cargado)}</span>
+      ),
+    },
+    {
+      title: 'Método', key: 'metodo',
+      render: (_, r) => (
+        <span className="text-base text-slate-600">
+          {r.metodo_pago === 'CUENTA_CORRIENTE' ? 'Cuenta Corriente' : (METODO_PAGO_LABEL[r.metodo_pago] ?? r.metodo_pago)}
+        </span>
+      ),
+    },
+    {
+      title: 'Estado', key: 'estado',
+      render: (_, r) => <Badge color={ESTADO_CARGA_COLOR[r.estado] ?? 'default'}>{r.estado}</Badge>,
+    },
+  ]
+
   if (!tarjeta) return null
 
   const disponible = describirDisponible(tarjeta)
@@ -259,7 +290,11 @@ export default function ModalDetalle({ tarjeta, toggling, onToggleEstado, onClos
 
         <div className="border-b border-slate-200 mb-4">
           <div className="flex">
-            {(['movimientos', 'cargas'] as const).map(tab => (
+            {(
+              tarjeta.hijo
+                ? (['movimientos', 'cargas', 'recargasAlmuerzo'] as const)
+                : (['movimientos', 'cargas'] as const)
+            ).map(tab => (
               <button
                 key={tab}
                 onClick={() => setDetailTab(tab)}
@@ -269,7 +304,7 @@ export default function ModalDetalle({ tarjeta, toggling, onToggleEstado, onClos
                     : 'border-transparent text-slate-500 hover:text-slate-700'
                 }`}
               >
-                {tab === 'movimientos' ? 'Movimientos' : 'Cargas de Saldo'}
+                {tab === 'movimientos' ? 'Movimientos' : tab === 'cargas' ? 'Cargas de Saldo' : 'Recargas de Almuerzo'}
               </button>
             ))}
           </div>
@@ -294,8 +329,10 @@ export default function ModalDetalle({ tarjeta, toggling, onToggleEstado, onClos
             </div>
             <Table columns={colsMovimientos} dataSource={movimientosFiltrados} rowKey="id_movimiento_tarjeta" pageSize={8} />
           </>
-        ) : (
+        ) : detailTab === 'cargas' ? (
           <Table columns={colsCargas} dataSource={cargas} rowKey="id_carga" pageSize={8} />
+        ) : (
+          <Table columns={colsRecargasAlmuerzo} dataSource={recargasAlmuerzo} rowKey="id_recarga_almuerzo" pageSize={8} />
         )}
 
         <div className="flex justify-end mt-5">

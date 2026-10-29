@@ -112,6 +112,14 @@ export interface CargaSaldo {
   usuario_nombre?: string
 }
 
+export interface RecargaAlmuerzo {
+  id_recarga_almuerzo: number
+  monto_cargado: string | number
+  metodo_pago: string
+  estado: string
+  fecha_carga: string
+}
+
 export type TipoTitular = 'alumno' | 'funcionario'
 
 export interface TarjetaForm {
@@ -148,7 +156,7 @@ export const TIPO_MOV_COLOR: Record<string, BadgeColor> = {
 }
 
 export const ESTADO_CARGA_COLOR: Record<string, BadgeColor> = {
-  CONFIRMADA: 'green', PENDIENTE: 'yellow', RECHAZADA: 'red',
+  CONFIRMADA: 'green', PENDIENTE: 'yellow', RECHAZADA: 'red', ANULADA: 'red',
 }
 
 // Debe coincidir con MOTIVOS_RENUMERACION_TARJETA en apps/core/services.py
