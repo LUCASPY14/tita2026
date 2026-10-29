@@ -23,19 +23,32 @@ export default function ModalCrear({ open, onClose, onSaved }: Props) {
   const puedeAutorizar = rol === 'ADMIN' || rol === 'SUPERVISOR'
   const [form, setForm] = useState<TarjetaForm>(FORM_INITIAL)
   const [saving, setSaving] = useState(false)
-  const [hijos, setHijos] = useState<Hijo[]>([])
+  const [alumnosSearch, setAlumnosSearch] = useState('')
+  const [alumnos, setAlumnos] = useState<Hijo[]>([])
+  const [loadingAlumnos, setLoadingAlumnos] = useState(false)
+  const alumnosTimer = useRef<ReturnType<typeof setTimeout>>(undefined)
   const [clientesSearch, setClientesSearch] = useState('')
   const [clientes, setClientes] = useState<ClienteBasico[]>([])
   const [loadingClientes, setLoadingClientes] = useState(false)
   const clientesTimer = useRef<ReturnType<typeof setTimeout>>(undefined)
 
+  // Búsqueda de alumnos con debounce: con cientos de estudiantes activos,
+  // un <select> precargado se corta por el tope de paginación del backend
+  // (max_page_size=500) y deja alumnos sin aparecer según el orden alfabético.
   useEffect(() => {
-    if (open && hijos.length === 0) {
-      clientesService.getHijos<Hijo>({ activo: true, page_size: 500 })
-        .then(({ data }) => setHijos(data.results ?? []))
-        .catch(() => toast.error('Error al cargar alumnos'))
-    }
-  }, [open, hijos.length])
+    if (!open || form.tipoTitular !== 'alumno') return
+    clearTimeout(alumnosTimer.current)
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    if (!alumnosSearch.trim()) { setAlumnos([]); return }
+    alumnosTimer.current = setTimeout(() => {
+      setLoadingAlumnos(true)
+      clientesService.getHijos<Hijo>({ search: alumnosSearch, activo: true, page_size: 8 })
+        .then(({ data }) => setAlumnos(data.results ?? []))
+        .catch(() => setAlumnos([]))
+        .finally(() => setLoadingAlumnos(false))
+    }, 350)
+    return () => clearTimeout(alumnosTimer.current)
+  }, [alumnosSearch, open, form.tipoTitular])
 
   // Búsqueda de clientes con debounce: limpiar resultados sincrónicamente
   // cuando el modal está cerrado o la búsqueda está vacía es intencional.
@@ -57,6 +70,8 @@ export default function ModalCrear({ open, onClose, onSaved }: Props) {
   }, [clientesSearch, open, form.tipoTitular])
 
   const handleClose = () => {
+    setAlumnosSearch('')
+    setAlumnos([])
     setClientesSearch('')
     setClientes([])
     onClose()
@@ -90,6 +105,8 @@ export default function ModalCrear({ open, onClose, onSaved }: Props) {
       await tarjetasService.crear(payload)
       toast.success('Tarjeta creada')
       setForm(FORM_INITIAL)
+      setAlumnosSearch('')
+      setAlumnos([])
       setClientesSearch('')
       setClientes([])
       onSaved()
@@ -140,7 +157,11 @@ export default function ModalCrear({ open, onClose, onSaved }: Props) {
               <button
                 key={tipo}
                 type="button"
-                onClick={() => setForm(f => ({ ...f, tipoTitular: tipo, hijo: '', cliente_directo: '' }))}
+                onClick={() => {
+                  setForm(f => ({ ...f, tipoTitular: tipo, hijo: '', cliente_directo: '' }))
+                  setAlumnosSearch(''); setAlumnos([])
+                  setClientesSearch(''); setClientes([])
+                }}
                 className={[
                   'flex-1 py-2.5 rounded-xl border-2 text-sm font-bold transition-colors cursor-pointer',
                   form.tipoTitular === tipo
@@ -157,16 +178,46 @@ export default function ModalCrear({ open, onClose, onSaved }: Props) {
         {form.tipoTitular === 'alumno' ? (
           <div>
             <label className={labelClass}>Estudiante *</label>
-            <select
-              value={form.hijo}
-              onChange={e => setForm(f => ({ ...f, hijo: Number(e.target.value) || '' }))}
+            <input
+              value={alumnosSearch}
+              onChange={e => { setAlumnosSearch(e.target.value); setForm(f => ({ ...f, hijo: '' })) }}
+              placeholder="Buscar por nombre o apellido..."
               className={inputClass}
-            >
-              <option value="">Seleccionar estudiante...</option>
-              {hijos.map(h => (
-                <option key={h.id_hijo} value={h.id_hijo}>{h.nombre} {h.apellido} — {h.grado}</option>
-              ))}
-            </select>
+            />
+            {loadingAlumnos && (
+              <p className="text-xs text-slate-400 mt-1">Buscando...</p>
+            )}
+            {alumnos.length > 0 && !form.hijo && (
+              <ul className="border border-slate-200 rounded-xl mt-1 max-h-40 overflow-y-auto">
+                {alumnos.map(h => (
+                  <li key={h.id_hijo}>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setForm(f => ({ ...f, hijo: h.id_hijo }))
+                        setAlumnosSearch(`${h.nombre} ${h.apellido}${h.grado_nombre ? ` — ${h.grado_nombre}` : ''}`)
+                      }}
+                      className="w-full text-left px-3 py-2 text-sm hover:bg-green-50 cursor-pointer"
+                    >
+                      <span className="font-semibold text-slate-800">{h.nombre} {h.apellido}</span>
+                      {h.grado_nombre && <span className="text-slate-400 ml-2 text-xs">{h.grado_nombre}</span>}
+                    </button>
+                  </li>
+                ))}
+              </ul>
+            )}
+            {form.hijo !== '' && (
+              <div className="mt-1 flex items-center gap-2 bg-green-50 border border-green-200 rounded-lg px-3 py-1.5">
+                <span className="text-green-700 text-sm font-semibold">{alumnosSearch}</span>
+                <button
+                  type="button"
+                  onClick={() => { setForm(f => ({ ...f, hijo: '' })); setAlumnosSearch('') }}
+                  className="ml-auto text-slate-400 hover:text-red-500 text-xs cursor-pointer"
+                >
+                  ✕
+                </button>
+              </div>
+            )}
           </div>
         ) : (
           <div>

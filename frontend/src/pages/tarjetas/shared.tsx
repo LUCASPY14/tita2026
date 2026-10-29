@@ -86,7 +86,7 @@ export interface Hijo {
   id_hijo: number
   nombre: string
   apellido: string
-  grado: string
+  grado_nombre: string | null
   activo: boolean
 }
 
