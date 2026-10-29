@@ -150,6 +150,24 @@ class TestEnviarWhatsapp:
         payload = mock_post.call_args[1]["json"]
         assert payload["chatId"] == "595981112222@c.us"
 
+    def test_normaliza_numero_en_formato_local(self):
+        """El caso real que fallaba: whatsapp_cliente() y NotificacionService
+        pasan cliente.telefono tal cual está guardado (formato local, '0...'),
+        sin convertir — enviar_whatsapp ahora lo normaliza igual."""
+        from apps.notificaciones.services import enviar_whatsapp
+        mock_resp = MagicMock()
+        mock_resp.json.return_value = {}
+        mock_resp.raise_for_status = MagicMock()
+
+        with patch("django.conf.settings.EVOLUTION_API_URL", "http://waha:3000"):
+            with patch("django.conf.settings.EVOLUTION_API_KEY", ""):
+                with patch("django.conf.settings.EVOLUTION_API_INSTANCE", "default"):
+                    with patch("requests.post", return_value=mock_resp) as mock_post:
+                        enviar_whatsapp("0985350656", "msg")
+
+        payload = mock_post.call_args[1]["json"]
+        assert payload["chatId"] == "595985350656@c.us"
+
     def test_http_error_se_propaga(self):
         from apps.notificaciones.services import enviar_whatsapp
         import requests as req_lib

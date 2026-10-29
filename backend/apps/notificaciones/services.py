@@ -293,12 +293,28 @@ class EmailService:
         )
 
 
+def normalizar_numero_py(telefono: str) -> str:
+    """Normaliza un teléfono guardado en formato local ('0981234567') o ya
+    internacional ('+595981234567') al formato sin '+' que espera WAHA
+    ('595981234567')."""
+    numero = (telefono or "").strip().lstrip("+").replace(" ", "").replace("-", "")
+    if not numero:
+        return numero
+    if numero.startswith("0"):
+        numero = "595" + numero[1:]
+    elif not numero.startswith("595"):
+        numero = "595" + numero
+    return numero
+
+
 def enviar_whatsapp(numero: str, mensaje: str) -> dict:
     """
     Envía un mensaje de WhatsApp usando WAHA (WhatsApp HTTP API, self-hosted).
 
     Args:
-        numero: Número en formato internacional sin '+', ej. "595981234567"
+        numero: Teléfono en formato local ('0981234567') o internacional
+            ('595981234567' / '+595981234567') — se normaliza acá, así que
+            el caller no necesita convertirlo antes.
         mensaje: Texto plano del mensaje
 
     Returns:
@@ -319,8 +335,7 @@ def enviar_whatsapp(numero: str, mensaje: str) -> dict:
             "Iniciá WAHA con: docker run -d --name waha -p 3000:3000 devlikeapro/waha:latest"
         )
 
-    # Normalizar: quitar espacios, guiones y '+' inicial
-    numero_limpio = numero.strip().lstrip("+").replace(" ", "").replace("-", "")
+    numero_limpio = normalizar_numero_py(numero)
     # WAHA usa el formato E.164 con sufijo @c.us para contactos individuales
     chat_id = f"{numero_limpio}@c.us"
 

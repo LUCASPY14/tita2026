@@ -80,17 +80,6 @@ def _cache_key_whatsapp_2fa(user_id) -> str:
     return f"2fa_whatsapp:{user_id}"
 
 
-def _normalizar_numero_py(telefono: str) -> str:
-    """Normaliza un teléfono guardado en formato local ('0981234567') al
-    formato internacional sin '+' que espera WAHA ('595981234567')."""
-    numero = (telefono or "").strip().lstrip("+").replace(" ", "").replace("-", "")
-    if numero.startswith("0"):
-        numero = "595" + numero[1:]
-    elif not numero.startswith("595"):
-        numero = "595" + numero
-    return numero
-
-
 def _enviar_codigo_whatsapp_2fa(user) -> tuple[bool, str | None]:
     """
     Genera un código de 6 dígitos, lo guarda en cache (TTL 5 min) y lo envía
@@ -101,7 +90,7 @@ def _enviar_codigo_whatsapp_2fa(user) -> tuple[bool, str | None]:
     notificaciones.services.whatsapp_cliente(), aquí sí nos interesa saber si
     el envío falló, porque sin eso el usuario no puede completar el login.
     """
-    from apps.notificaciones.services import enviar_whatsapp
+    from apps.notificaciones.services import enviar_whatsapp, normalizar_numero_py
 
     cliente = getattr(user, "cliente", None)
     telefono = getattr(cliente, "telefono", None) if cliente else None
@@ -111,7 +100,7 @@ def _enviar_codigo_whatsapp_2fa(user) -> tuple[bool, str | None]:
     codigo = f"{secrets.randbelow(1_000_000):06d}"
     cache.set(_cache_key_whatsapp_2fa(user.id_usuario), codigo, timeout=_WHATSAPP_2FA_TTL)
 
-    numero = _normalizar_numero_py(telefono)
+    numero = normalizar_numero_py(telefono)
     mensaje = f"Cantina Tita: tu código de verificación es {codigo}. Vence en 5 minutos."
     enviar_whatsapp(numero, mensaje)
 
