@@ -71,8 +71,8 @@ export default function PanelAlumno({
                 </div>
               )}
               <p className="text-2xl font-black text-slate-900 leading-tight">{tarjeta.hijo_nombre ?? tarjeta.cliente_nombre}</p>
-              {tarjeta.hijo_grado
-                ? <p className="text-slate-500 text-base mt-0.5">{tarjeta.hijo_grado}</p>
+              {tarjeta.es_alumno
+                ? <p className="text-slate-500 text-base mt-0.5">{tarjeta.hijo_grado ?? 'Sin grado'}</p>
                 : <p className="text-slate-400 text-sm mt-0.5">Docente / Funcionario</p>
               }
               <p className="text-slate-300 text-xs mt-1 font-mono tracking-wider">{tarjeta.nro_tarjeta}</p>
@@ -197,7 +197,7 @@ export default function PanelAlumno({
                   >
                     <span>
                       <p className="text-sm font-semibold text-slate-800">{t.hijo_nombre ?? t.cliente_nombre}</p>
-                      <p className="text-xs text-slate-400">{t.hijo_grado ?? 'Docente / Funcionario'}</p>
+                      <p className="text-xs text-slate-400">{t.es_alumno ? (t.hijo_grado ?? 'Sin grado') : 'Docente / Funcionario'}</p>
                     </span>
                     <span className="text-xs font-mono text-slate-300 shrink-0">{t.nro_tarjeta}</span>
                   </button>

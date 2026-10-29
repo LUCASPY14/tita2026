@@ -424,6 +424,33 @@ describe('ModoRecreo — búsqueda de tarjeta', () => {
     expect(await screen.findByText('Ana López')).toBeInTheDocument()
   })
 
+  it('alumno sin grado muestra "Sin grado", no "Docente / Funcionario"', async () => {
+    setupData()
+    mockTarjetasBuscar.mockResolvedValueOnce({
+      data: { results: [{ ...TARJETA_ACTIVA, hijo_grado: null }] },
+    })
+    render(<ModoRecreo />)
+    await waitForProducts()
+
+    const scannerInput = screen.getByPlaceholderText(/Escanear tarjeta/i)
+    await userEvent.type(scannerInput, 'T-00001{Enter}')
+    expect(await screen.findByText('Sin grado')).toBeInTheDocument()
+    expect(screen.queryByText('Docente / Funcionario')).not.toBeInTheDocument()
+  })
+
+  it('tarjeta de docente/funcionario (sin alumno) sí muestra "Docente / Funcionario"', async () => {
+    setupData()
+    mockTarjetasBuscar.mockResolvedValueOnce({
+      data: { results: [{ ...TARJETA_ACTIVA, es_alumno: false, hijo_nombre: null, hijo_grado: null, cliente_nombre: 'Carlos Profesor' }] },
+    })
+    render(<ModoRecreo />)
+    await waitForProducts()
+
+    const scannerInput = screen.getByPlaceholderText(/Escanear tarjeta/i)
+    await userEvent.type(scannerInput, 'T-00001{Enter}')
+    expect(await screen.findByText('Docente / Funcionario')).toBeInTheDocument()
+  })
+
   it('muestra aviso de cumpleaños cuando hijo_cumple_hoy es true', async () => {
     setupData()
     mockTarjetasBuscar.mockResolvedValueOnce({
@@ -476,6 +503,20 @@ describe('ModoRecreo — búsqueda de tarjeta', () => {
     await userEvent.click(screen.getByText('Ana Gómez'))
     expect(await screen.findByText('2° B')).toBeInTheDocument()
     expect(screen.queryByText(/encontrados — elegí uno/i)).not.toBeInTheDocument()
+  })
+
+  it('en la lista de varios resultados, un alumno sin grado muestra "Sin grado"', async () => {
+    setupData()
+    const SIN_GRADO = { ...TARJETA_ACTIVA, nro_tarjeta: 'T-00005', hijo_nombre: 'Ana Sin Grado', hijo_grado: null }
+    mockTarjetasBuscar.mockResolvedValueOnce({ data: { results: [TARJETA_ACTIVA, SIN_GRADO] } })
+    render(<ModoRecreo />)
+    await waitForProducts()
+
+    const scannerInput = screen.getByPlaceholderText(/Escanear tarjeta/i)
+    await userEvent.type(scannerInput, 'Ana{Enter}')
+    expect(await screen.findByText('Ana Sin Grado')).toBeInTheDocument()
+    expect(screen.getByText('Sin grado')).toBeInTheDocument()
+    expect(screen.queryByText('Docente / Funcionario')).not.toBeInTheDocument()
   })
 
   it('con un único resultado bloqueado, muestra el error de estado (no "no encontrada")', async () => {
