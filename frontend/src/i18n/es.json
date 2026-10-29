@@ -108,6 +108,7 @@
     "priceHistory":"Hist. Precios",
     "lunchTypes":  "Tipos Almuerzo",
     "lunchPrices": "Precios Almuerzo",
+    "lunchConfig": "Rango Almuerzo",
     "units":       "Unidades Medida",
     "allergens":   "Alérgenos",
     "taxes":       "Impuestos",

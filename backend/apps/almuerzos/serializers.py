@@ -8,6 +8,7 @@ from common.permissions import ROLES_AUTORIZADORES, exigir_rol
 
 from .models import (
     Alergeno,
+    ConfiguracionAlmuerzo,
     CuentaAlmuerzoMensual,
     DetalleMenuDiario,
     MenuDiario,
@@ -223,6 +224,36 @@ class RecargaSaldoAlmuerzoSerializer(serializers.ModelSerializer):
         if value <= 0:
             raise serializers.ValidationError("El monto debe ser mayor a cero.")
         return value
+
+
+# ==============================================================================
+# CONFIGURACIÓN DE ALMUERZO
+# ==============================================================================
+
+class ConfiguracionAlmuerzoSerializer(serializers.ModelSerializer):
+    grado_desde_nombre = serializers.CharField(source="grado_desde.nombre", read_only=True, default=None)
+    grado_hasta_nombre = serializers.CharField(source="grado_hasta.nombre", read_only=True, default=None)
+
+    class Meta:
+        model = ConfiguracionAlmuerzo
+        fields = [
+            "id_configuracion_almuerzo", "grado_desde", "grado_hasta",
+            "grado_desde_nombre", "grado_hasta_nombre", "fecha_actualizacion",
+        ]
+        read_only_fields = ["fecha_actualizacion"]
+
+    def validate(self, attrs):
+        desde = attrs.get("grado_desde", getattr(self.instance, "grado_desde", None))
+        hasta = attrs.get("grado_hasta", getattr(self.instance, "grado_hasta", None))
+        if desde and hasta and desde.orden > hasta.orden:
+            raise serializers.ValidationError(
+                "El grado 'desde' no puede ser posterior al grado 'hasta'."
+            )
+        if (desde and not hasta) or (hasta and not desde):
+            raise serializers.ValidationError(
+                "Definí ambos extremos del rango, o dejalos vacíos los dos para no restringir."
+            )
+        return attrs
 
 
 # ==============================================================================

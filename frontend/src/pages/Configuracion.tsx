@@ -21,6 +21,7 @@ import TabDatosEmpresa from './configuracion/TabDatosEmpresa'
 import TabHistorialPrecios from './configuracion/TabHistorialPrecios'
 import TabTiposAlmuerzo from './configuracion/TabTiposAlmuerzo'
 import TabPreciosAlmuerzo from './configuracion/TabPreciosAlmuerzo'
+import TabConfigAlmuerzo from './configuracion/TabConfigAlmuerzo'
 import TabUnidadesMedida from './configuracion/TabUnidadesMedida'
 import TabAlergenos from './configuracion/TabAlergenos'
 import TabImpuestos from './configuracion/TabImpuestos'
@@ -33,7 +34,7 @@ import TabPromocionAnual from './configuracion/TabPromocionAnual'
 type TabKey =
   | 'categorias' | 'tipos_cliente' | 'listas_precio' | 'medios_pago' | 'cajas'
   | 'grados' | 'datos_empresa' | 'historial_precios' | 'ubicaciones'
-  | 'tipos_almuerzo' | 'precios_almuerzo' | 'unidades_medida' | 'alergenos' | 'impuestos'
+  | 'tipos_almuerzo' | 'precios_almuerzo' | 'config_almuerzo' | 'unidades_medida' | 'alergenos' | 'impuestos'
   | 'whatsapp' | 'purga_alumnos' | 'notificaciones' | 'anio_lectivo' | 'promocion_anual'
 
 const TABS: { key: TabKey; labelKey: string; icon: typeof Settings }[] = [
@@ -48,6 +49,7 @@ const TABS: { key: TabKey; labelKey: string; icon: typeof Settings }[] = [
   { key: 'historial_precios', labelKey: 'settings.priceHistory',icon: History },
   { key: 'tipos_almuerzo',    labelKey: 'settings.lunchTypes',  icon: UtensilsCrossed },
   { key: 'precios_almuerzo',  labelKey: 'settings.lunchPrices', icon: DollarSign },
+  { key: 'config_almuerzo',   labelKey: 'settings.lunchConfig', icon: GraduationCap },
   { key: 'unidades_medida',   labelKey: 'settings.units',       icon: Ruler },
   { key: 'alergenos',         labelKey: 'settings.allergens',   icon: AlertTriangle },
   { key: 'impuestos',         labelKey: 'settings.taxes',       icon: Percent },
@@ -117,6 +119,7 @@ export default function Configuracion() {
         {tab === 'grados'            && <TabGrados          onDelete={confirmDelete} />}
         {tab === 'tipos_almuerzo'    && <TabTiposAlmuerzo   onDelete={confirmDelete} />}
         {tab === 'precios_almuerzo'  && <TabPreciosAlmuerzo onDelete={confirmDelete} />}
+        {tab === 'config_almuerzo'   && <TabConfigAlmuerzo />}
         {tab === 'unidades_medida'   && <TabUnidadesMedida  onDelete={confirmDelete} />}
         {tab === 'alergenos'         && <TabAlergenos       onDelete={confirmDelete} />}
         {tab === 'impuestos'         && <TabImpuestos       onDelete={confirmDelete} />}

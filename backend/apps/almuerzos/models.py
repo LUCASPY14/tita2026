@@ -593,6 +593,33 @@ class DetalleMenuDiario(models.Model):
 # SALDO DE ALMUERZO (CUENTA CORRIENTE)
 # ==============================================================================
 
+class ConfiguracionAlmuerzo(models.Model):
+    """
+    Rango de grados habilitados para cargar saldo de almuerzo (padres desde el
+    portal, y caja/cobrador/admin desde el panel interno). Fila única — si no
+    existe, o si algún extremo del rango está vacío, no hay restricción.
+    """
+
+    id_configuracion_almuerzo = models.BigAutoField(primary_key=True)
+    grado_desde = models.ForeignKey(
+        "clientes.Grado", models.SET_NULL, null=True, blank=True, related_name="+",
+    )
+    grado_hasta = models.ForeignKey(
+        "clientes.Grado", models.SET_NULL, null=True, blank=True, related_name="+",
+    )
+    fecha_actualizacion = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        verbose_name = "Configuración de Almuerzo"
+        verbose_name_plural = "Configuración de Almuerzo"
+        ordering = ["-fecha_actualizacion"]
+
+    def __str__(self):
+        if self.grado_desde and self.grado_hasta:
+            return f"Almuerzo habilitado: {self.grado_desde} a {self.grado_hasta}"
+        return "Almuerzo habilitado: todos los grados"
+
+
 class SaldoAlmuerzo(models.Model):
     """
     Saldo corriente de almuerzo de un hijo. Independiente del saldo de la

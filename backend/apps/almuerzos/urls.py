@@ -3,6 +3,7 @@ from rest_framework.routers import DefaultRouter
 
 from .views import (
     AlergenoViewSet,
+    ConfiguracionAlmuerzoViewSet,
     CuentaAlmuerzoMensualViewSet,
     DetalleMenuDiarioViewSet,
     EstadoCuentaAlmuerzoView,
@@ -28,6 +29,7 @@ router.register(r"registros-consumo", RegistroConsumoAlmuerzoViewSet, basename="
 router.register(r"cuentas-mensuales", CuentaAlmuerzoMensualViewSet, basename="cuentas-mensuales")
 router.register(r"pagos-cuentas", PagoCuentaAlmuerzoViewSet, basename="pagos-cuentas")
 router.register(r"saldos", SaldoAlmuerzoViewSet, basename="saldos-almuerzo")
+router.register(r"configuracion", ConfiguracionAlmuerzoViewSet, basename="configuracion-almuerzo")
 router.register(r"recargas-saldo", RecargaSaldoAlmuerzoViewSet, basename="recargas-saldo-almuerzo")
 router.register(r"alergenos", AlergenoViewSet, basename="alergenos")
 router.register(r"productos-alergenos", ProductoAlergenoViewSet, basename="productos-alergenos")

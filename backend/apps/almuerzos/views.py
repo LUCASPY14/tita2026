@@ -38,6 +38,7 @@ class _EstadoInFilter(django_filters.BaseInFilter, django_filters.CharFilter):
 
 from .models import (
     Alergeno,
+    ConfiguracionAlmuerzo,
     CuentaAlmuerzoMensual,
     DetalleMenuDiario,
     MenuDiario,
@@ -53,6 +54,7 @@ from .models import (
 )
 from .serializers import (
     AlergenoSerializer,
+    ConfiguracionAlmuerzoSerializer,
     CuentaAlmuerzoMensualSerializer,
     DetalleMenuDiarioSerializer,
     MenuDiarioSerializer,
@@ -69,6 +71,7 @@ from .serializers import (
 from .filters import RegistroConsumoFilter
 from .services import AlmuerzoService
 from .validators import (
+    motivo_grado_no_habilitado_almuerzo,
     resolver_suscripcion_activa,
     validar_limite_registros_diarios,
     validar_restricciones_alergenicas,
@@ -706,6 +709,31 @@ MONTO_MIN_CARGA_CAJA = 5_000
 MONTO_MAX_CARGA_CAJA = 5_000_000
 
 
+class ConfiguracionAlmuerzoViewSet(viewsets.ModelViewSet):
+    """Rango de grados habilitados para cargar saldo de almuerzo. Fila única:
+    el staff lee, solo ADMIN edita o crea."""
+
+    queryset = ConfiguracionAlmuerzo.objects.select_related("grado_desde", "grado_hasta").all()
+    serializer_class = ConfiguracionAlmuerzoSerializer
+    permission_classes = [IsAdminOrReadOnly]
+
+    def perform_create(self, serializer):
+        config = serializer.save()
+        registrar_auditoria(
+            request=self.request, operacion="CONFIGURAR_RANGO_ALMUERZO",
+            tabla="almuerzos_configuracionalmuerzo", id_registro=config.pk,
+            descripcion=str(config),
+        )
+
+    def perform_update(self, serializer):
+        config = serializer.save()
+        registrar_auditoria(
+            request=self.request, operacion="CONFIGURAR_RANGO_ALMUERZO",
+            tabla="almuerzos_configuracionalmuerzo", id_registro=config.pk,
+            descripcion=str(config),
+        )
+
+
 class SaldoAlmuerzoViewSet(viewsets.ModelViewSet):
     """Saldo corriente de almuerzo por hijo. El saldo en sí se modifica vía
     RecargaSaldoAlmuerzoViewSet y RegistroConsumoAlmuerzoViewSet — lo único
@@ -833,6 +861,10 @@ class RecargaSaldoAlmuerzoViewSet(viewsets.ModelViewSet):
         motivo = motivo_no_recarga_hijo(data["hijo"])
         if motivo:
             raise ValidationError({"error": motivo})
+
+        motivo_grado = motivo_grado_no_habilitado_almuerzo(data["hijo"])
+        if motivo_grado:
+            raise ValidationError({"error": motivo_grado})
 
         if metodo in METODOS_CONFIRMACION_INMEDIATA:
             monto_cargado = data["monto_cargado"]

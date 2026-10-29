@@ -89,6 +89,30 @@ def verificar_alergenos_venta(hijo, productos: list) -> list[dict]:
     return advertencias
 
 
+def motivo_grado_no_habilitado_almuerzo(hijo) -> str | None:
+    """
+    Texto si el grado del alumno queda fuera del rango configurado para cargar
+    saldo de almuerzo, o None si puede recargar. Sin configuración, o alumno
+    sin grado asignado, no hay restricción.
+    """
+    from .models import ConfiguracionAlmuerzo
+
+    config = ConfiguracionAlmuerzo.objects.select_related("grado_desde", "grado_hasta").first()
+    if not config or not config.grado_desde or not config.grado_hasta:
+        return None
+
+    grado = hijo.grado
+    if grado is None:
+        return None
+
+    if grado.orden < config.grado_desde.orden or grado.orden > config.grado_hasta.orden:
+        return (
+            f"El grado {grado.nombre} no está habilitado para cargar saldo de almuerzo "
+            f"(rango habilitado: {config.grado_desde.nombre} a {config.grado_hasta.nombre})."
+        )
+    return None
+
+
 def resolver_suscripcion_activa(hijo, fecha_consumo):
     """
     Busca la SuscripcionAlmuerzo ACTIVA y vigente del hijo para esa fecha.

@@ -708,6 +708,24 @@ class TestBancardIniciarAlmuerzo:
         assert resp.status_code == 400
         assert 'cliente' in resp.data['detail'].lower()
 
+    def test_grado_fuera_de_rango_retorna_400(self, padre_con_cuenta):
+        from apps.clientes.models import Grado
+        from apps.almuerzos.models import ConfiguracionAlmuerzo
+        from rest_framework.test import APIClient
+        padre, cuenta = padre_con_cuenta
+        grado_excluido = Grado.objects.create(nombre="Grado Excluido Iniciar", nivel=10, orden=10, activo=True)
+        grado_permitido = Grado.objects.create(nombre="Grado Permitido Iniciar", nivel=1, orden=1, activo=True)
+        cuenta.hijo.grado = grado_excluido
+        cuenta.hijo.save(update_fields=["grado"])
+        ConfiguracionAlmuerzo.objects.create(grado_desde=grado_permitido, grado_hasta=grado_permitido)
+        client = APIClient()
+        client.force_authenticate(user=padre)
+        resp = client.post('/api/v1/core/bancard/iniciar-almuerzo/', {
+            'hijo_id': cuenta.hijo_id, 'monto': 100000,
+        })
+        assert resp.status_code == 400
+        assert 'no está habilitado' in resp.data['detail']
+
 
 # ─── Tests retorno almuerzo ───────────────────────────────────────────────────
 
@@ -1519,6 +1537,23 @@ class TestBancardPagarAlmuerzoConTarjeta:
             'hijo_id': 99999, 'monto': 100000, 'card_id': 1,
         })
         assert resp.status_code == 404
+
+    def test_grado_fuera_de_rango_retorna_400(self, padre_con_cuenta):
+        from apps.clientes.models import Grado
+        from apps.almuerzos.models import ConfiguracionAlmuerzo
+        padre, cuenta = padre_con_cuenta
+        grado_excluido = Grado.objects.create(nombre="Grado Excluido Pagar", nivel=10, orden=10, activo=True)
+        grado_permitido = Grado.objects.create(nombre="Grado Permitido Pagar", nivel=1, orden=1, activo=True)
+        cuenta.hijo.grado = grado_excluido
+        cuenta.hijo.save(update_fields=["grado"])
+        ConfiguracionAlmuerzo.objects.create(grado_desde=grado_permitido, grado_hasta=grado_permitido)
+        client = APIClient()
+        client.force_authenticate(user=padre)
+        resp = client.post('/api/v1/core/bancard/pagar-almuerzo-con-tarjeta/', {
+            'hijo_id': cuenta.hijo_id, 'monto': 100000, 'card_id': 1,
+        })
+        assert resp.status_code == 400
+        assert 'no está habilitado' in resp.data['detail']
 
     @patch('apps.core.bancard_service.pagar_con_token')
     @patch('apps.core.bancard_service.listar_tarjetas')

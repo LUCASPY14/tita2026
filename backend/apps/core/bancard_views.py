@@ -212,6 +212,11 @@ def bancard_iniciar_almuerzo(request):
     if _motivo:
         return Response({"detail": _motivo}, status=status.HTTP_400_BAD_REQUEST)
 
+    from apps.almuerzos.validators import motivo_grado_no_habilitado_almuerzo
+    _motivo_grado = motivo_grado_no_habilitado_almuerzo(hijo)
+    if _motivo_grado:
+        return Response({"detail": _motivo_grado}, status=status.HTTP_400_BAD_REQUEST)
+
     if not bancard_service._public_key() or not bancard_service._private_key():
         return Response(
             {"detail": "La integración de pagos no está configurada. Contactá con la administración."},
@@ -1200,6 +1205,11 @@ def bancard_pagar_almuerzo_con_tarjeta(request):
     _motivo = motivo_no_recarga_hijo(hijo)
     if _motivo:
         return Response({"detail": _motivo}, status=status.HTTP_400_BAD_REQUEST)
+
+    from apps.almuerzos.validators import motivo_grado_no_habilitado_almuerzo
+    _motivo_grado = motivo_grado_no_habilitado_almuerzo(hijo)
+    if _motivo_grado:
+        return Response({"detail": _motivo_grado}, status=status.HTTP_400_BAD_REQUEST)
 
     if not bancard_service._public_key() or not bancard_service._private_key():
         return Response(
