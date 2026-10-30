@@ -12,10 +12,10 @@ from django.utils import timezone
 
 from rest_framework import viewsets, status
 from rest_framework.exceptions import MethodNotAllowed
-from rest_framework.filters import SearchFilter
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
+from common.filters import UnaccentSearchFilter
 from common.permissions import (
     IsAdmin, IsAdminOrReadOnly, IsCajeroCobradorSupervisorOrAdmin, IsCajeroOrAdmin,
     IsStaffOrClienteWeb, IsStaffUser, ROLES_AUTORIZADORES, exigir_rol,
@@ -84,9 +84,9 @@ class ClienteViewSet(viewsets.ModelViewSet):
     ).order_by("apellidos", "nombres")
     serializer_class = ClienteSerializer
     permission_classes = [IsAdminOrReadOnly]
-    filter_backends = [DjangoFilterBackend, SearchFilter]
+    filter_backends = [DjangoFilterBackend, UnaccentSearchFilter]
     filterset_fields = ["activo", "tipo_cliente"]
-    search_fields = ["ruc_ci", "nombres", "apellidos"]
+    search_fields = ["ruc_ci", "nombres__unaccent", "apellidos__unaccent"]
 
     def get_serializer_class(self):
         # CAJERO solo usa esto para elegir el cliente de una venta a credito
@@ -259,9 +259,9 @@ class TipoClienteViewSet(viewsets.ModelViewSet):
 class HijoViewSet(viewsets.ModelViewSet):
     serializer_class = HijoSerializer
     permission_classes = [IsStaffOrClienteWeb]
-    filter_backends = [DjangoFilterBackend, SearchFilter]
+    filter_backends = [DjangoFilterBackend, UnaccentSearchFilter]
     filterset_fields = ["activo"]
-    search_fields = ["nombre", "apellido"]
+    search_fields = ["nombre__unaccent", "apellido__unaccent"]
 
     def get_permissions(self):
         if self.action == "foto":

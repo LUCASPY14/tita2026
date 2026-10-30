@@ -10,9 +10,10 @@ from django.db.models import Q
 from rest_framework import viewsets, status
 from rest_framework.views import APIView
 from rest_framework.decorators import action
-from rest_framework.filters import SearchFilter, OrderingFilter
+from rest_framework.filters import OrderingFilter
 from rest_framework.response import Response
 
+from common.filters import UnaccentSearchFilter
 from common.pagination import CursorResultsSetPagination
 from common.permissions import (
     IsAdmin, IsAdminOrReadOnly, IsCajeroOrAdmin, IsCobradorSupervisorOrAdmin,
@@ -61,12 +62,13 @@ class TarjetaViewSet(viewsets.ModelViewSet):
     ).prefetch_related("hijo__restricciones").all()
     serializer_class = TarjetaSerializer
     permission_classes = [IsStaffOrClienteWeb]
-    filter_backends = [DjangoFilterBackend, SearchFilter, OrderingFilter]
+    filter_backends = [DjangoFilterBackend, UnaccentSearchFilter, OrderingFilter]
     filterset_fields = ["estado"]
     search_fields = [
         "nro_tarjeta",
-        "hijo__nombre", "hijo__apellido",
-        "cliente_directo__nombres", "cliente_directo__apellidos", "cliente_directo__razon_social",
+        "hijo__nombre__unaccent", "hijo__apellido__unaccent",
+        "cliente_directo__nombres__unaccent", "cliente_directo__apellidos__unaccent",
+        "cliente_directo__razon_social__unaccent",
     ]
     ordering = ["nro_tarjeta"]
 

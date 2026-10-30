@@ -34,6 +34,7 @@ from rest_framework_simplejwt.serializers import TokenObtainPairSerializer
 from rest_framework_simplejwt.tokens import RefreshToken
 from rest_framework_simplejwt.views import TokenObtainPairView
 
+from common.filters import UnaccentSearchFilter
 from common.permissions import IsAdmin
 from common.throttling import LoginRateThrottle, PortalRateThrottle, SensitiveEndpointThrottle
 from common.utils.request_ip import get_client_ip
@@ -627,7 +628,7 @@ class CustomTokenObtainPairView(TokenObtainPairView):
 
 class UsuarioViewSet(viewsets.ModelViewSet):
     queryset = Usuario.objects.select_related("auth_2fa", "empleado").prefetch_related("credenciales_webauthn")
-    filter_backends = [DjangoFilterBackend, drf_filters.SearchFilter, drf_filters.OrderingFilter]
+    filter_backends = [DjangoFilterBackend, UnaccentSearchFilter, drf_filters.OrderingFilter]
     filterset_fields = ["rol", "is_active"]
 
     def get_queryset(self):
@@ -635,7 +636,7 @@ class UsuarioViewSet(viewsets.ModelViewSet):
         if self.request.query_params.get("sin_portal") == "1":
             qs = qs.exclude(rol=Usuario.Rol.CLIENTE_WEB)
         return qs
-    search_fields = ["email", "nombre", "apellido"]
+    search_fields = ["email", "nombre__unaccent", "apellido__unaccent"]
     ordering_fields = ["email", "nombre", "fecha_creacion"]
     ordering = ["-fecha_creacion"]
 
