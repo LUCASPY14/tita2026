@@ -600,7 +600,7 @@ class CustomTokenObtainPairView(TokenObtainPairView):
                 id_registro=user.id_usuario,
                 descripcion=f"Login paso 1 OK — esperando 2FA ({user.email})",
             )
-            metodo_2fa = user.auth_2fa.metodo if _tiene_2fa_activo(user) else None
+            metodo_2fa = user.auth_2fa.metodo if _tiene_2fa_activo(user) else 'WHATSAPP'
             return Response({
                 "requires_2fa": True, "pre_auth_token": pre_auth,
                 "tiene_webauthn": tiene_wa, "metodo_2fa": metodo_2fa,
@@ -1493,8 +1493,9 @@ class TwoFAVerificarView(APIView):
         if not valido:
             return Response({"error": "Código inválido."}, status=status.HTTP_400_BAD_REQUEST)
 
-        auth.ultima_verificacion = timezone.now()
-        auth.save(update_fields=["ultima_verificacion"])
+        if auth is not None:
+            auth.ultima_verificacion = timezone.now()
+            auth.save(update_fields=['ultima_verificacion'])
         return Response({"detail": "Verificación exitosa."})
 
 
@@ -1564,15 +1565,15 @@ class TwoFALoginVerificarView(APIView):
         try:
             auth = user.auth_2fa
         except Exception:
-            return Response({"error": "2FA no configurado."}, status=status.HTTP_400_BAD_REQUEST)
+            auth = None
 
         codigo_upper = codigo.upper()
-        if auth.metodo == Autenticacion2FA.Metodo.WHATSAPP:
+        if auth is None or not auth.habilitado or auth.metodo == Autenticacion2FA.Metodo.WHATSAPP:
             valido = _verificar_codigo_whatsapp_2fa(user.id_usuario, codigo)
         else:
             valido = _verify_totp(auth.secret_key, codigo.lower())
 
-        if not valido and codigo_upper in auth.backup_codes:
+        if not valido and auth is not None and codigo_upper in auth.backup_codes:
             valido = True
             auth.backup_codes = [c for c in auth.backup_codes if c != codigo_upper]
             auth.save(update_fields=["backup_codes"])
@@ -1593,8 +1594,9 @@ class TwoFALoginVerificarView(APIView):
             )
             return Response({"error": "Código inválido."}, status=status.HTTP_400_BAD_REQUEST)
 
-        auth.ultima_verificacion = timezone.now()
-        auth.save(update_fields=["ultima_verificacion"])
+        if auth is not None:
+            auth.ultima_verificacion = timezone.now()
+            auth.save(update_fields=['ultima_verificacion'])
 
         rechazo = _rechazo_por_ubicacion(user, request)
         if rechazo:
@@ -1676,6 +1678,7 @@ class WebAuthnRegistrarOpcionesView(APIView):
             user_id=str(user.id_usuario).encode(),
             user_display_name=f"{user.nombre} {user.apellido}".strip() or user.email,
             exclude_credentials=existentes,
+            authenticator_selection=webauthn.helpers.structs.AuthenticatorSelectionCriteria(authenticator_attachment=webauthn.helpers.structs.AuthenticatorAttachment.PLATFORM),
         )
         cache.set(
             _webauthn_challenge_cache_key("reg", user.id_usuario),
@@ -1765,7 +1768,7 @@ class WebAuthnLoginOpcionesView(APIView):
         options = webauthn.generate_authentication_options(
             rp_id=django_settings.WEBAUTHN_RP_ID,
             allow_credentials=[
-                PublicKeyCredentialDescriptor(id=webauthn.helpers.base64url_to_bytes(c.credential_id))
+                PublicKeyCredentialDescriptor(id=webauthn.helpers.base64url_to_bytes(c.credential_id), transports=[webauthn.helpers.structs.AuthenticatorTransport.INTERNAL])
                 for c in credenciales
             ],
         )
