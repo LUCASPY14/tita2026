@@ -4,7 +4,6 @@ Sin dependencias externas — usa la stdlib.
 """
 import json
 import logging
-import traceback
 
 
 class JsonFormatter(logging.Formatter):

@@ -515,7 +515,7 @@ class EstadoCuentaAlmuerzoView(APIView):
     def get(self, request):
         from collections import defaultdict
         from apps.clientes.models import Hijo
-        from .models import MovimientoSaldoAlmuerzo, RecargaSaldoAlmuerzo, SaldoAlmuerzo
+        from .models import RecargaSaldoAlmuerzo, SaldoAlmuerzo
 
         anio_raw = request.query_params.get("anio")
         if not anio_raw:

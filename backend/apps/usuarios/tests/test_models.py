@@ -3,7 +3,6 @@ Tests de modelos de usuarios.
 Cubre: __str__, @property, Manager edge cases, save() validation.
 """
 import pytest
-from django.utils import timezone
 
 
 # ── Fixtures ──────────────────────────────────────────────────────────────────

@@ -6,7 +6,6 @@ Tests adicionales para TarjetaService — cobertura de:
 """
 import pytest
 from decimal import Decimal
-from rest_framework.exceptions import ValidationError
 
 
 @pytest.fixture

@@ -1950,7 +1950,6 @@ class TestBancardPagosReintentar:
 
     def test_cc_sin_credito_previo_acredita(self, api_admin, padre_con_deuda_cc):
         from apps.core.models import PagoBancard
-        from apps.clientes.models import CuentaCorrienteCliente
         padre, cliente_deuda = padre_con_deuda_cc
         pago = PagoBancard.objects.create(
             tipo=PagoBancard.Tipo.CC, cliente=cliente_deuda,

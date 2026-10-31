@@ -5,7 +5,6 @@ O: python manage.py runscript cargar_datos (si instalás django-extensions)
 """
 
 import os
-import sys
 
 os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'backend.settings.base')
 
@@ -19,7 +18,7 @@ from datetime import date
 # ==============================================================================
 # USUARIOS
 # ==============================================================================
-from apps.usuarios.models import Usuario, Rol, Empleado
+from apps.usuarios.models import Rol, Empleado
 
 print("Creando roles...")
 admin_rol, _ = Rol.objects.get_or_create(nombre_rol="Administrador", defaults={"descripcion": "Acceso total"})

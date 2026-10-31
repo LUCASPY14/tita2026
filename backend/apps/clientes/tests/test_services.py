@@ -113,7 +113,6 @@ class TestCrearResponsableConClienteNuevo:
     def test_usa_la_lista_de_precio_por_defecto(self, hijo_con_responsables, lista_precio):
         from apps.clientes.services import crear_responsable_con_cliente_nuevo
         from apps.clientes.models import AlumnoResponsable
-        from apps.productos.models import ListaPrecio
 
         lista_precio.es_por_defecto = True
         lista_precio.save()

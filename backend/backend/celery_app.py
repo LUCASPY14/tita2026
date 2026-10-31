@@ -208,7 +208,6 @@ def setup_task_failure_handler(sender, **kwargs):
             task_name, task_id, exception,
         )
         try:
-            import django
             from django.conf import settings as django_settings
             for _, admin_email in getattr(django_settings, "ADMINS", []):
                 from apps.notificaciones.services import EmailService

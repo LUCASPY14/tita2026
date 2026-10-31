@@ -3,7 +3,6 @@ Tests de ConfiguracionAlmuerzo: el rango de grados habilitados para cargar
 saldo de almuerzo, su endpoint de administración y la validación que bloquea
 la recarga (panel interno y Bancard) cuando el grado del alumno queda afuera.
 """
-from decimal import Decimal
 
 import pytest
 from rest_framework.test import APIClient

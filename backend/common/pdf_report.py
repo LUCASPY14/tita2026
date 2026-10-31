@@ -98,7 +98,7 @@ def pdf_response(
 
 def _make_styles() -> dict:
     from reportlab.lib.styles import getSampleStyleSheet
-    from reportlab.lib.enums import TA_LEFT, TA_CENTER, TA_RIGHT
+    from reportlab.lib.enums import TA_LEFT, TA_CENTER
 
     base = getSampleStyleSheet()
     return {

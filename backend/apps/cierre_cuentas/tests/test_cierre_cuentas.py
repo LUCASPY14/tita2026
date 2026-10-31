@@ -8,7 +8,6 @@ Matriz de autorización:
   devolución / condonación    SUPERVISOR solicita; solo ADMIN aprueba. Si la pide un
                               ADMIN, se ejecuta al momento.
 """
-from datetime import date
 from decimal import Decimal
 
 import pytest
@@ -567,7 +566,6 @@ class TestEstadoYCierre:
 class TestTrazabilidad:
 
     def test_el_libro_mayor_de_la_tarjeta_queda_consistente(self, favor, hermano, usuario_admin):
-        from django.db.models import Sum
         from apps.core.models import MovimientoTarjeta, Tarjeta
         cierre, _ = CierreCuentaService.abrir(favor, 2026)
         _resolver(cierre, usuario_admin, Tipo.TRASPASO_HERMANO, "CANTINA", 20000, hijo_destino=hermano)
