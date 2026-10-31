@@ -8,6 +8,7 @@ Cubre: Cliente (save, pin, nombre_completo, saldo_cuenta_corriente),
 import datetime
 import pytest
 from decimal import Decimal
+from freezegun import freeze_time
 
 
 # ── Fixtures locales ──────────────────────────────────────────────────────────
@@ -249,6 +250,7 @@ class TestHijoModel:
     def test_edad_sin_fecha_nacimiento(self, hijo_sin_grado):
         assert hijo_sin_grado.edad is None
 
+    @freeze_time("2026-06-15")
     def test_edad_antes_de_cumpleanos(self, cliente):
         from apps.clientes.models import Hijo
         hoy = datetime.date.today()

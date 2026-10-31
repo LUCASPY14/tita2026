@@ -326,7 +326,8 @@ class TestBajaDelUltimoCurso:
         sigue = _hijo(cliente, grado_normal, "Sigue")
         with freeze_time("2027-01-01 08:00:00"):
             assert dar_baja_alumnos_ultimo_curso() == {"dados_de_baja": 1}
-        egresado.refresh_from_db(); sigue.refresh_from_db()
+        egresado.refresh_from_db()
+        sigue.refresh_from_db()
         assert egresado.activo is False and egresado.fecha_baja is not None
         assert sigue.activo is True
 

@@ -69,7 +69,7 @@ def check_package(pkg_name, min_version=None, notes=None):
             [sys.executable, "-m", "pip", "show", pkg_name],
             capture_output=True, text=True
         )
-        ver_line = [l for l in result.stdout.splitlines() if l.startswith("Version:")]
+        ver_line = [line for line in result.stdout.splitlines() if line.startswith("Version:")]
         ver = ver_line[0].split(": ")[1].strip() if ver_line else "?"
         msg = f"{pkg_name} {ver}"
         if notes:

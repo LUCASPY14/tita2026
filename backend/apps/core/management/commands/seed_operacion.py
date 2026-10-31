@@ -564,7 +564,7 @@ class Command(BaseCommand):
                 if monto <= 0:
                     continue
                 medio = random.choice(["EFECTIVO", "TRANSFERENCIA"])
-                pago = PagoCuentaAlmuerzo.objects.create(
+                PagoCuentaAlmuerzo.objects.create(
                     cuenta=cuenta, monto=monto, medio_pago=medio,
                     registrado_por=self.cobrador_o_admin(), observaciones="Pago mensual",
                 )
@@ -584,7 +584,6 @@ class Command(BaseCommand):
     def _seed_compras_historicas(self):
         from apps.compras.services import CompraService
         from apps.compras.models import PagoProveedor, AplicacionPagoCompra, CuentaCorrienteProveedor, Compra
-        from apps.core.models import MedioPago
 
         self.stdout.write("\n[8/8] Compras históricas a proveedores...")
 

@@ -19,20 +19,20 @@ logger = logging.getLogger(__name__)
 
 # Configuración VAPID
 VAPID_PUBLIC_KEY = getattr(settings, 'VAPID_PUBLIC_KEY', None)
-VAPID_PRIVATE_KEY = getattr(settings, 'VAPID_PRIVATE_KEY', None) 
+VAPID_PRIVATE_KEY = getattr(settings, 'VAPID_PRIVATE_KEY', None)
 VAPID_EMAIL = getattr(settings, 'VAPID_EMAIL', 'admin@cantina-tita.com')
 
 class PushNotificationManager:
     """
     Manager para Push Notifications que usa el servicio Node.js
     """
-    
+
     def __init__(self):
         self.service_script = os.path.join(
             settings.BASE_DIR, 'push-notification-service.js'
         )
         self.subscriptions = {}  # Cache local, en producción usar BD
-        
+
     def get_vapid_public_key(self):
         """Obtener la VAPID public key del servicio"""
         try:
@@ -41,7 +41,7 @@ class PushNotificationManager:
         except Exception as e:
             logger.error(f"Error getting VAPID key: {e}")
             return None
-            
+
     def subscribe_user(self, user_id, subscription_data):
         """Suscribir usuario a notificaciones"""
         try:
@@ -49,7 +49,7 @@ class PushNotificationManager:
                 'userId': str(user_id),
                 'subscription': subscription_data
             })
-            
+
             if result.get('success'):
                 self.subscriptions[str(user_id)] = {
                     'subscription': subscription_data,
@@ -57,30 +57,30 @@ class PushNotificationManager:
                     'active': True
                 }
                 logger.info(f"User {user_id} subscribed to push notifications")
-                
+
             return result
-            
+
         except Exception as e:
             logger.error(f"Subscription error for user {user_id}: {e}")
             return {'success': False, 'error': str(e)}
-            
+
     def unsubscribe_user(self, user_id):
         """Desuscribir usuario"""
         try:
             result = self.call_node_service('unsubscribe', {
                 'userId': str(user_id)
             })
-            
+
             if result.get('success') and str(user_id) in self.subscriptions:
                 del self.subscriptions[str(user_id)]
                 logger.info(f"User {user_id} unsubscribed from push notifications")
-                
+
             return result
-            
+
         except Exception as e:
             logger.error(f"Unsubscribe error for user {user_id}: {e}")
             return {'success': False, 'error': str(e)}
-    
+
     def send_notification_to_user(self, user_id, notification):
         """Enviar notificación a usuario específico"""
         try:
@@ -88,28 +88,28 @@ class PushNotificationManager:
                 'userId': str(user_id),
                 'notification': notification
             })
-            
+
             logger.info(f"Notification sent to user {user_id}: {notification.get('title', 'No title')}")
             return result
-            
+
         except Exception as e:
             logger.error(f"Send notification error for user {user_id}: {e}")
             return {'success': False, 'error': str(e)}
-    
+
     def send_notification_to_all(self, notification):
         """Enviar notificación a todos los usuarios suscritos"""
         try:
             result = self.call_node_service('sendToAll', {
                 'notification': notification
             })
-            
+
             logger.info(f"Broadcast notification sent: {notification.get('title', 'No title')}")
             return result
-            
+
         except Exception as e:
             logger.error(f"Broadcast notification error: {e}")
             return {'success': False, 'error': str(e)}
-            
+
     def get_subscription_stats(self):
         """Obtener estadísticas de suscripciones"""
         try:
@@ -117,7 +117,7 @@ class PushNotificationManager:
         except Exception as e:
             logger.error(f"Stats error: {e}")
             return {'error': str(e)}
-    
+
     def call_node_service(self, method, params=None):
         """
         Llamar al servicio Node.js de push notifications
@@ -126,12 +126,12 @@ class PushNotificationManager:
             'method': method,
             'params': params or {}
         }
-        
+
         # Crear archivo temporal con comando
         with tempfile.NamedTemporaryFile(mode='w', suffix='.json', delete=False) as f:
             json.dump(command_data, f)
             temp_file = f.name
-        
+
         try:
             # Ejecutar servicio Node.js
             result = subprocess.run([
@@ -139,11 +139,11 @@ class PushNotificationManager:
                     const PushService = require('{self.service_script}');
                     const fs = require('fs');
                     const data = JSON.parse(fs.readFileSync('{temp_file}', 'utf8'));
-                    
+
                     const service = new PushService();
                     const method = data.method;
                     const params = data.params;
-                    
+
                     (async () => {{
                         try {{
                             let result;
@@ -162,7 +162,7 @@ class PushNotificationManager:
                             }} else {{
                                 result = {{ error: 'Unknown method' }};
                             }}
-                            
+
                             console.log(JSON.stringify(result));
                         }} catch (error) {{
                             console.log(JSON.stringify({{ error: error.message }}));
@@ -170,12 +170,12 @@ class PushNotificationManager:
                     }})();
                 '''
             ], capture_output=True, text=True, cwd=settings.BASE_DIR)
-            
+
             if result.returncode == 0:
                 return json.loads(result.stdout.strip())
             else:
                 raise Exception(f"Node.js error: {result.stderr}")
-                
+
         finally:
             # Limpiar archivo temporal
             if os.path.exists(temp_file):
@@ -192,16 +192,16 @@ def get_vapid_public_key(request):
     """
     try:
         public_key = push_manager.get_vapid_public_key()
-        
+
         if not public_key:
             return JsonResponse({
                 'error': 'VAPID keys not configured'
             }, status=500)
-            
+
         return JsonResponse({
             'publicKey': public_key
         })
-        
+
     except Exception as e:
         logger.error(f"Error getting VAPID public key: {e}")
         return JsonResponse({'error': str(e)}, status=500)
@@ -216,19 +216,19 @@ def subscribe_push_notifications(request):
     try:
         data = json.loads(request.body)
         subscription = data.get('subscription')
-        
+
         if not subscription:
             return JsonResponse({
                 'error': 'Subscription data required'
             }, status=400)
-        
+
         result = push_manager.subscribe_user(
-            request.user.id, 
+            request.user.id,
             subscription
         )
-        
+
         return JsonResponse(result)
-        
+
     except json.JSONDecodeError:
         return JsonResponse({'error': 'Invalid JSON'}, status=400)
     except Exception as e:
@@ -236,7 +236,7 @@ def subscribe_push_notifications(request):
         return JsonResponse({'error': str(e)}, status=500)
 
 @csrf_exempt
-@login_required  
+@login_required
 @require_http_methods(["POST"])
 def unsubscribe_push_notifications(request):
     """
@@ -245,14 +245,14 @@ def unsubscribe_push_notifications(request):
     try:
         result = push_manager.unsubscribe_user(request.user.id)
         return JsonResponse(result)
-        
+
     except Exception as e:
         logger.error(f"Unsubscribe error: {e}")
         return JsonResponse({'error': str(e)}, status=500)
 
 @csrf_exempt
 @login_required
-@require_http_methods(["POST"]) 
+@require_http_methods(["POST"])
 def send_test_notification(request):
     """
     Enviar notificación de prueba al usuario actual
@@ -269,14 +269,14 @@ def send_test_notification(request):
                 'timestamp': datetime.now().isoformat()
             }
         }
-        
+
         result = push_manager.send_notification_to_user(
             request.user.id,
             notification
         )
-        
+
         return JsonResponse(result)
-        
+
     except Exception as e:
         logger.error(f"Test notification error: {e}")
         return JsonResponse({'error': str(e)}, status=500)
@@ -290,10 +290,10 @@ def get_notification_stats(request):
     try:
         if not request.user.is_staff:
             return JsonResponse({'error': 'Unauthorized'}, status=403)
-            
+
         stats = push_manager.get_subscription_stats()
         return JsonResponse(stats)
-        
+
     except Exception as e:
         logger.error(f"Stats error: {e}")
         return JsonResponse({'error': str(e)}, status=500)
@@ -319,7 +319,7 @@ def send_order_notification(order_id, user_id=None):
             {'action': 'dismiss', 'title': 'Descartar'}
         ]
     }
-    
+
     if user_id:
         return push_manager.send_notification_to_user(user_id, notification)
     else:
@@ -340,7 +340,7 @@ def send_payment_notification(payment_amount, user_id=None):
             'type': 'payment'
         }
     }
-    
+
     if user_id:
         return push_manager.send_notification_to_user(user_id, notification)
     else:
@@ -362,8 +362,8 @@ def send_low_stock_notification(product_name, quantity, user_id=None):
             'type': 'inventory'
         }
     }
-    
+
     if user_id:
-        return push_manager.send_notification_to_user(user_id, notification)  
+        return push_manager.send_notification_to_user(user_id, notification)
     else:
         return push_manager.send_notification_to_all(notification)

@@ -3,7 +3,6 @@ Tests para TarjetaService.renumerar — corregir/reemplazar el número de una
 tarjeta (su PK) sin perder nada de lo que ya tenía enganchado: movimientos,
 cargas, pagos Bancard, ventas y consumos de almuerzo.
 """
-from decimal import Decimal
 
 import pytest
 from rest_framework.exceptions import ValidationError
@@ -81,11 +80,16 @@ class TestRenumerar:
         )
 
         assert not Tarjeta.objects.filter(pk="REN-VIEJO").exists()
-        mov.refresh_from_db(); assert mov.tarjeta_id == "REN-NUEVO"
-        carga.refresh_from_db(); assert carga.tarjeta_id == "REN-NUEVO"
-        pago.refresh_from_db(); assert pago.tarjeta_id == "REN-NUEVO"
-        venta.refresh_from_db(); assert venta.tarjeta_id == "REN-NUEVO"
-        consumo.refresh_from_db(); assert consumo.nro_tarjeta_id == "REN-NUEVO"
+        mov.refresh_from_db()
+        assert mov.tarjeta_id == "REN-NUEVO"
+        carga.refresh_from_db()
+        assert carga.tarjeta_id == "REN-NUEVO"
+        pago.refresh_from_db()
+        assert pago.tarjeta_id == "REN-NUEVO"
+        venta.refresh_from_db()
+        assert venta.tarjeta_id == "REN-NUEVO"
+        consumo.refresh_from_db()
+        assert consumo.nro_tarjeta_id == "REN-NUEVO"
 
     def test_numero_nuevo_vacio_falla(self, tarjeta_ren, usuario_admin):
         from apps.core.services import TarjetaService
