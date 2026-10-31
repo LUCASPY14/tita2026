@@ -8,6 +8,10 @@ Cubre:
   4. Segunda etapa con código TOTP inválido → 400.
   5. Segunda etapa con pre_auth_token expirado → 400.
   6. Segunda etapa con backup code válido → JWT (y el code se consume).
+  7. Usuario con huella (WebAuthn) pero sin 2FA formal: login exige
+     verificación igual, y la segunda etapa cae a WhatsApp (commit 8e791ba —
+     antes quedaba trabado pidiendo un código TOTP que el usuario nunca
+     configuró, cuando la huella no estaba disponible en ese dispositivo).
 """
 import base64
 import hashlib
@@ -18,6 +22,8 @@ import time
 
 import pytest
 from django.core import signing
+from django.core.cache import cache as django_cache
+from django.test import override_settings
 from rest_framework.test import APIClient
 
 from apps.usuarios.models import Autenticacion2FA, Usuario
@@ -64,6 +70,18 @@ def client():
     return APIClient()
 
 
+# backend.settings.test usa DummyCache (no-op) — el código de WhatsApp SÍ
+# necesita sobrevivir entre el request que lo guarda y el que lo verifica,
+# así que estos tests fuerzan un cache real (mismo patrón que test_2fa_whatsapp.py).
+@pytest.fixture
+def cache_real():
+    with override_settings(
+        CACHES={"default": {"BACKEND": "django.core.cache.backends.locmem.LocMemCache", "LOCATION": "test-2fa-login"}}
+    ):
+        django_cache.clear()
+        yield
+
+
 @pytest.fixture
 def user_sin_2fa(db):
     return Usuario.objects.create_user(
@@ -73,6 +91,25 @@ def user_sin_2fa(db):
         apellido="DosFa",
         rol=Usuario.Rol.CAJERO,
     )
+
+
+@pytest.fixture
+def user_solo_webauthn(db):
+    """Usuario con huella (WebAuthn) registrada pero sin Autenticacion2FA
+    formal — el caso que arregló el commit 8e791ba."""
+    from apps.usuarios.models import CredencialWebAuthn
+
+    user = Usuario.objects.create_user(
+        email="solohuella@test.com",
+        password="Test1234!",
+        nombre="Solo",
+        apellido="Huella",
+        rol=Usuario.Rol.CLIENTE_WEB,
+    )
+    CredencialWebAuthn.objects.create(
+        usuario=user, credential_id="cred-solo-huella", public_key="clave-publica-fake",
+    )
+    return user
 
 
 @pytest.fixture
@@ -196,6 +233,60 @@ def test_2fa_login_con_backup_code_valido(client, user_con_2fa):
 def test_2fa_login_sin_campos_retorna_400(client, user_con_2fa):
     """Body vacío → 400 con mensaje de error descriptivo."""
     resp = client.post(FA2_LOGIN_URL, {}, format="json")
+    assert resp.status_code == 400
+    assert "error" in resp.data
+
+
+@pytest.mark.django_db
+def test_login_con_solo_webauthn_exige_2fa_con_metodo_whatsapp(client, user_solo_webauthn):
+    """Login paso 1: sin 2FA formal pero con huella registrada → igual exige
+    verificación (requires_2fa=True), con metodo_2fa='WHATSAPP' como fallback
+    (antes era None, y el frontend terminaba mostrando una caja de código
+    TOTP que este usuario no podía completar)."""
+    resp = client.post(
+        LOGIN_URL,
+        {"email": "solohuella@test.com", "password": "Test1234!"},
+        format="json",
+    )
+    assert resp.status_code == 200
+    assert resp.data.get("requires_2fa") is True
+    assert resp.data.get("metodo_2fa") == "WHATSAPP"
+    assert resp.data.get("tiene_webauthn") is True
+    assert "access" not in resp.data
+
+
+@pytest.mark.django_db
+def test_2fa_login_solo_webauthn_cae_a_whatsapp_sin_auth_2fa(client, user_solo_webauthn, cache_real):
+    """Segunda etapa: sin registro de Autenticacion2FA (user.auth_2fa no
+    existe), la verificación cae a WhatsApp usando el código cacheado —
+    ya no explota con '2FA no configurado'."""
+    from django.core.cache import cache
+    from apps.usuarios.views import _cache_key_whatsapp_2fa
+
+    pre_auth = _pre_auth_token(user_solo_webauthn)
+    cache.set(_cache_key_whatsapp_2fa(user_solo_webauthn.id_usuario), "654321", timeout=300)
+
+    resp = client.post(
+        FA2_LOGIN_URL,
+        {"pre_auth_token": pre_auth, "codigo": "654321"},
+        format="json",
+    )
+    assert resp.status_code == 200, resp.data
+    assert "access" in resp.data
+    assert "refresh" in resp.data
+
+
+@pytest.mark.django_db
+def test_2fa_login_solo_webauthn_codigo_whatsapp_invalido_retorna_400(client, user_solo_webauthn):
+    """Mismo usuario, código de WhatsApp incorrecto → 400 (no revienta por
+    falta de Autenticacion2FA)."""
+    pre_auth = _pre_auth_token(user_solo_webauthn)
+
+    resp = client.post(
+        FA2_LOGIN_URL,
+        {"pre_auth_token": pre_auth, "codigo": "000000"},
+        format="json",
+    )
     assert resp.status_code == 400
     assert "error" in resp.data
 
