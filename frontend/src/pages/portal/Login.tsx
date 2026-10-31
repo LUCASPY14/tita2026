@@ -1,13 +1,16 @@
 import { useState, useRef, useEffect } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import toast from 'react-hot-toast'
-import { ShieldCheck, ArrowLeft, Fingerprint, MessageCircle } from 'lucide-react'
+import { ShieldCheck, ArrowLeft, Fingerprint, MessageCircle, PlayCircle } from 'lucide-react'
 import { browserSupportsWebAuthn, platformAuthenticatorIsAvailable, startAuthentication } from '@simplewebauthn/browser'
 import { useAuthStore } from '../../store/authStore'
 import api from '../../services/api'
 import Button from '../../components/ui/Button'
 import Input from '../../components/ui/Input'
 import AuthShell from '../../components/AuthShell'
+
+// TODO: reemplazar por el link real una vez grabado y subido el video tutorial.
+const TUTORIAL_VIDEO_URL = 'https://www.youtube.com/@CantinaTita'
 
 export default function PortalLogin() {
   const [email, setEmail] = useState('')
@@ -383,6 +386,17 @@ export default function PortalLogin() {
           >
             Olvidé mi contraseña
           </button>
+          <p>
+            <a
+              href={TUTORIAL_VIDEO_URL}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-flex items-center gap-1.5 text-sm text-green-600 hover:underline"
+            >
+              <PlayCircle className="w-4 h-4" />
+              ¿Cómo uso esto?
+            </a>
+          </p>
           <p className="text-sm text-gray-400">
             ¿Trabajás en la cantina?{' '}
             <Link to="/login" className="text-green-600 hover:underline">Acceso empleados</Link>
