@@ -397,10 +397,6 @@ export default function PortalLogin() {
               ¿Cómo uso esto?
             </a>
           </p>
-          <p className="text-sm text-gray-400">
-            ¿Trabajás en la cantina?{' '}
-            <Link to="/login" className="text-green-600 hover:underline">Acceso empleados</Link>
-          </p>
           <p className="text-xs text-gray-300">
             <Link to="/portal/terminos" className="hover:underline">Términos y Condiciones</Link>
           </p>
