@@ -1,4 +1,4 @@
-import { useSearchParams } from 'react-router-dom'
+import { useSearchParams, useNavigate } from 'react-router-dom'
 import { CheckCircle2, XCircle, AlertCircle, ArrowLeft } from 'lucide-react'
 
 function formatGs(n: number) {
@@ -7,6 +7,7 @@ function formatGs(n: number) {
 
 export default function PagoCompletado() {
   const [searchParams] = useSearchParams()
+  const navigate = useNavigate()
 
   const estado = searchParams.get('estado') ?? 'error'
   const monto  = searchParams.get('monto')
@@ -17,14 +18,11 @@ export default function PagoCompletado() {
   const esCatastro  = tipo === 'catastro'
   const esCC        = tipo === 'cc'
 
-  // Full page reload: garantiza datos frescos (saldo actualizado) y re-autenticación.
-  // El catastro de tarjeta no está atado a un flujo de pago específico — volvemos al inicio del portal.
-  // Carga de saldo (cantina) y de almuerzo viven en la misma pantalla, con un toggle.
-  // El pago de cuenta corriente tiene su propia pantalla dedicada.
-  const base = esCatastro ? '/portal' : esCC ? '/portal/pagar-cc' : '/portal/carga-saldo'
+  // Navegación SPA (no hard reload): el Dashboard ya recarga sus propios datos
+  // (saldo, hijos) al montarse, así que no hace falta forzar una re-autenticación
+  // completa solo para tener datos frescos — eso solo agrega un punto de falla.
   const handleVolver = () => {
-    const tipoParam = !esCatastro && !esCC && tipo === 'almuerzo' ? '&tipo=ALMUERZO' : ''
-    window.location.href = `${base}?_r=${Date.now()}${tipoParam}`
+    navigate('/portal', { replace: true })
   }
 
   return (
