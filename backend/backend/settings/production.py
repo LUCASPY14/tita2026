@@ -108,11 +108,14 @@ DATABASES = {
         "PASSWORD": os.environ.get("DB_PASSWORD", ""),
         "HOST": os.environ.get("DB_HOST", "localhost"),
         "PORT": os.environ.get("DB_PORT", "5432"),
-        # ATOMIC_REQUESTS + CONN_MAX_AGE=600 hacen innecesario PgBouncer a esta escala
-        # (~8-12 conexiones reales). Si se superan 40-50 conexiones sostenidas, hay que
-        # desactivar ambas ANTES de habilitar PgBouncer en modo transaction.
+        # CONN_MAX_AGE=0: a esta escala (~8-12 conexiones reales) abrir conexión
+        # nueva por request es gratis, y evita el bug de conexión zombie que
+        # CONN_MAX_AGE=600 + CONN_HEALTH_CHECKS no siempre detectaba a tiempo
+        # (InterfaceError "connection already closed" intermitente en login,
+        # ver fix de nov-2026). Si en el futuro el volumen de requests crece
+        # mucho, evaluar PgBouncer en modo transaction en vez de volver a subir esto.
         "ATOMIC_REQUESTS": True,
-        "CONN_MAX_AGE": 600,
+        "CONN_MAX_AGE": 0,
         "CONN_HEALTH_CHECKS": True,
         "OPTIONS": {
             "connect_timeout": 10,
