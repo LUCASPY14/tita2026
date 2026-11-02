@@ -8,6 +8,7 @@ from .views import (
     DetalleMenuDiarioViewSet,
     EstadoCuentaAlmuerzoView,
     MenuDiarioViewSet,
+    MovimientoSaldoAlmuerzoViewSet,
     PagoCuentaAlmuerzoViewSet,
     PrecioAlmuerzoViewSet,
     ProductoAlergenoViewSet,
@@ -31,6 +32,7 @@ router.register(r"pagos-cuentas", PagoCuentaAlmuerzoViewSet, basename="pagos-cue
 router.register(r"saldos", SaldoAlmuerzoViewSet, basename="saldos-almuerzo")
 router.register(r"configuracion", ConfiguracionAlmuerzoViewSet, basename="configuracion-almuerzo")
 router.register(r"recargas-saldo", RecargaSaldoAlmuerzoViewSet, basename="recargas-saldo-almuerzo")
+router.register(r"movimientos-saldo", MovimientoSaldoAlmuerzoViewSet, basename="movimientos-saldo-almuerzo")
 router.register(r"alergenos", AlergenoViewSet, basename="alergenos")
 router.register(r"productos-alergenos", ProductoAlergenoViewSet, basename="productos-alergenos")
 router.register(r"menu", MenuDiarioViewSet, basename="menu")

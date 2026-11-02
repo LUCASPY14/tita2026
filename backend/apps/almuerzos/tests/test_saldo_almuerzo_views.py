@@ -135,6 +135,49 @@ class TestSaldoAlmuerzoViewSet:
         assert resp.data[0]["tipo"] == "RECARGA"
 
 
+# ── MovimientoSaldoAlmuerzoViewSet (ledger completo para Tarjetas → Detalle) ─
+
+@pytest.mark.django_db
+class TestMovimientoSaldoAlmuerzoViewSet:
+
+    def test_incluye_ajustes_y_recargas_filtrando_por_hijo(self, api_admin, hijo_almuerzo, usuario_admin):
+        from apps.almuerzos.services import AlmuerzoService
+        AlmuerzoService.ajustar_saldo(
+            hijo=hijo_almuerzo, monto=Decimal("200000"), motivo="arrastre migración", usuario=usuario_admin,
+        )
+        AlmuerzoService.recargar_saldo(hijo=hijo_almuerzo, monto=Decimal("50000"))
+
+        resp = api_admin.get("/api/v1/almuerzos/movimientos-saldo/", {"hijo": hijo_almuerzo.pk})
+        assert resp.status_code == 200
+        assert resp.data["count"] == 2
+        tipos = {r["tipo"] for r in resp.data["results"]}
+        assert tipos == {"AJUSTE", "RECARGA"}
+
+    def test_filtra_solo_los_movimientos_del_hijo_pedido(self, api_admin, hijo_almuerzo, cliente, grado):
+        from apps.almuerzos.models import SaldoAlmuerzo
+        from apps.almuerzos.services import AlmuerzoService
+        from apps.clientes.models import Hijo
+        SaldoAlmuerzo.objects.create(hijo=hijo_almuerzo, saldo_actual=Decimal("0"))
+        AlmuerzoService.recargar_saldo(hijo=hijo_almuerzo, monto=Decimal("10000"))
+
+        otro_hijo = Hijo.objects.create(
+            nombre="Otro", apellido="Hijo", cliente_responsable=cliente, grado=grado, activo=True,
+        )
+        SaldoAlmuerzo.objects.create(hijo=otro_hijo, saldo_actual=Decimal("0"))
+        AlmuerzoService.recargar_saldo(hijo=otro_hijo, monto=Decimal("99999"))
+
+        resp = api_admin.get("/api/v1/almuerzos/movimientos-saldo/", {"hijo": hijo_almuerzo.pk})
+        assert resp.status_code == 200
+        assert resp.data["count"] == 1
+        assert resp.data["results"][0]["monto"] == "10000"
+
+    def test_cliente_web_no_puede_ver_movimientos(self, api_padre, hijo_almuerzo):
+        from apps.almuerzos.models import SaldoAlmuerzo
+        SaldoAlmuerzo.objects.create(hijo=hijo_almuerzo, saldo_actual=Decimal("0"))
+        resp = api_padre.get("/api/v1/almuerzos/movimientos-saldo/", {"hijo": hijo_almuerzo.pk})
+        assert resp.status_code == 403
+
+
 # ── SaldoAlmuerzoViewSet: editar limite_credito (tope de alerta) ────────────
 
 @pytest.mark.django_db

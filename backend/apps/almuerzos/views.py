@@ -1054,6 +1054,26 @@ class RecargaSaldoAlmuerzoViewSet(viewsets.ModelViewSet):
         return Response(self.get_serializer(recarga_anulada).data)
 
 
+class MovimientoSaldoAlmuerzoViewSet(viewsets.ReadOnlyModelViewSet):
+    """Ledger completo del saldo de almuerzo (recargas + ajustes + consumos),
+    para la pestaña de historial en Tarjetas → Detalle — a diferencia de
+    /recargas-saldo/, que solo muestra RecargaSaldoAlmuerzo y no los AJUSTE
+    manuales (ver MovimientoSaldoAlmuerzo.Tipo)."""
+
+    queryset = MovimientoSaldoAlmuerzo.objects.select_related("saldo__hijo").all()
+    serializer_class = MovimientoSaldoAlmuerzoSerializer
+    permission_classes = [IsCajeroCobradorOrAdmin]
+    filter_backends = [OrderingFilter]
+    ordering = ["-fecha"]
+
+    def get_queryset(self):
+        qs = super().get_queryset()
+        hijo_id = self.request.query_params.get("hijo")
+        if hijo_id:
+            qs = qs.filter(saldo__hijo_id=hijo_id)
+        return qs
+
+
 # ==============================================================================
 # ALERGENO
 # ==============================================================================

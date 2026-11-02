@@ -120,6 +120,15 @@ export interface RecargaAlmuerzo {
   fecha_carga: string
 }
 
+export interface MovimientoSaldoAlmuerzo {
+  id_movimiento_almuerzo: number
+  tipo: string
+  monto: string | number
+  saldo_resultante: string | number
+  observaciones: string | null
+  fecha: string
+}
+
 export type TipoTitular = 'alumno' | 'funcionario'
 
 export interface TarjetaForm {
