@@ -5,9 +5,6 @@ from datetime import timedelta
 
 logger = logging.getLogger(__name__)
 
-# Deuda de cantina en una tarjeta a partir de la cual se avisa a los admins.
-_MONTO_ALERTA_SALDO_TARJETA = 100_000
-
 
 @shared_task(
     name="apps.core.tasks.crear_particion_anio_siguiente",
@@ -68,29 +65,21 @@ def expirar_recargas_pendientes():
 )
 def alertar_saldo_tarjeta_negativo():
     """
-    Avisa a ADMIN de tarjetas con deuda de cantina alta: desde
-    _MONTO_ALERTA_SALDO_TARJETA, o desde el 80% de su tope si el tope es menor.
+    Avisa a ADMIN de tarjetas con deuda de cantina alta (ver
+    TarjetaService.tarjetas_en_alerta_saldo para el criterio exacto).
     Como el alerta de almuerzo, no deduplica: mientras siga por encima del
     umbral vuelve a avisar cada día.
     """
-    from decimal import Decimal
-
     from apps.notificaciones.models import Notificacion
     from apps.usuarios.models import Usuario
 
-    from .models import Tarjeta
+    from .services import TarjetaService
 
     admins = list(Usuario.objects.filter(rol=Usuario.Rol.ADMIN, is_active=True))
     alertadas = 0
-    for tarjeta in Tarjeta.objects.filter(saldo_actual__lt=0).select_related("hijo", "cliente_directo"):
+    for tarjeta in TarjetaService.tarjetas_en_alerta_saldo():
         deuda = -tarjeta.saldo_actual
         tope = tarjeta.deuda_maxima
-        umbral = Decimal(_MONTO_ALERTA_SALDO_TARJETA)
-        if tope:
-            umbral = min(umbral, tope * Decimal("0.8"))
-        if deuda < umbral:
-            continue
-
         titular = (
             tarjeta.hijo.nombre_completo if tarjeta.hijo_id
             else tarjeta.cliente_directo.nombre_completo if tarjeta.cliente_directo_id

@@ -26,8 +26,31 @@ MOTIVOS_RENUMERACION_TARJETA = {
 }
 
 
+# Deuda de cantina en una tarjeta a partir de la cual se avisa a los admins
+# (ver TarjetaService.tarjetas_en_alerta_saldo, usado por el dashboard y por
+# apps.core.tasks.alertar_saldo_tarjeta_negativo).
+MONTO_ALERTA_SALDO_TARJETA = Decimal("100000")
+
+
 class TarjetaService:
     """Servicio para operaciones con tarjetas."""
+
+    @staticmethod
+    def tarjetas_en_alerta_saldo():
+        """Tarjetas con deuda de cantina relevante: desde
+        MONTO_ALERTA_SALDO_TARJETA, o desde el 80% de su tope si el tope es
+        menor. No depende de que nadie configure un umbral por tarjeta
+        (a diferencia de saldo_alerta, que es opcional y casi nunca se usa)."""
+        resultado = []
+        for tarjeta in Tarjeta.objects.filter(saldo_actual__lt=0).select_related("hijo", "cliente_directo"):
+            deuda = -tarjeta.saldo_actual
+            tope = tarjeta.deuda_maxima
+            umbral = MONTO_ALERTA_SALDO_TARJETA
+            if tope:
+                umbral = min(umbral, tope * Decimal("0.8"))
+            if deuda >= umbral:
+                resultado.append(tarjeta)
+        return resultado
 
     @staticmethod
     def _validar_activa(tarjeta):

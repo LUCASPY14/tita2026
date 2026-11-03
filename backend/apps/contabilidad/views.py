@@ -709,12 +709,13 @@ class DashboardResumenView(APIView):
     permission_classes = [IsStaffUser]
 
     def get(self, request):
-        from django.db.models import Count, Sum, F
+        from django.db.models import Count, Sum
         from apps.ventas.models import Venta
         from apps.clientes.models import Cliente, Hijo
         from apps.productos.models import Producto
         from apps.inventario.services import StockService
-        from apps.core.models import CargaSaldo, Tarjeta
+        from apps.core.models import CargaSaldo
+        from apps.core.services import TarjetaService
         from apps.almuerzos.models import RegistroConsumoAlmuerzo
         from apps.usuarios.models import Empleado
 
@@ -733,11 +734,7 @@ class DashboardResumenView(APIView):
 
         almuerzos_hoy = RegistroConsumoAlmuerzo.objects.filter(fecha_consumo=hoy).count()
 
-        tarjetas_alerta = Tarjeta.objects.filter(
-            notificar_saldo_bajo=True,
-            saldo_alerta__isnull=False,
-            saldo_actual__lte=F("saldo_alerta"),
-        ).count()
+        tarjetas_alerta = len(TarjetaService.tarjetas_en_alerta_saldo())
 
         cumpleaneros_hoy = list(
             Hijo.objects.filter(
