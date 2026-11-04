@@ -19,8 +19,10 @@ se crea el registro Tarjeta vinculado a ese hijo con estado ACTIVA y saldo 0
 Si el número ya está registrado a nombre de otro titular, o el hijo ya tenía
 una tarjeta distinta, no se toca nada y se avisa para resolverlo a mano.
 
-Columnas obligatorias: ruc_ci, cliente_nombres, cliente_apellidos,
-hijo1_nombre, hijo1_apellido
+Columnas obligatorias: ruc_ci, cliente_nombres, cliente_apellidos.
+hijo1_nombre/hijo1_apellido son obligatorios solo cuando cliente_tipo (de la
+fila o de --tipo-cliente) resuelve a "Familia" — el formulario también se usa
+para Profesores/Externos/Administrativos, que no cargan hijos.
 Columnas opcionales: cliente_email, cliente_telefono, cliente_direccion,
 cliente_ciudad, cliente_tipo, cliente_lista_precio, hijoN_fecha_nacimiento
 (acepta AAAA-MM-DD, DD/MM/AAAA o DD-MM-AAAA), hijoN_grado, hijoN_tarjeta,
@@ -69,7 +71,7 @@ def _parsear_fecha(fecha_str: str) -> date | None:
             continue
     return None
 
-REQUERIDAS = ["ruc_ci", "cliente_nombres", "cliente_apellidos", "hijo1_nombre", "hijo1_apellido"]
+REQUERIDAS = ["ruc_ci", "cliente_nombres", "cliente_apellidos"]
 
 
 class Command(BaseCommand):
@@ -151,15 +153,15 @@ class Command(BaseCommand):
         if not RUC_CI_REGEX.match(ruc_ci):
             raise _FilaInvalida(f'CI/RUC "{ruc_ci}" no tiene un formato reconocible')
 
-        hijo1_nombre = (fila.get("hijo1_nombre") or "").strip()
-        hijo1_apellido = (fila.get("hijo1_apellido") or "").strip()
-        if not hijo1_nombre or not hijo1_apellido:
-            raise _FilaInvalida("falta hijo1_nombre/hijo1_apellido — toda familia debe tener al menos un hijo")
-
         tipo_fila = (fila.get("cliente_tipo") or "").strip()
         tipo = self._resolver_tipo_cliente(tipo_fila) if tipo_fila else tipo_default
         if tipo is None:
             raise _FilaInvalida("sin cliente_tipo en el CSV y sin --tipo-cliente por defecto")
+
+        hijo1_nombre = (fila.get("hijo1_nombre") or "").strip()
+        hijo1_apellido = (fila.get("hijo1_apellido") or "").strip()
+        if tipo.nombre.strip().lower() == "familia" and (not hijo1_nombre or not hijo1_apellido):
+            raise _FilaInvalida("falta hijo1_nombre/hijo1_apellido — toda familia debe tener al menos un hijo")
 
         lista_fila = (fila.get("cliente_lista_precio") or "").strip()
         lista = self._resolver_lista_precio(lista_fila) if lista_fila else lista_default
