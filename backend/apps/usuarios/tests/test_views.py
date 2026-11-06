@@ -437,6 +437,35 @@ class TestPortalHistorialCantina:
         )
         assert resp.status_code == 400
 
+    def test_hijo_id_cero_sin_tarjeta_propia_retorna_404(self, api_portal):
+        resp = api_portal.get(
+            "/api/v1/usuarios/portal/historial-cantina/",
+            {"hijo_id": 0},
+        )
+        assert resp.status_code == 404
+
+    def test_hijo_id_cero_con_tarjeta_propia_retorna_compras_del_cliente(self, api_portal, cliente, usuario_cajero):
+        from decimal import Decimal
+        from apps.core.models import Tarjeta
+        from apps.ventas.models import Venta
+
+        Tarjeta.objects.create(
+            nro_tarjeta="DIRECTA-1", cliente_directo=cliente, estado=Tarjeta.Estado.ACTIVA, saldo_actual=0,
+        )
+        Venta.objects.create(
+            cliente=cliente, hijo=None, cajero=usuario_cajero,
+            tipo=Venta.Tipo.CONTADO, estado=Venta.Estado.ACTIVA,
+            monto_total=Decimal("3000"),
+        )
+        resp = api_portal.get(
+            "/api/v1/usuarios/portal/historial-cantina/",
+            {"hijo_id": 0},
+        )
+        assert resp.status_code == 200
+        assert resp.data["count"] == 1
+        assert resp.data["results"][0]["tipo"] == "VENTA"
+        assert resp.data["results"][0]["monto_total"] == 3000
+
 
 # ── PortalHistorialRecargas ───────────────────────────────────────────────────
 
@@ -460,6 +489,31 @@ class TestPortalHistorialRecargas:
             {"hijo_id": 1},
         )
         assert resp.status_code == 400
+
+    def test_hijo_id_cero_sin_tarjeta_propia_retorna_404(self, api_portal):
+        resp = api_portal.get(
+            "/api/v1/usuarios/portal/historial-recargas/",
+            {"hijo_id": 0},
+        )
+        assert resp.status_code == 404
+
+    def test_hijo_id_cero_con_tarjeta_propia_retorna_sus_cargas(self, api_portal, cliente):
+        from apps.core.models import Tarjeta, CargaSaldo
+
+        tarjeta = Tarjeta.objects.create(
+            nro_tarjeta="DIRECTA-2", cliente_directo=cliente, estado=Tarjeta.Estado.ACTIVA, saldo_actual=0,
+        )
+        CargaSaldo.objects.create(
+            tarjeta=tarjeta, monto_cargado=20_000, estado=CargaSaldo.Estado.CONFIRMADA, metodo_pago="EFECTIVO",
+        )
+        resp = api_portal.get(
+            "/api/v1/usuarios/portal/historial-recargas/",
+            {"hijo_id": 0},
+        )
+        assert resp.status_code == 200
+        assert resp.data["count"] == 1
+        assert resp.data["results"][0]["tipo"] == "CANTINA"
+        assert resp.data["results"][0]["monto"] == 20_000
 
     def test_sin_recargas_retorna_vacio(self, api_portal, hijo_portal):
         resp = api_portal.get(
@@ -862,6 +916,79 @@ class TestPortalMiHijoConDatos:
         resp = api_portal.get("/api/v1/usuarios/portal/mi-hijo/")
         assert resp.status_code == 200
         assert resp.data["hijos"][0]["top_productos"] == []
+
+
+# ── PortalMiHijoView — tarjeta propia (cliente_directo, sin hijos) ─────────────
+# Administrativos/Externos/Profesores: Cliente sin Hijo, titular directo de su
+# propia tarjeta de cantina.
+
+@pytest.mark.django_db
+class TestPortalMiHijoTarjetaPropia:
+
+    def test_sin_hijos_y_sin_tarjeta_propia_retorna_lista_vacia(self, api_portal):
+        resp = api_portal.get("/api/v1/usuarios/portal/mi-hijo/")
+        assert resp.status_code == 200
+        assert resp.data["hijos"] == []
+
+    def test_sin_hijos_con_tarjeta_propia_retorna_entrada_sintetica(self, api_portal, cliente):
+        from decimal import Decimal
+        from apps.core.models import Tarjeta
+        Tarjeta.objects.create(
+            nro_tarjeta="DIRECTA-3", cliente_directo=cliente,
+            estado=Tarjeta.Estado.ACTIVA, saldo_actual=Decimal("15000"),
+        )
+        resp = api_portal.get("/api/v1/usuarios/portal/mi-hijo/")
+        assert resp.status_code == 200
+        hijos = resp.data["hijos"]
+        assert len(hijos) == 1
+        entrada = hijos[0]
+        assert entrada["id_hijo"] == 0
+        assert entrada["es_propia"] is True
+        assert entrada["nombre"] == cliente.nombre_completo
+        assert entrada["grado"] is None
+        assert entrada["tarjeta"]["nro_tarjeta"] == "DIRECTA-3"
+        assert entrada["tarjeta"]["saldo_actual"] == 15000
+        assert entrada["consumo_mes"] is None
+        assert entrada["saldo_almuerzo"] == 0
+        assert entrada["restricciones"] == []
+
+    def test_tarjeta_propia_top_productos_no_mezcla_compras_de_hijos(
+        self, api_portal, cliente, usuario_admin, producto, categoria, unidad_medida, lista_precio,
+    ):
+        from decimal import Decimal
+        from apps.clientes.models import Hijo
+        from apps.core.models import Tarjeta
+        from apps.ventas.models import DetalleVenta, Venta
+
+        Tarjeta.objects.create(nro_tarjeta="DIRECTA-4", cliente_directo=cliente, estado=Tarjeta.Estado.ACTIVA, saldo_actual=0)
+
+        # Compra propia (hijo=None) — debe aparecer
+        venta_propia = Venta.objects.create(
+            cliente=cliente, hijo=None, cajero=usuario_admin,
+            tipo=Venta.Tipo.CONTADO, estado=Venta.Estado.ACTIVA, monto_total=Decimal("2000"),
+        )
+        DetalleVenta.objects.create(
+            venta=venta_propia, producto=producto, cantidad=Decimal("2"),
+            precio_unitario=Decimal("1000"), subtotal=Decimal("2000"),
+        )
+
+        # Compra de un hijo del mismo cliente — NO debe mezclarse con la propia
+        hijo = Hijo.objects.create(nombre="Otro", apellido="Hijo", cliente_responsable=cliente, activo=True)
+        venta_hijo = Venta.objects.create(
+            cliente=cliente, hijo=hijo, cajero=usuario_admin,
+            tipo=Venta.Tipo.CONTADO, estado=Venta.Estado.ACTIVA, monto_total=Decimal("9000"),
+        )
+        DetalleVenta.objects.create(
+            venta=venta_hijo, producto=producto, cantidad=Decimal("9"),
+            precio_unitario=Decimal("1000"), subtotal=Decimal("9000"),
+        )
+
+        resp = api_portal.get("/api/v1/usuarios/portal/mi-hijo/")
+        assert resp.status_code == 200
+        hijos = resp.data["hijos"]
+        propia = next(h for h in hijos if h.get("es_propia"))
+        assert len(propia["top_productos"]) == 1
+        assert propia["top_productos"][0]["cantidad"] == 2
 
 
 # ── PortalHistorialConsumos ───────────────────────────────────────────────────

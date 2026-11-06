@@ -148,15 +148,29 @@ class TestImportarClientesUnHijo:
         assert "Errores (1)" in salida
         assert "formato reconocible" in salida
 
-    def test_falta_hijo1_es_error_de_fila_completa(self, tmp_path, tipo_cliente, lista_precio):
+    def test_falta_hijo1_es_error_de_fila_completa(self, tmp_path, lista_precio):
+        # hijo1 solo es obligatorio para tipo "Familia" — usar ese tipo
+        # explícitamente en vez del fixture genérico "Padre".
+        TipoCliente.objects.create(nombre="Familia")
         fila = fila_base()
         fila["hijo1_nombre"] = ""
         csv_path = escribir_csv(tmp_path / "in.csv", [fila])
-        salida = run_importar(csv_path, tipo_cliente="Padre", lista_precio="General")
+        salida = run_importar(csv_path, tipo_cliente="Familia", lista_precio="General")
 
         assert Cliente.objects.count() == 0
         assert "Errores (1)" in salida
         assert "al menos un hijo" in salida
+
+    def test_falta_hijo1_no_es_error_si_tipo_no_es_familia(self, tmp_path, tipo_cliente, lista_precio):
+        fila = fila_base()
+        fila["hijo1_nombre"] = ""
+        fila["hijo1_apellido"] = ""
+        csv_path = escribir_csv(tmp_path / "in.csv", [fila])
+        salida = run_importar(csv_path, tipo_cliente="Padre", lista_precio="General")
+
+        assert Cliente.objects.filter(ruc_ci="4123456").exists()
+        assert Cliente.objects.get(ruc_ci="4123456").hijos.count() == 0
+        assert "Sin errores" in salida
 
     def test_fila_valida_y_fila_invalida_en_el_mismo_csv_no_se_afectan(self, tmp_path, tipo_cliente, lista_precio):
         filas = [

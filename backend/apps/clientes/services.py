@@ -33,6 +33,15 @@ def hijos_visibles_para_cliente(cliente):
     ).distinct()
 
 
+def tarjeta_propia_de_cliente(cliente):
+    """Tarjeta de la que `cliente` es titular directo (Tarjeta.cliente_directo),
+    no a través de un hijo — caso de Administrativos/Externos/Profesores, que
+    no tienen Hijo pero sí su propia tarjeta de cantina."""
+    from apps.core.models import Tarjeta
+
+    return Tarjeta.objects.filter(cliente_directo=cliente).first()
+
+
 def resolver_origen_pago_cc(cliente, origen_solicitado, monto) -> str:
     """
     Resuelve a qué categoría (CANTINA/ALMUERZO) corresponde un pago de

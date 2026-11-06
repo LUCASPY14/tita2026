@@ -793,7 +793,7 @@ class PortalMiHijoView(APIView):
 
         from django.db.models import Count, Sum
         from apps.clientes.models import RestriccionHijo
-        from apps.clientes.services import hijos_visibles_para_cliente
+        from apps.clientes.services import hijos_visibles_para_cliente, tarjeta_propia_de_cliente
         from apps.almuerzos.models import RegistroConsumoAlmuerzo, SaldoAlmuerzo
         from apps.ventas.models import DetalleVenta, Venta
 
@@ -864,11 +864,53 @@ class PortalMiHijoView(APIView):
                 "restricciones": restricciones,
                 "consumo_mes": consumo_mes,
                 "saldo_almuerzo": int(saldo_almuerzo.saldo_actual) if saldo_almuerzo else 0,
+                "es_propia": False,
                 "top_productos": [
                     {
                         "producto": p["producto__descripcion"],
                         "cantidad": float(p["cantidad_total"]),
                     }
+                    for p in top_productos
+                ],
+            })
+
+        # Tarjeta propia (cliente_directo) — Administrativos/Externos/Profesores
+        # no tienen Hijo, son titulares directos de su propia tarjeta. No hay
+        # almuerzo ni restricciones para este caso (id_hijo=0 es un sentinel,
+        # nunca una PK real de Hijo).
+        tarjeta_propia = tarjeta_propia_de_cliente(user.cliente)
+        if tarjeta_propia is not None:
+            # No hay "consumo_mes" (es específicamente almuerzos/comedor, que
+            # no aplica a una tarjeta propia de staff) — solo top_productos,
+            # que sí es cantina real.
+            top_productos = list(
+                DetalleVenta.objects.filter(
+                    venta__cliente=user.cliente,
+                    venta__hijo__isnull=True,
+                    venta__estado=Venta.Estado.ACTIVA,
+                    venta__fecha__year=hoy.year,
+                    venta__fecha__month=hoy.month,
+                )
+                .values("producto__descripcion")
+                .annotate(cantidad_total=Sum("cantidad"))
+                .order_by("-cantidad_total")[:5]
+            )
+            hijos_data.append({
+                "id_hijo": 0,
+                "nombre": user.cliente.nombre_completo,
+                "grado": None,
+                "tarjeta": {
+                    "nro_tarjeta": tarjeta_propia.nro_tarjeta,
+                    "saldo_actual": int(tarjeta_propia.saldo_actual),
+                    "estado": tarjeta_propia.estado,
+                    "en_alerta": tarjeta_propia.esta_en_alerta,
+                },
+                "restricciones": [],
+                "consumo_mes": None,
+                "saldo_almuerzo": 0,
+                "es_propia": True,
+                "top_productos": [
+                    {"producto": p["producto__descripcion"], "cantidad": float(p["cantidad_total"])}
                     for p in top_productos
                 ],
             })
@@ -1001,7 +1043,7 @@ class PortalHistorialCantina(APIView):
     def get(self, request):
         from apps.core.models import MovimientoTarjeta
         from apps.ventas.models import Venta
-        from apps.clientes.services import hijos_visibles_para_cliente
+        from apps.clientes.services import hijos_visibles_para_cliente, tarjeta_propia_de_cliente
 
         user = request.user
         if not user.cliente:
@@ -1011,26 +1053,40 @@ class PortalHistorialCantina(APIView):
         if not hijo_id:
             return Response({"detail": "Se requiere hijo_id."}, status=400)
 
-        hijo = hijos_visibles_para_cliente(user.cliente).filter(id_hijo=hijo_id, activo=True).first()
-        if not hijo:
-            return Response({"detail": "Hijo no encontrado."}, status=404)
-
         page_size = min(int(request.query_params.get("page_size", 15)), 50)
         page = max(int(request.query_params.get("page", 1)), 1)
         offset = (page - 1) * page_size
         limite = offset + page_size
 
-        ventas_qs = (
-            Venta.objects
-            .filter(hijo=hijo, estado=Venta.Estado.ACTIVA)
-            .prefetch_related("detalles", "detalles__producto")
-        )
-        # Ajustes administrativos manuales (TarjetaService.ajustar_saldo o el
-        # admin de Django) — se distinguen de los reversos automáticos (p.ej.
-        # rollback de un pago Bancard) porque esos no llevan creado_por.
-        ajustes_qs = MovimientoTarjeta.objects.filter(
-            tarjeta__hijo=hijo, tipo=MovimientoTarjeta.Tipo.AJUSTE, creado_por__isnull=False,
-        )
+        # hijo_id=0 es el sentinel de "tarjeta propia" (cliente_directo) —
+        # ver PortalMiHijoView. No hay Hijo real detrás.
+        if hijo_id == "0":
+            tarjeta = tarjeta_propia_de_cliente(user.cliente)
+            if not tarjeta:
+                return Response({"detail": "Hijo no encontrado."}, status=404)
+            ventas_qs = (
+                Venta.objects
+                .filter(cliente=user.cliente, hijo__isnull=True, estado=Venta.Estado.ACTIVA)
+                .prefetch_related("detalles", "detalles__producto")
+            )
+            ajustes_qs = MovimientoTarjeta.objects.filter(
+                tarjeta=tarjeta, tipo=MovimientoTarjeta.Tipo.AJUSTE, creado_por__isnull=False,
+            )
+        else:
+            hijo = hijos_visibles_para_cliente(user.cliente).filter(id_hijo=hijo_id, activo=True).first()
+            if not hijo:
+                return Response({"detail": "Hijo no encontrado."}, status=404)
+            ventas_qs = (
+                Venta.objects
+                .filter(hijo=hijo, estado=Venta.Estado.ACTIVA)
+                .prefetch_related("detalles", "detalles__producto")
+            )
+            # Ajustes administrativos manuales (TarjetaService.ajustar_saldo o el
+            # admin de Django) — se distinguen de los reversos automáticos (p.ej.
+            # rollback de un pago Bancard) porque esos no llevan creado_por.
+            ajustes_qs = MovimientoTarjeta.objects.filter(
+                tarjeta__hijo=hijo, tipo=MovimientoTarjeta.Tipo.AJUSTE, creado_por__isnull=False,
+            )
 
         # Mismo patrón que PortalHistorialRecargas: el top (offset+page_size)
         # combinado solo puede salir del top (offset+page_size) de cada
@@ -1092,7 +1148,7 @@ class PortalHistorialRecargas(APIView):
     def get(self, request):
         from apps.core.models import CargaSaldo
         from apps.almuerzos.models import RecargaSaldoAlmuerzo
-        from apps.clientes.services import hijos_visibles_para_cliente
+        from apps.clientes.services import hijos_visibles_para_cliente, tarjeta_propia_de_cliente
 
         user = request.user
         if not user.cliente:
@@ -1102,17 +1158,25 @@ class PortalHistorialRecargas(APIView):
         if not hijo_id:
             return Response({"detail": "Se requiere hijo_id."}, status=400)
 
-        hijo = hijos_visibles_para_cliente(user.cliente).filter(id_hijo=hijo_id, activo=True).first()
-        if not hijo:
-            return Response({"detail": "Hijo no encontrado."}, status=404)
-
         page_size = min(int(request.query_params.get("page_size", 15)), 50)
         page = max(int(request.query_params.get("page", 1)), 1)
         offset = (page - 1) * page_size
         limite = offset + page_size
 
-        cargas_qs = CargaSaldo.objects.filter(tarjeta__hijo=hijo)
-        recargas_qs = RecargaSaldoAlmuerzo.objects.filter(hijo=hijo)
+        # hijo_id=0 es el sentinel de "tarjeta propia" (cliente_directo) — ver
+        # PortalMiHijoView. No hay saldo de almuerzo para este caso.
+        if hijo_id == "0":
+            tarjeta = tarjeta_propia_de_cliente(user.cliente)
+            if not tarjeta:
+                return Response({"detail": "Hijo no encontrado."}, status=404)
+            cargas_qs = CargaSaldo.objects.filter(tarjeta=tarjeta)
+            recargas_qs = RecargaSaldoAlmuerzo.objects.none()
+        else:
+            hijo = hijos_visibles_para_cliente(user.cliente).filter(id_hijo=hijo_id, activo=True).first()
+            if not hijo:
+                return Response({"detail": "Hijo no encontrado."}, status=404)
+            cargas_qs = CargaSaldo.objects.filter(tarjeta__hijo=hijo)
+            recargas_qs = RecargaSaldoAlmuerzo.objects.filter(hijo=hijo)
 
         # El top (offset + page_size) combinado solo puede salir del top
         # (offset + page_size) de cada fuente por separado — no hace falta

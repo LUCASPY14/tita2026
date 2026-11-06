@@ -81,6 +81,9 @@ interface HijoData {
   consumo_mes: ConsumoMes | null
   saldo_almuerzo: number
   top_productos?: TopProducto[]
+  /** true = tarjeta propia (cliente_directo, sin Hijo) — Administrativos/Externos/Profesores.
+   *  No tienen almuerzo ni restricciones; id_hijo es el sentinel 0. */
+  es_propia?: boolean
 }
 
 interface PortalData {
@@ -226,41 +229,44 @@ function ResumenTab({ hijo, mes }: { hijo: HijoData; mes: { anio: number; mes: n
         </div>
       )}
 
-      {/* Saldo de almuerzo — cuenta corriente, separada de la tarjeta */}
-      <div className={[
-        'rounded-2xl border p-4',
-        hijo.saldo_almuerzo < 0 ? 'bg-red-50 border-red-200' : 'bg-orange-50 border-orange-200',
-      ].join(' ')}>
-        <div className="flex items-start justify-between gap-4">
-          <div>
-            <div className="flex items-center gap-2 mb-1">
-              <UtensilsCrossed className={`w-4 h-4 ${hijo.saldo_almuerzo < 0 ? 'text-red-500' : 'text-orange-600'}`} />
-              <p className="text-sm font-semibold text-slate-500 uppercase tracking-wide">Saldo de almuerzo</p>
-            </div>
-            <p className={`text-4xl font-bold tabular-nums ${hijo.saldo_almuerzo < 0 ? 'text-red-700' : 'text-orange-700'}`}>
-              {formatGs(hijo.saldo_almuerzo)}
-            </p>
-            {hijo.saldo_almuerzo < 0 && (
-              <p className="text-sm text-slate-400 mt-1">
-                Debe — se descuenta de cada ingreso al comedor
+      {/* Saldo de almuerzo — cuenta corriente, separada de la tarjeta. No
+          aplica a una tarjeta propia de staff (es_propia). */}
+      {!hijo.es_propia && (
+        <div className={[
+          'rounded-2xl border p-4',
+          hijo.saldo_almuerzo < 0 ? 'bg-red-50 border-red-200' : 'bg-orange-50 border-orange-200',
+        ].join(' ')}>
+          <div className="flex items-start justify-between gap-4">
+            <div>
+              <div className="flex items-center gap-2 mb-1">
+                <UtensilsCrossed className={`w-4 h-4 ${hijo.saldo_almuerzo < 0 ? 'text-red-500' : 'text-orange-600'}`} />
+                <p className="text-sm font-semibold text-slate-500 uppercase tracking-wide">Saldo de almuerzo</p>
+              </div>
+              <p className={`text-4xl font-bold tabular-nums ${hijo.saldo_almuerzo < 0 ? 'text-red-700' : 'text-orange-700'}`}>
+                {formatGs(hijo.saldo_almuerzo)}
               </p>
-            )}
+              {hijo.saldo_almuerzo < 0 && (
+                <p className="text-sm text-slate-400 mt-1">
+                  Debe — se descuenta de cada ingreso al comedor
+                </p>
+              )}
+            </div>
           </div>
+          <button
+            type="button"
+            onClick={() => navigate(`/portal/carga-saldo?tipo=ALMUERZO&hijo_id=${hijo.id_hijo}`)}
+            className={[
+              'mt-3 w-full flex items-center justify-center gap-2 py-2.5 rounded-xl bg-white border font-semibold text-base transition-colors cursor-pointer',
+              hijo.saldo_almuerzo < 0
+                ? 'border-red-300 text-red-700 hover:bg-red-50'
+                : 'border-orange-300 text-orange-700 hover:bg-orange-50',
+            ].join(' ')}
+          >
+            <Wallet className="w-4 h-4" />
+            Recargar saldo de almuerzo
+          </button>
         </div>
-        <button
-          type="button"
-          onClick={() => navigate(`/portal/carga-saldo?tipo=ALMUERZO&hijo_id=${hijo.id_hijo}`)}
-          className={[
-            'mt-3 w-full flex items-center justify-center gap-2 py-2.5 rounded-xl bg-white border font-semibold text-base transition-colors cursor-pointer',
-            hijo.saldo_almuerzo < 0
-              ? 'border-red-300 text-red-700 hover:bg-red-50'
-              : 'border-orange-300 text-orange-700 hover:bg-orange-50',
-          ].join(' ')}
-        >
-          <Wallet className="w-4 h-4" />
-          Recargar saldo de almuerzo
-        </button>
-      </div>
+      )}
 
       {/* Restricciones */}
       {hijo.restricciones.length > 0 && (
@@ -284,30 +290,34 @@ function ResumenTab({ hijo, mes }: { hijo: HijoData; mes: { anio: number; mes: n
         </div>
       )}
 
-      {/* Consumo del mes — informativo, el saldo de almuerzo de arriba es lo que se cobra */}
-      {hijo.consumo_mes ? (
-        <div className="bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden">
-          <div className="px-4 py-3 bg-slate-50 border-b border-slate-100 flex items-center gap-2">
-            <UtensilsCrossed className="w-4 h-4 text-slate-500" />
-            <p className="text-base font-semibold text-slate-700">
-              Consumo — {MESES[mes.mes]} {mes.anio}
-            </p>
-          </div>
-          <div className="grid grid-cols-2 divide-x divide-slate-100">
-            <div className="p-4 text-center">
-              <p className="text-sm text-slate-500 mb-1">Almuerzos tomados</p>
-              <p className="text-3xl font-bold text-slate-800 tabular-nums">{hijo.consumo_mes.cantidad_almuerzos}</p>
+      {/* Consumo del mes — informativo, el saldo de almuerzo de arriba es lo
+          que se cobra. Es específico de almuerzos/comedor, no aplica a
+          es_propia. */}
+      {!hijo.es_propia && (
+        hijo.consumo_mes ? (
+          <div className="bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden">
+            <div className="px-4 py-3 bg-slate-50 border-b border-slate-100 flex items-center gap-2">
+              <UtensilsCrossed className="w-4 h-4 text-slate-500" />
+              <p className="text-base font-semibold text-slate-700">
+                Consumo — {MESES[mes.mes]} {mes.anio}
+              </p>
             </div>
-            <div className="p-4 text-center">
-              <p className="text-sm text-slate-500 mb-1">Total del mes</p>
-              <p className="text-2xl font-bold text-emerald-700 tabular-nums">{formatGs(hijo.consumo_mes.monto_total)}</p>
+            <div className="grid grid-cols-2 divide-x divide-slate-100">
+              <div className="p-4 text-center">
+                <p className="text-sm text-slate-500 mb-1">Almuerzos tomados</p>
+                <p className="text-3xl font-bold text-slate-800 tabular-nums">{hijo.consumo_mes.cantidad_almuerzos}</p>
+              </div>
+              <div className="p-4 text-center">
+                <p className="text-sm text-slate-500 mb-1">Total del mes</p>
+                <p className="text-2xl font-bold text-emerald-700 tabular-nums">{formatGs(hijo.consumo_mes.monto_total)}</p>
+              </div>
             </div>
           </div>
-        </div>
-      ) : (
-        <div className="rounded-2xl border border-slate-100 bg-white px-4 py-6 text-center text-slate-400 text-sm">
-          Sin consumo de almuerzo en {MESES[mes.mes]}
-        </div>
+        ) : (
+          <div className="rounded-2xl border border-slate-100 bg-white px-4 py-6 text-center text-slate-400 text-sm">
+            Sin consumo de almuerzo en {MESES[mes.mes]}
+          </div>
+        )
       )}
 
       {/* Lo más consumido en cantina */}
@@ -938,12 +948,14 @@ export default function PortalDashboard() {
               Cantina
             </span>
           </TabBtn>
-          <TabBtn active={tab === 'almuerzos'} onClick={() => setTab(hijo.id_hijo, 'almuerzos')}>
-            <span className="flex items-center gap-1.5">
-              <CalendarCheck className="w-3.5 h-3.5" />
-              Almuerzos
-            </span>
-          </TabBtn>
+          {!hijo.es_propia && (
+            <TabBtn active={tab === 'almuerzos'} onClick={() => setTab(hijo.id_hijo, 'almuerzos')}>
+              <span className="flex items-center gap-1.5">
+                <CalendarCheck className="w-3.5 h-3.5" />
+                Almuerzos
+              </span>
+            </TabBtn>
+          )}
         </div>
 
         {/* Tab content */}
