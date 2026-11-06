@@ -3,6 +3,7 @@ Servicios de negocio para contabilidad
 Caja y facturacion
 """
 
+import logging
 from decimal import Decimal, ROUND_HALF_UP
 
 from django.db import models, transaction, IntegrityError
@@ -11,6 +12,8 @@ from django.utils import timezone
 from rest_framework.exceptions import ValidationError
 
 from .models import Caja, CierreCaja, MovimientoCaja, Factura
+
+logger = logging.getLogger(__name__)
 
 TIPO_CARGA_SALDO = "CARGA_SALDO"
 TIPO_PAGO_ALMUERZO = "PAGO_ALMUERZO"
@@ -145,7 +148,7 @@ class FacturacionService:
                 raise ValidationError({"error": f"La factura {nro_factura} ya fue registrada."})
 
             try:
-                return Factura.objects.create(
+                factura = Factura.objects.create(
                     cliente=cliente,
                     venta=venta,
                     nro_factura=nro_factura,
@@ -157,6 +160,26 @@ class FacturacionService:
                 )
             except IntegrityError:
                 raise ValidationError({"error": f"La factura {nro_factura} ya fue registrada."})
+
+            # Único punto real de emisión — emitir_para_origen y emitir_lote
+            # llaman a este método, así que cubre los 3 casos sin duplicar el
+            # aviso. No depende de PreferenciaNotificacion (decisión del
+            # usuario, 6-nov-2026): se manda siempre que el cliente tenga
+            # teléfono, igual que los demás avisos automáticos del sistema.
+            from apps.notificaciones.tasks import enviar_whatsapp_cliente
+            mensaje = (
+                f"Hola {cliente.nombres}, se emitió la factura N° {nro_factura} "
+                f"por Gs. {int(monto_total):,}. Cantina Tita."
+            )
+            cliente_id = cliente.id_cliente
+            try:
+                transaction.on_commit(lambda: enviar_whatsapp_cliente.delay(cliente_id, mensaje))
+            except Exception:
+                logger.warning(
+                    "No se pudo encolar WhatsApp de factura para cliente %s", cliente_id, exc_info=True,
+                )
+
+            return factura
 
     @staticmethod
     def anular_factura(factura) -> Factura:

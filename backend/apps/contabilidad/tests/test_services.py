@@ -26,6 +26,24 @@ class TestEmitirFactura:
         assert factura.monto_total == Decimal("50000")
         assert factura.cliente == cliente
 
+    def test_emitir_factura_encola_whatsapp_al_cliente(self, cliente, django_capture_on_commit_callbacks):
+        from unittest.mock import patch
+        from apps.contabilidad.services import FacturacionService
+
+        with patch("apps.notificaciones.tasks.enviar_whatsapp_cliente.delay") as mock_wa, \
+             django_capture_on_commit_callbacks(execute=True):
+            FacturacionService.emitir_factura(
+                cliente=cliente,
+                nro_factura="001-001-0000009",
+                monto_total=Decimal("50000"),
+            )
+
+        mock_wa.assert_called_once()
+        args = mock_wa.call_args[0]
+        assert args[0] == cliente.id_cliente
+        assert "001-001-0000009" in args[1]
+        assert "50.000" in args[1] or "50,000" in args[1]
+
     def test_factura_duplicada_falla(self, cliente):
         from apps.contabilidad.services import FacturacionService
 
