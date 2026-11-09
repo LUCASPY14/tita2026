@@ -10,7 +10,7 @@ import Table, { type Column } from '../../components/ui/Table'
 import Modal from '../../components/ui/Modal'
 import {
   extractErrorMessage, formatGs, formatFecha, formatFechaCorta,
-  type Tarjeta, type MovimientoTarjeta, type CargaSaldo, type MovimientoSaldoAlmuerzo,
+  type Tarjeta, type MovimientoTarjeta, type CargaSaldo, type MovimientoSaldoAlmuerzo, type RecargaAlmuerzo,
   ESTADO_COLOR, TIPO_MOV_LABEL, TIPO_MOV_COLOR, ESTADO_CARGA_COLOR, describirDisponible,
 } from './shared'
 
@@ -27,10 +27,11 @@ const inputClass = 'border border-slate-200 rounded-xl px-3 py-1.5 text-sm text-
 const labelClass = 'block text-sm font-semibold text-slate-500 uppercase tracking-wide mb-1.5'
 
 export default function ModalDetalle({ tarjeta, toggling, onToggleEstado, onClose, onTarjetaUpdated, onListReload }: Props) {
-  const [detailTab, setDetailTab] = useState<'movimientos' | 'cargas' | 'movimientosAlmuerzo'>('movimientos')
+  const [detailTab, setDetailTab] = useState<'movimientos' | 'cargas' | 'movimientosAlmuerzo' | 'cargasAlmuerzo'>('movimientos')
   const [movimientos, setMovimientos] = useState<MovimientoTarjeta[]>([])
   const [cargas, setCargas] = useState<CargaSaldo[]>([])
   const [movimientosAlmuerzo, setMovimientosAlmuerzo] = useState<MovimientoSaldoAlmuerzo[]>([])
+  const [cargasAlmuerzo, setCargasAlmuerzo] = useState<RecargaAlmuerzo[]>([])
   const [loadingDetail, setLoadingDetail] = useState(false)
   const [tipoMovFilter, setTipoMovFilter] = useState('')
 
@@ -56,10 +57,14 @@ export default function ModalDetalle({ tarjeta, toggling, onToggleEstado, onClos
       tarjeta.hijo
         ? api.get('/almuerzos/movimientos-saldo/', { params: { hijo: tarjeta.hijo, page_size: 200 } })
         : Promise.resolve(null),
-    ]).then(([movRes, cargaRes, movAlmuerzoRes]) => {
+      tarjeta.hijo
+        ? api.get('/almuerzos/recargas-saldo/', { params: { hijo: tarjeta.hijo, page_size: 200 } })
+        : Promise.resolve(null),
+    ]).then(([movRes, cargaRes, movAlmuerzoRes, cargaAlmuerzoRes]) => {
       setMovimientos(movRes.data.results ?? [])
       setCargas(cargaRes.data.results ?? [])
       setMovimientosAlmuerzo(movAlmuerzoRes?.data.results ?? [])
+      setCargasAlmuerzo(cargaAlmuerzoRes?.data.results ?? [])
     }).catch(() => toast.error('Error al cargar historial'))
       .finally(() => setLoadingDetail(false))
   }, [tarjeta?.nro_tarjeta]) // eslint-disable-line react-hooks/exhaustive-deps
@@ -206,6 +211,33 @@ export default function ModalDetalle({ tarjeta, toggling, onToggleEstado, onClos
     },
   ]
 
+  const colsCargasAlmuerzo: Column<RecargaAlmuerzo>[] = [
+    {
+      title: 'Fecha', key: 'fecha_carga',
+      render: (_, r) => <span className="text-xs text-slate-500">{formatFecha(r.fecha_carga)}</span>,
+    },
+    {
+      title: 'Monto', key: 'monto',
+      render: (_, r) => (
+        <span className="tabular-nums font-semibold text-emerald-700">{formatGs(r.monto_cargado)}</span>
+      ),
+    },
+    {
+      title: 'Método', key: 'metodo',
+      render: (_, r) => (
+        <span className="text-base text-slate-600">{METODO_PAGO_LABEL[r.metodo_pago] ?? r.metodo_pago}</span>
+      ),
+    },
+    {
+      title: 'Estado', key: 'estado',
+      render: (_, r) => <Badge color={ESTADO_CARGA_COLOR[r.estado] ?? 'default'}>{r.estado}</Badge>,
+    },
+    {
+      title: 'Usuario', key: 'usuario',
+      render: (_, r) => <span className="text-base text-slate-400">{r.registrado_por_nombre ?? '—'}</span>,
+    },
+  ]
+
   if (!tarjeta) return null
 
   const disponible = describirDisponible(tarjeta)
@@ -297,7 +329,7 @@ export default function ModalDetalle({ tarjeta, toggling, onToggleEstado, onClos
           <div className="flex">
             {(
               tarjeta.hijo
-                ? (['movimientos', 'cargas', 'movimientosAlmuerzo'] as const)
+                ? (['movimientos', 'cargas', 'movimientosAlmuerzo', 'cargasAlmuerzo'] as const)
                 : (['movimientos', 'cargas'] as const)
             ).map(tab => (
               <button
@@ -309,7 +341,12 @@ export default function ModalDetalle({ tarjeta, toggling, onToggleEstado, onClos
                     : 'border-transparent text-slate-500 hover:text-slate-700'
                 }`}
               >
-                {tab === 'movimientos' ? 'Movimientos' : tab === 'cargas' ? 'Cargas de Saldo' : 'Saldo de Almuerzo'}
+                {{
+                  movimientos: 'Movimientos',
+                  cargas: 'Cargas de Saldo',
+                  movimientosAlmuerzo: 'Movimientos de Almuerzo',
+                  cargasAlmuerzo: 'Cargas de Almuerzo',
+                }[tab]}
               </button>
             ))}
           </div>
@@ -336,8 +373,10 @@ export default function ModalDetalle({ tarjeta, toggling, onToggleEstado, onClos
           </>
         ) : detailTab === 'cargas' ? (
           <Table columns={colsCargas} dataSource={cargas} rowKey="id_carga" pageSize={8} />
-        ) : (
+        ) : detailTab === 'movimientosAlmuerzo' ? (
           <Table columns={colsMovimientosAlmuerzo} dataSource={movimientosAlmuerzo} rowKey="id_movimiento_almuerzo" pageSize={8} />
+        ) : (
+          <Table columns={colsCargasAlmuerzo} dataSource={cargasAlmuerzo} rowKey="id_recarga_almuerzo" pageSize={8} />
         )}
 
         <div className="flex justify-end mt-5">

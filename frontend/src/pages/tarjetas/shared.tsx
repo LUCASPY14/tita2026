@@ -118,6 +118,7 @@ export interface RecargaAlmuerzo {
   metodo_pago: string
   estado: string
   fecha_carga: string
+  registrado_por_nombre?: string | null
 }
 
 export interface MovimientoSaldoAlmuerzo {

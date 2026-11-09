@@ -46,22 +46,34 @@ beforeEach(() => {
   vi.clearAllMocks()
   vi.mocked(tarjetasService.getMovimientos).mockResolvedValue({ data: { results: [] } } as never)
   vi.mocked(tarjetasService.getCargas).mockResolvedValue({ data: { results: [] } } as never)
-  vi.mocked(api.get).mockResolvedValue({
-    data: {
-      results: [
-        { id_movimiento_almuerzo: 44, tipo: 'RECARGA', monto: 20000, saldo_resultante: 60000, observaciones: null, fecha: '2026-10-29T09:31:00Z' },
-      ],
-    },
-  } as never)
+  vi.mocked(api.get).mockImplementation((url: string) => {
+    if (url === '/almuerzos/recargas-saldo/') {
+      return Promise.resolve({
+        data: {
+          results: [
+            { id_recarga_almuerzo: 7, monto_cargado: 20000, metodo_pago: 'EFECTIVO', estado: 'CONFIRMADA', fecha_carga: '2026-10-29T09:31:00Z', registrado_por_nombre: 'Cajero Demo' },
+          ],
+        },
+      }) as never
+    }
+    return Promise.resolve({
+      data: {
+        results: [
+          { id_movimiento_almuerzo: 44, tipo: 'RECARGA', monto: 20000, saldo_resultante: 60000, observaciones: null, fecha: '2026-10-29T09:31:00Z' },
+        ],
+      },
+    }) as never
+  })
 })
 
 describe('ModalDetalle', () => {
-  it('no muestra la pestaña de saldo de almuerzo para tarjetas sin alumno', async () => {
+  it('no muestra las pestañas de almuerzo para tarjetas sin alumno', async () => {
     render(
       <ModalDetalle tarjeta={TARJETA_DOCENTE} toggling={null} onToggleEstado={vi.fn()} onClose={vi.fn()} onTarjetaUpdated={vi.fn()} onListReload={vi.fn()} />
     )
     await waitFor(() => expect(tarjetasService.getMovimientos).toHaveBeenCalled())
-    expect(screen.queryByRole('button', { name: 'Saldo de Almuerzo' })).not.toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: 'Movimientos de Almuerzo' })).not.toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: 'Cargas de Almuerzo' })).not.toBeInTheDocument()
     expect(api.get).not.toHaveBeenCalled()
   })
 
@@ -71,9 +83,18 @@ describe('ModalDetalle', () => {
     )
     await waitFor(() => {
       expect(api.get).toHaveBeenCalledWith('/almuerzos/movimientos-saldo/', { params: { hijo: 42, page_size: 200 } })
+      expect(api.get).toHaveBeenCalledWith('/almuerzos/recargas-saldo/', { params: { hijo: 42, page_size: 200 } })
     })
-    await userEvent.click(await screen.findByRole('button', { name: 'Saldo de Almuerzo' }))
+    await userEvent.click(await screen.findByRole('button', { name: 'Movimientos de Almuerzo' }))
     expect(await screen.findByText('+20.000 Gs.')).toBeInTheDocument()
+  })
+
+  it('carga y muestra las cargas de saldo de almuerzo del alumno en su propia pestaña', async () => {
+    render(
+      <ModalDetalle tarjeta={TARJETA_ALUMNO} toggling={null} onToggleEstado={vi.fn()} onClose={vi.fn()} onTarjetaUpdated={vi.fn()} onListReload={vi.fn()} />
+    )
+    await userEvent.click(await screen.findByRole('button', { name: 'Cargas de Almuerzo' }))
+    expect(await screen.findByText('Cajero Demo')).toBeInTheDocument()
   })
 
   it('no bloquea el historial si falla la carga de movimientos de saldo de almuerzo', async () => {
