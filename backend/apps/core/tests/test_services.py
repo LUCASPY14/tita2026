@@ -214,3 +214,15 @@ class TestAjustarSaldo:
                 tarjeta=tarjeta_activa, monto=Decimal("1000"),
                 motivo="   ", usuario=usuario_admin,
             )
+
+    def test_ajuste_motivo_demasiado_largo_falla_sin_romper_db(self, tarjeta_activa, usuario_admin):
+        """descripcion es varchar(255) — un motivo + sufijo que lo supere debe
+        dar ValidationError (400), no un StringDataRightTruncation de Postgres."""
+        from apps.core.services import TarjetaService
+
+        motivo_largo = "x" * 255
+        with pytest.raises(ValidationError, match="demasiado largo"):
+            TarjetaService.ajustar_saldo(
+                tarjeta=tarjeta_activa, monto=Decimal("1000"),
+                motivo=motivo_largo, usuario=usuario_admin,
+            )

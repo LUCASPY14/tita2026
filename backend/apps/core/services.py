@@ -272,8 +272,14 @@ class TarjetaService:
         """
         if monto == 0:
             raise ValidationError({"error": "El monto del ajuste no puede ser cero."})
-        if not motivo or not motivo.strip():
+        motivo = (motivo or "").strip()
+        if not motivo:
             raise ValidationError({"error": "El motivo del ajuste es obligatorio."})
+
+        sufijo = f" (ajuste manual: {usuario.email})"
+        max_largo = MovimientoTarjeta._meta.get_field("descripcion").max_length - len(sufijo)
+        if len(motivo) > max_largo:
+            raise ValidationError({"error": f"El motivo es demasiado largo (máx. {max_largo} caracteres)."})
 
         with transaction.atomic():
             tarjeta = Tarjeta.objects.select_for_update().get(pk=tarjeta.pk)
@@ -287,7 +293,7 @@ class TarjetaService:
                 monto=monto,
                 saldo_anterior=saldo_anterior,
                 saldo_resultante=tarjeta.saldo_actual,
-                descripcion=f"{motivo.strip()} (ajuste manual: {usuario.email})",
+                descripcion=f"{motivo}{sufijo}",
                 creado_por=usuario,
             )
 

@@ -13,6 +13,10 @@ interface Props {
 
 type TipoSaldo = 'CANTINA' | 'ALMUERZO'
 
+// Margen seguro para que motivo + " (ajuste manual: <email>)" no supere
+// el varchar(200) de observaciones de almuerzo (el de cantina es 255).
+const MOTIVO_MAX_LENGTH = 150
+
 const inputClass = 'border border-slate-200 rounded-xl px-3 py-2 text-base text-slate-900 bg-white focus:outline-none focus:ring-2 focus:ring-green-500/30 focus:border-green-500 transition-colors duration-150 w-full'
 const labelClass = 'block text-sm font-semibold text-slate-500 uppercase tracking-wide mb-1.5'
 
@@ -134,11 +138,15 @@ export default function ModalAjustarSaldo({ tarjeta, onClose, onSaved }: Props) 
           <label className={labelClass}>Motivo (obligatorio)</label>
           <textarea
             value={motivo}
-            onChange={e => setMotivo(e.target.value)}
+            onChange={e => setMotivo(e.target.value.slice(0, MOTIVO_MAX_LENGTH))}
             placeholder="Ej: corrección por reclamo del padre, cobro duplicado, etc."
             rows={3}
+            maxLength={MOTIVO_MAX_LENGTH}
             className={inputClass}
           />
+          <p className={`text-xs mt-1 text-right ${motivo.length >= MOTIVO_MAX_LENGTH ? 'text-red-500' : 'text-slate-400'}`}>
+            {motivo.length}/{MOTIVO_MAX_LENGTH}
+          </p>
         </div>
       </div>
     </Modal>

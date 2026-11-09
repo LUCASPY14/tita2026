@@ -366,8 +366,14 @@ class AlmuerzoService:
         """
         if monto == 0:
             raise ValidationError({"error": "El monto del ajuste no puede ser cero."})
-        if not motivo or not motivo.strip():
+        motivo = (motivo or "").strip()
+        if not motivo:
             raise ValidationError({"error": "El motivo del ajuste es obligatorio."})
+
+        sufijo = f" (ajuste manual: {usuario.email})"
+        max_largo = MovimientoSaldoAlmuerzo._meta.get_field("observaciones").max_length - len(sufijo)
+        if len(motivo) > max_largo:
+            raise ValidationError({"error": f"El motivo es demasiado largo (máx. {max_largo} caracteres)."})
 
         with transaction.atomic():
             saldo, _ = SaldoAlmuerzo.objects.get_or_create(hijo=hijo)
@@ -380,5 +386,5 @@ class AlmuerzoService:
                 tipo=MovimientoSaldoAlmuerzo.Tipo.AJUSTE,
                 monto=monto,
                 saldo_resultante=saldo.saldo_actual,
-                observaciones=f"{motivo.strip()} (ajuste manual: {usuario.email})",
+                observaciones=f"{motivo}{sufijo}",
             )

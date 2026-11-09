@@ -424,6 +424,16 @@ class TestAjustarSaldo:
                 hijo=hijo_almuerzo, monto=Decimal("1000"), motivo="", usuario=usuario_admin,
             )
 
+    def test_ajuste_motivo_demasiado_largo_falla_sin_romper_db(self, hijo_almuerzo, usuario_admin):
+        """observaciones es varchar(200) — un motivo + sufijo que lo supere debe
+        dar ValidationError (400), no un StringDataRightTruncation de Postgres."""
+        from apps.almuerzos.services import AlmuerzoService
+        motivo_largo = "x" * 200
+        with pytest.raises(ValidationError, match="demasiado largo"):
+            AlmuerzoService.ajustar_saldo(
+                hijo=hijo_almuerzo, monto=Decimal("1000"), motivo=motivo_largo, usuario=usuario_admin,
+            )
+
 
 @pytest.mark.django_db
 class TestConfirmarRecarga:
