@@ -20,7 +20,9 @@ from webauthn.helpers.structs import PublicKeyCredentialDescriptor
 
 from django.contrib.auth.tokens import default_token_generator
 from django.core import signing
+from django.db import transaction
 from django.utils import timezone
+from django.utils.decorators import method_decorator
 from django.utils.encoding import force_bytes, force_str
 from django.utils.http import urlsafe_base64_encode, urlsafe_base64_decode
 
@@ -1439,11 +1441,19 @@ class TwoFAActivarView(APIView):
         return Response({"detail": "2FA activado correctamente."})
 
 
+@method_decorator(transaction.non_atomic_requests, name="dispatch")
 class TwoFAWhatsappEnviarView(APIView):
     """
     POST /api/usuarios/2fa/whatsapp/enviar/
     Envía (o reenvía) el código de activación por WhatsApp al teléfono del
     cliente asociado al usuario autenticado. Paso 1 del setup por WhatsApp.
+
+    Exenta de ATOMIC_REQUESTS: enviar_whatsapp() es una llamada HTTP
+    síncrona (hasta 15s) a WAHA. Si corriera dentro de la transacción
+    automática de Django, una respuesta lenta de WAHA deja la conexión a
+    Postgres "idle in transaction" más tiempo que
+    idle_in_transaction_session_timeout (10s en producción) y Postgres la
+    cierra, convirtiendo el error controlado de abajo en un 500 real.
     """
     permission_classes = [IsAuthenticated]
     throttle_classes = [SensitiveEndpointThrottle]
@@ -1468,10 +1478,11 @@ class TwoFAWhatsappEnviarView(APIView):
         # del código) para poder mostrarlos junto al campo de código, igual
         # que en el setup de TOTP — si se generaran recién al activar, el
         # usuario nunca llegaría a verlos antes de que la pantalla navegue a /portal.
-        auth, _ = Autenticacion2FA.objects.get_or_create(usuario=request.user)
-        if not auth.backup_codes:
-            auth.backup_codes = _generate_backup_codes()
-            auth.save(update_fields=["backup_codes"])
+        with transaction.atomic():
+            auth, _ = Autenticacion2FA.objects.get_or_create(usuario=request.user)
+            if not auth.backup_codes:
+                auth.backup_codes = _generate_backup_codes()
+                auth.save(update_fields=["backup_codes"])
 
         return Response({
             "detail": "Código enviado por WhatsApp.",
@@ -1678,12 +1689,16 @@ class TwoFALoginVerificarView(APIView):
         return Response({**tokens, "user": _user_data(user), "session_key": session_key})
 
 
+@method_decorator(transaction.non_atomic_requests, name="dispatch")
 class TwoFALoginWhatsappEnviarView(APIView):
     """
     POST /api/usuarios/2fa/login/whatsapp/enviar/
     Body: {"pre_auth_token": "..."}
     Envía (o reenvía) el código de verificación por WhatsApp durante el
     segundo paso del login, para usuarios con 2FA por WhatsApp habilitado.
+
+    Exenta de ATOMIC_REQUESTS por el mismo motivo que
+    TwoFAWhatsappEnviarView — ver su docstring.
     """
     permission_classes = [AllowAny]
     throttle_classes = [LoginRateThrottle]

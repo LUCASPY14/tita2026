@@ -2,6 +2,8 @@
 Views para la app notificaciones
 """
 
+from django.db import transaction
+from django.utils.decorators import method_decorator
 from rest_framework import viewsets, status
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
@@ -149,6 +151,7 @@ class EnviarNotificacionView(APIView):
         return Response(resultado, status=http_status)
 
 
+@method_decorator(transaction.non_atomic_requests, name="dispatch")
 class WAHAEstadoView(APIView):
     """
     GET  /api/notificaciones/whatsapp-estado/
@@ -157,6 +160,10 @@ class WAHAEstadoView(APIView):
     POST /api/notificaciones/whatsapp-estado/
     Body: {"telefono": "595981234567", "mensaje": "Prueba"}
     Envía un mensaje de prueba para verificar la conexión.
+
+    Exenta de ATOMIC_REQUESTS: el POST llama a enviar_whatsapp() de forma
+    síncrona (hasta 15s) — misma razón que TwoFAWhatsappEnviarView en
+    apps/usuarios/views.py.
     """
     permission_classes = [IsAdmin]
 
@@ -243,10 +250,17 @@ def _waha_config():
     return base_url, session, headers
 
 
+@method_decorator(transaction.non_atomic_requests, name="dispatch")
 class WAHASesionView(APIView):
     """
-    POST   /api/notificaciones/whatsapp-sesion/  — crea/(re)inicia la sesión.
+    POST   /api/notificaciones/whatsapp-sesion/  — borra y recrea la sesión
+           desde cero, para que siempre termine en SCAN_QR_CODE con un QR
+           nuevo para escanear.
     DELETE /api/notificaciones/whatsapp-sesion/  — cierra sesión (logout), para reconectar con otro número.
+
+    Exenta de ATOMIC_REQUESTS: ambos métodos hacen llamadas HTTP síncronas
+    (hasta 15s) a WAHA — misma razón que TwoFAWhatsappEnviarView en
+    apps/usuarios/views.py.
     """
     permission_classes = [IsAdmin]
 
@@ -258,11 +272,20 @@ class WAHASesionView(APIView):
             return Response({"error": "EVOLUTION_API_URL no está configurada."}, status=status.HTTP_503_SERVICE_UNAVAILABLE)
         base_url, session, headers = cfg
 
+        # Borrar primero (si existe) y recrear de cero: un simple "start"
+        # sobre una sesión que ya existe pero quedó en estado FAILED
+        # intenta reanudarla con sus datos de auth viejos y se queda
+        # trabada en FAILED sin generar QR nuevo — confirmado en
+        # producción el 8-nov-2026. Se ignora cualquier error del DELETE
+        # (ej. la sesión no existía, o WAHA tardó) porque lo que importa
+        # es el resultado del POST de creación que sigue.
+        try:
+            req_lib.delete(f"{base_url}/api/sessions/{session}", headers=headers, timeout=15)
+        except req_lib.RequestException:
+            pass
+
         try:
             resp = req_lib.post(f"{base_url}/api/sessions", json={"name": session, "start": True}, headers=headers, timeout=15)
-            if resp.status_code == 422:
-                # La sesión ya existe (ej. quedó parada) — solo iniciarla.
-                resp = req_lib.post(f"{base_url}/api/sessions/{session}/start", headers=headers, timeout=15)
             resp.raise_for_status()
             return Response({"ok": True, "waha_response": resp.json()})
         except req_lib.RequestException as exc:
@@ -284,12 +307,19 @@ class WAHASesionView(APIView):
             return Response({"ok": False, "error": str(exc)}, status=status.HTTP_502_BAD_GATEWAY)
 
 
+@method_decorator(transaction.non_atomic_requests, name="dispatch")
 class WAHAQRView(APIView):
     """
     GET /api/notificaciones/whatsapp-qr/
     Devuelve el PNG del código QR actual de la sesión (solo válido mientras
     el estado es SCAN_QR_CODE). Proxy directo a WAHA — la API key nunca
     llega al frontend.
+
+    Exenta de ATOMIC_REQUESTS: hace una llamada HTTP síncrona (hasta 15s)
+    a WAHA — misma razón que TwoFAWhatsappEnviarView en
+    apps/usuarios/views.py. El frontend la pollea cada 5s mientras se
+    espera el escaneo, así que además reduce la carga de conexiones
+    abiertas innecesariamente contra Postgres.
     """
     permission_classes = [IsAdmin]
 

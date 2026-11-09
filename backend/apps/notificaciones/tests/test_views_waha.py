@@ -203,40 +203,48 @@ class TestWAHASesionViewPost:
         assert resp.status_code == 503
 
     def test_crea_sesion_nueva(self, api_admin):
-        mock_resp = MagicMock()
-        mock_resp.status_code = 201
-        mock_resp.json.return_value = {"name": "default", "status": "STARTING"}
-        mock_resp.raise_for_status.return_value = None
+        """Borra la sesión (si existía) y la recrea — así siempre termina en
+        SCAN_QR_CODE con un QR nuevo, en vez de quedar trabada en FAILED si
+        ya existía con datos de auth viejos (bug real, confirmado 8-nov-2026)."""
+        mock_delete = MagicMock(status_code=200)
+        mock_post = MagicMock()
+        mock_post.status_code = 201
+        mock_post.json.return_value = {"name": "default", "status": "STARTING"}
+        mock_post.raise_for_status.return_value = None
         with patch("django.conf.settings.EVOLUTION_API_URL", "http://waha:3001"):
             with patch("django.conf.settings.EVOLUTION_API_INSTANCE", "default"):
-                with patch("requests.post", return_value=mock_resp) as mock_post:
-                    resp = api_admin.post(URL_SESION)
+                with patch("requests.delete", return_value=mock_delete) as mock_del:
+                    with patch("requests.post", return_value=mock_post) as mock_pst:
+                        resp = api_admin.post(URL_SESION)
         assert resp.status_code == 200
         assert resp.data["ok"] is True
-        mock_post.assert_called_once()
+        mock_del.assert_called_once()
+        mock_pst.assert_called_once()
 
-    def test_sesion_existente_reintenta_con_start(self, api_admin):
-        """Si /api/sessions responde 422 (ya existe), reintenta con /start."""
-        mock_422 = MagicMock()
-        mock_422.status_code = 422
-        mock_started = MagicMock()
-        mock_started.status_code = 200
-        mock_started.json.return_value = {"name": "default", "status": "STARTING"}
-        mock_started.raise_for_status.return_value = None
+    def test_delete_fallido_no_bloquea_la_creacion(self, api_admin):
+        """Si el DELETE previo falla (ej. la sesión no existía todavía), el
+        POST de creación igual se intenta — el DELETE es best-effort."""
+        import requests
+        mock_post = MagicMock()
+        mock_post.status_code = 201
+        mock_post.json.return_value = {"name": "default", "status": "STARTING"}
+        mock_post.raise_for_status.return_value = None
         with patch("django.conf.settings.EVOLUTION_API_URL", "http://waha:3001"):
             with patch("django.conf.settings.EVOLUTION_API_INSTANCE", "default"):
-                with patch("requests.post", side_effect=[mock_422, mock_started]) as mock_post:
-                    resp = api_admin.post(URL_SESION)
+                with patch("requests.delete", side_effect=requests.exceptions.ConnectionError("refused")):
+                    with patch("requests.post", return_value=mock_post) as mock_pst:
+                        resp = api_admin.post(URL_SESION)
         assert resp.status_code == 200
         assert resp.data["ok"] is True
-        assert mock_post.call_count == 2
+        mock_pst.assert_called_once()
 
     def test_waha_error_retorna_502(self, api_admin):
         import requests
         with patch("django.conf.settings.EVOLUTION_API_URL", "http://waha:3001"):
             with patch("django.conf.settings.EVOLUTION_API_INSTANCE", "default"):
-                with patch("requests.post", side_effect=requests.exceptions.ConnectionError("refused")):
-                    resp = api_admin.post(URL_SESION)
+                with patch("requests.delete", return_value=MagicMock(status_code=200)):
+                    with patch("requests.post", side_effect=requests.exceptions.ConnectionError("refused")):
+                        resp = api_admin.post(URL_SESION)
         assert resp.status_code == 502
         assert resp.data["ok"] is False
 
