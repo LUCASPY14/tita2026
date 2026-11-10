@@ -8,13 +8,18 @@ import api from '../../services/api'
 import Button from '../../components/ui/Button'
 import Input from '../../components/ui/Input'
 import AuthShell from '../../components/AuthShell'
+import Modal from '../../components/ui/Modal'
 
-// TODO: reemplazar por el link real una vez grabado y subido el video tutorial.
-const TUTORIAL_VIDEO_URL = 'https://www.youtube.com/@LaCantinadeTita'
+// Video tutorial del portal (YouTube, no listado) — se reproduce en un modal
+// dentro del login. Si se cambia el video, actualizar solo el ID.
+const TUTORIAL_VIDEO_ID = 'oJDdL7jL9Vg'
+const TUTORIAL_VIDEO_URL = `https://youtu.be/${TUTORIAL_VIDEO_ID}`
+const TUTORIAL_EMBED_URL = `https://www.youtube-nocookie.com/embed/${TUTORIAL_VIDEO_ID}?autoplay=1&rel=0&playsinline=1`
 
 export default function PortalLogin() {
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
+  const [verTutorial, setVerTutorial] = useState(false)
   const [loading, setLoading] = useState(false)
   const [codigo, setCodigo] = useState('')
   const [codigoError, setCodigoError] = useState('')
@@ -387,21 +392,47 @@ export default function PortalLogin() {
             Olvidé mi contraseña
           </button>
           <p>
-            <a
-              href={TUTORIAL_VIDEO_URL}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="inline-flex items-center gap-1.5 text-sm text-green-600 hover:underline"
+            <button
+              type="button"
+              onClick={() => setVerTutorial(true)}
+              className="inline-flex items-center gap-1.5 text-sm text-green-600 hover:underline cursor-pointer"
             >
               <PlayCircle className="w-4 h-4" />
               ¿Cómo uso esto?
-            </a>
+            </button>
           </p>
           <p className="text-xs text-gray-300">
             <Link to="/portal/terminos" className="hover:underline">Términos y Condiciones</Link>
           </p>
         </div>
       </div>
+      <Modal
+        open={verTutorial}
+        title="¿Cómo uso el Portal de Padres?"
+        onCancel={() => setVerTutorial(false)}
+        width={860}
+        footer={null}
+      >
+        <div className="aspect-video w-full overflow-hidden rounded-xl bg-black">
+          <iframe
+            src={TUTORIAL_EMBED_URL}
+            title="Tutorial del Portal de Padres"
+            className="h-full w-full"
+            allow="autoplay; encrypted-media; picture-in-picture; fullscreen"
+            allowFullScreen
+          />
+        </div>
+        <p className="mt-3 text-center">
+          <a
+            href={TUTORIAL_VIDEO_URL}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="text-sm text-green-600 hover:underline"
+          >
+            Abrir en YouTube
+          </a>
+        </p>
+      </Modal>
     </AuthShell>
   )
 }
