@@ -19,14 +19,20 @@ se crea el registro Tarjeta vinculado a ese hijo con estado ACTIVA y saldo 0
 Si el número ya está registrado a nombre de otro titular, o el hijo ya tenía
 una tarjeta distinta, no se toca nada y se avisa para resolverlo a mano.
 
+Para clientes sin hijos (Profesores/Externos/Administrativos), la columna
+cliente_tarjeta hace lo mismo pero vinculando la tarjeta directo al cliente
+(Tarjeta.cliente_directo) en vez de a un hijo — mismo mecanismo que el alta
+manual desde Configuración → Tarjetas → "Docente/Funcionario".
+
 Columnas obligatorias: ruc_ci, cliente_nombres, cliente_apellidos.
 hijo1_nombre/hijo1_apellido son obligatorios solo cuando cliente_tipo (de la
 fila o de --tipo-cliente) resuelve a "Familia" — el formulario también se usa
 para Profesores/Externos/Administrativos, que no cargan hijos.
 Columnas opcionales: cliente_email, cliente_telefono, cliente_direccion,
-cliente_ciudad, cliente_tipo, cliente_lista_precio, hijoN_fecha_nacimiento
-(acepta AAAA-MM-DD, DD/MM/AAAA o DD-MM-AAAA), hijoN_grado, hijoN_tarjeta,
-para cada N detectado (hijo2_nombre, hijo2_apellido, hijo3_nombre, ...)
+cliente_ciudad, cliente_tipo, cliente_lista_precio, cliente_tarjeta,
+hijoN_fecha_nacimiento (acepta AAAA-MM-DD, DD/MM/AAAA o DD-MM-AAAA),
+hijoN_grado, hijoN_tarjeta, para cada N detectado (hijo2_nombre,
+hijo2_apellido, hijo3_nombre, ...)
 
 Si el CSV no trae "cliente_tipo"/"cliente_lista_precio" (o vienen vacíos en
 una fila), se usan los valores de --tipo-cliente/--lista-precio. Si tampoco
@@ -208,6 +214,33 @@ class Command(BaseCommand):
 
         for n in nros_hijo:
             self._procesar_hijo(fila, n, cliente, stats, warnings)
+
+        nro_tarjeta_cliente = (fila.get("cliente_tarjeta") or "").strip()
+        if nro_tarjeta_cliente:
+            self._procesar_tarjeta_cliente(nro_tarjeta_cliente, cliente, stats, warnings)
+
+    def _procesar_tarjeta_cliente(self, nro_tarjeta, cliente, stats, warnings):
+        existente = Tarjeta.objects.filter(pk=nro_tarjeta).first()
+        if existente:
+            if existente.cliente_directo_id == cliente.id_cliente:
+                return  # ya estaba correctamente vinculada, nada que hacer
+            titular = existente.hijo or existente.cliente_directo
+            warnings.append(
+                f'Tarjeta "{nro_tarjeta}" ya está registrada a nombre de {titular} — '
+                f'no se reasigna a {cliente.nombres} {cliente.apellidos}, revisar a mano'
+            )
+            return
+
+        tarjeta_previa = Tarjeta.objects.filter(cliente_directo=cliente).first()
+        if tarjeta_previa:
+            warnings.append(
+                f'{cliente.nombres} {cliente.apellidos} ya tiene la tarjeta "{tarjeta_previa.pk}" asociada — '
+                f'no se crea "{nro_tarjeta}" adicional'
+            )
+            return
+
+        Tarjeta.objects.create(nro_tarjeta=nro_tarjeta, cliente_directo=cliente)
+        stats["tarjetas_creadas"] += 1
 
     def _procesar_hijo(self, fila, n, cliente, stats, warnings):
         nombre = (fila.get(f"hijo{n}_nombre") or "").strip()
