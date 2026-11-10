@@ -10,7 +10,7 @@ import Input from '../../components/ui/Input'
 import AuthShell from '../../components/AuthShell'
 
 // TODO: reemplazar por el link real una vez grabado y subido el video tutorial.
-const TUTORIAL_VIDEO_URL = 'https://www.youtube.com/@CantinaTita'
+const TUTORIAL_VIDEO_URL = 'https://www.youtube.com/@LaCantinadeTita'
 
 export default function PortalLogin() {
   const [email, setEmail] = useState('')
