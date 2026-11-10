@@ -25,6 +25,8 @@ interface Props {
   onSelectCliente: (c: ClienteBasico) => void
   onClearCliente: () => void
   onVentaStartTime: () => void
+  /** El alumno se identificó sin presentar la tarjeta (número tipeado o búsqueda por nombre) */
+  identificadoSinTarjeta?: boolean
 }
 
 export default function PanelAlumno({
@@ -33,6 +35,7 @@ export default function PanelAlumno({
   clienteDirecto, clienteSearch, clienteResultados, buscandoCliente,
   scannerRef, onChangeTarjetaInput, onScanEnter, onSeleccionarTarjeta,
   onChangeClienteSearch, onSelectCliente, onClearCliente, onVentaStartTime,
+  identificadoSinTarjeta = false,
 }: Props) {
   const [focused, setFocused] = useState(false)
   const navigate = useNavigate()
@@ -64,7 +67,7 @@ export default function PanelAlumno({
             <div className="text-center">
               {fotoBlobUrl ? (
                 <img src={fotoBlobUrl} alt={tarjeta.hijo_nombre ?? undefined}
-                  className="w-32 h-32 rounded-full object-cover border-4 border-blue-400 mx-auto mb-3 shadow-md" />
+                  className={`w-32 h-32 rounded-full object-cover border-4 mx-auto mb-3 shadow-md ${identificadoSinTarjeta ? 'border-amber-400' : 'border-blue-400'}`} />
               ) : (
                 <div className="w-32 h-32 rounded-full bg-slate-100 border-4 border-blue-300 flex items-center justify-center mx-auto mb-3">
                   <User size={64} className="text-slate-400" />
@@ -78,6 +81,16 @@ export default function PanelAlumno({
               <p className="text-slate-300 text-xs mt-1 font-mono tracking-wider">{tarjeta.nro_tarjeta}</p>
             </div>
 
+            {identificadoSinTarjeta && (
+              <div role="alert" className="bg-amber-50 border-2 border-amber-400 rounded-xl p-3 text-center">
+                <p className="flex items-center justify-center gap-1.5 text-amber-800 text-sm font-black uppercase tracking-wide">
+                  <AlertTriangle size={15} className="shrink-0" /> Sin tarjeta
+                </p>
+                <p className="text-amber-700 text-xs mt-1 leading-snug">
+                  Se identificó escribiendo el número o el nombre. Verificá con la foto que sea el alumno.
+                </p>
+              </div>
+            )}
             {tarjeta.es_alumno && tarjeta.hijo_cumple_hoy && (
               <div className="bg-pink-50 border-2 border-pink-300 rounded-xl p-3 text-center">
                 <span className="text-pink-700 text-sm font-black">🎂 ¡Hoy cumple años!</span>

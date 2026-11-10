@@ -2,6 +2,7 @@ import { render, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import ModoRecreo from '../ModoRecreo'
+import { esLecturaDeLector, MS_POR_CARACTER_LECTOR } from '../modorecreo/shared'
 
 // ─── Globals ───────────────────────────────────────────────────────────────────
 
@@ -505,6 +506,21 @@ describe('ModoRecreo — búsqueda de tarjeta', () => {
     expect(screen.queryByText(/encontrados — elegí uno/i)).not.toBeInTheDocument()
   })
 
+  it('si el alumno se elige de la lista (sin presentar la tarjeta), avisa "Sin tarjeta"', async () => {
+    setupData()
+    const OTRA = { ...TARJETA_ACTIVA, nro_tarjeta: 'T-00002', hijo_nombre: 'Ana Gómez', hijo_grado: '2° B' }
+    mockTarjetasBuscar.mockResolvedValueOnce({ data: { results: [TARJETA_ACTIVA, OTRA] } })
+    render(<ModoRecreo />)
+    await waitForProducts()
+
+    const scannerInput = screen.getByPlaceholderText(/Escanear tarjeta/i)
+    await userEvent.type(scannerInput, 'Ana{Enter}')
+    await screen.findByText('2 alumnos encontrados — elegí uno')
+    await userEvent.click(screen.getByText('Ana Gómez'))
+    expect(await screen.findByText(/Sin tarjeta/i)).toBeInTheDocument()
+    expect(screen.getByText(/Verificá con la foto/i)).toBeInTheDocument()
+  })
+
   it('en la lista de varios resultados, un alumno sin grado muestra "Sin grado"', async () => {
     setupData()
     const SIN_GRADO = { ...TARJETA_ACTIVA, nro_tarjeta: 'T-00005', hijo_nombre: 'Ana Sin Grado', hijo_grado: null }
@@ -713,5 +729,18 @@ describe('ModoRecreo — cancelar', () => {
 
     await userEvent.click(screen.getByRole('button', { name: /Cancelar/i }))
     expect(screen.getByText('0 productos')).toBeInTheDocument()
+  })
+})
+
+describe('esLecturaDeLector', () => {
+  it('lectura rápida (lector RFID / código de barras) → true', () => {
+    expect(esLecturaDeLector('T-10482', 1000, 1000 + 7 * 10)).toBe(true)
+  })
+  it('tipeo de una persona → false', () => {
+    expect(esLecturaDeLector('T-10482', 1000, 1000 + 7 * (MS_POR_CARACTER_LECTOR + 100))).toBe(false)
+  })
+  it('sin inicio registrado o texto muy corto → false', () => {
+    expect(esLecturaDeLector('T-10482', null, 1000)).toBe(false)
+    expect(esLecturaDeLector('Ana', 1000, 1001)).toBe(false)
   })
 })

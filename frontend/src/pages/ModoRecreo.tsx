@@ -15,7 +15,7 @@ import PanelAlumno from './modorecreo/PanelAlumno'
 import PanelProductos from './modorecreo/PanelProductos'
 import PanelCobro from './modorecreo/PanelCobro'
 import {
-  sfx, gs, extractError, detectInputType,
+  sfx, gs, extractError, detectInputType, esLecturaDeLector,
   getSalesMap, addSales, getDailyStats, updateDailyStats,
   type Producto, type RestriccionHijo, type Tarjeta, type ClienteBasico,
   type ItemCarrito, type MedioPagoDB, type ModoPago, type Flash, type DailyStats,
@@ -47,6 +47,10 @@ export default function ModoRecreo() {
   const [mediosPago, setMediosPago] = useState<MedioPagoDB[]>([])
 
   const [tarjetaInput, setTarjetaInput] = useState('')
+  // Inicio del tipeo en el campo de tarjeta (para distinguir lector vs. manual)
+  const tarjetaInputInicio = useRef<number | null>(null)
+  // nro_tarjeta identificada sin presentar la tarjeta física (tipeo o nombre)
+  const [tarjetaSinPresentar, setTarjetaSinPresentar] = useState<string | null>(null)
   const [tarjeta, setTarjeta] = useState<Tarjeta | null>(null)
   const [buscandoTarjeta, setBuscandoTarjeta] = useState(false)
   const [resultadosTarjeta, setResultadosTarjeta] = useState<Tarjeta[]>([])
@@ -250,10 +254,11 @@ export default function ModoRecreo() {
     setClienteDirecto(null); setClienteSearch(''); setClienteResultados([])
   }, [])
 
-  const aplicarTarjeta = useCallback(async (found: Tarjeta) => {
+  const aplicarTarjeta = useCallback(async (found: Tarjeta, sinPresentar = false) => {
     if (found.estado !== 'ACTIVA') { sfx.error(); toast.error(`Tarjeta ${found.estado.toLowerCase()}`); return }
     sfx.card()
     setTarjeta(found)
+    setTarjetaSinPresentar(sinPresentar ? found.nro_tarjeta : null)
     setResultadosTarjeta([])
     setCarrito([])
     setClienteDirecto(null); setClienteSearch(''); setClienteResultados([])
@@ -279,7 +284,7 @@ export default function ModoRecreo() {
     ventaStartTime.current = performance.now()
   }, [])
 
-  const buscarTarjeta = useCallback(async (nro: string) => {
+  const buscarTarjeta = useCallback(async (nro: string, sinPresentar = false) => {
     if (!nro || buscandoTarjeta) return
     setBuscandoTarjeta(true)
     setResultadosTarjeta([])
@@ -287,11 +292,11 @@ export default function ModoRecreo() {
       const { data } = await tarjetasService.buscar<Tarjeta>(nro)
       const resultados = data.results ?? []
       if (resultados.length === 0) { sfx.error(); toast.error('Tarjeta no encontrada'); return }
-      if (resultados.length === 1) { await aplicarTarjeta(resultados[0]); return }
+      if (resultados.length === 1) { await aplicarTarjeta(resultados[0], sinPresentar); return }
       // Varias coincidencias (búsqueda por nombre/apellido): el cajero elige.
       const activas = resultados.filter(t => t.estado === 'ACTIVA')
       if (activas.length === 0) { sfx.error(); toast.error('No hay tarjetas activas que coincidan'); return }
-      if (activas.length === 1) { await aplicarTarjeta(activas[0]); return }
+      if (activas.length === 1) { await aplicarTarjeta(activas[0], sinPresentar); return }
       setResultadosTarjeta(activas)
     } catch {
       sfx.error(); toast.error('Error al buscar tarjeta')
@@ -464,10 +469,12 @@ export default function ModoRecreo() {
   const processScan = useCallback(async (value: string) => {
     if (!value.trim()) return
     const trimmed = value.trim()
+    const sinPresentar = !esLecturaDeLector(trimmed, tarjetaInputInicio.current)
+    tarjetaInputInicio.current = null
     setTarjetaInput('')
     if (detectInputType(trimmed) === 'card') {
       if (tarjeta) setCarrito([])
-      await buscarTarjeta(trimmed)
+      await buscarTarjeta(trimmed, sinPresentar)
     } else {
       const prod = productos.find(p => p.codigo_barra === trimmed)
       if (prod) {
@@ -484,7 +491,7 @@ export default function ModoRecreo() {
         setTimeout(() => scannerRef.current?.focus(), 30)
       } else {
         if (tarjeta) setCarrito([])
-        await buscarTarjeta(trimmed)
+        await buscarTarjeta(trimmed, sinPresentar)
       }
     }
   }, [tarjeta, productos, buscarTarjeta])
@@ -597,9 +604,15 @@ export default function ModoRecreo() {
           clienteResultados={clienteResultados}
           buscandoCliente={buscandoCliente}
           scannerRef={scannerRef}
-          onChangeTarjetaInput={v => { setTarjetaInput(v); if (resultadosTarjeta.length) setResultadosTarjeta([]) }}
+          onChangeTarjetaInput={v => {
+            if (!v) tarjetaInputInicio.current = null
+            else if (!tarjetaInput) tarjetaInputInicio.current = performance.now()
+            setTarjetaInput(v)
+            if (resultadosTarjeta.length) setResultadosTarjeta([])
+          }}
           onScanEnter={() => processScan(tarjetaInput)}
-          onSeleccionarTarjeta={aplicarTarjeta}
+          onSeleccionarTarjeta={t => aplicarTarjeta(t, true)}
+          identificadoSinTarjeta={!!tarjeta && tarjetaSinPresentar === tarjeta.nro_tarjeta}
           onChangeClienteSearch={setClienteSearch}
           onSelectCliente={(c) => { setClienteDirecto(c); setClienteSearch(c.nombre_completo); setClienteResultados([]) }}
           onClearCliente={clearCliente}

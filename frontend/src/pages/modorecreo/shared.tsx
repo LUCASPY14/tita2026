@@ -71,6 +71,21 @@ export function catMeta(cat: string) {
 }
 
 export const CARD_PREFIX = 'T-'
+
+// ─── Lector vs. tipeo manual ──────────────────────────────────────────────────
+// Los lectores RFID / de código de barras "tipean" el número de la tarjeta en
+// pocos milisegundos y terminan con Enter; una persona tarda mucho más por
+// carácter. Se usa para avisar a la cajera cuando el alumno se identificó sin
+// presentar la tarjeta (número dictado o búsqueda por nombre).
+export const MS_POR_CARACTER_LECTOR = 35
+export function esLecturaDeLector(
+  valor: string,
+  inicioMs: number | null | undefined,
+  ahoraMs: number = performance.now(),
+): boolean {
+  if (inicioMs == null || valor.length < 4) return false
+  return (ahoraMs - inicioMs) / valor.length <= MS_POR_CARACTER_LECTOR
+}
 export function detectInputType(value: string): 'card' | 'product' {
   if (!value) return 'product'
   if (value.startsWith(CARD_PREFIX)) return 'card'
