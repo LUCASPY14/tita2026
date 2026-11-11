@@ -47,10 +47,31 @@ function Step {
     Write-Host $line -ForegroundColor DarkGray
 }
 
+$script:maintenanceOn = $false
+
+function EnableMaintenance {
+    Log "Activando modo mantenimiento (nginx muestra /mantenimiento.html)..." "Yellow"
+    $_prev = $ErrorActionPreference; $ErrorActionPreference = "Continue"
+    docker compose exec -T frontend touch /usr/share/nginx/html/maintenance.flag 2>$null
+    $ErrorActionPreference = $_prev
+    $script:maintenanceOn = $true
+}
+
+function DisableMaintenance {
+    if (-not $script:maintenanceOn) { return }
+    Log "Desactivando modo mantenimiento..." "DarkGray"
+    $_prev = $ErrorActionPreference; $ErrorActionPreference = "Continue"
+    # -f: no falla si el contenedor ya se recreó sin el flag (caso normal)
+    docker compose exec -T frontend rm -f /usr/share/nginx/html/maintenance.flag 2>$null
+    $ErrorActionPreference = $_prev
+    $script:maintenanceOn = $false
+}
+
 function Die {
     param([string]$Msg)
     Write-Host ""
     Write-Host "  ERROR: $Msg" -ForegroundColor Red
+    DisableMaintenance
     Write-Host ""
     exit 1
 }
@@ -179,6 +200,13 @@ if ($SkipBuild) {
 
 Step "4/7  Aplicando migraciones (PostgreSQL)"
 
+# A partir de acá el sistema puede quedar momentáneamente sin backend (migrate,
+# reinicio de backend, reinicio de frontend) — se activa la página de
+# mantenimiento en el frontend viejo (que sigue corriendo) para que nadie vea
+# errores crudos de proxy mientras tanto. Se desactiva más abajo apenas el
+# frontend nuevo está arriba (o en Die, si el deploy falla antes de eso).
+EnableMaintenance
+
 # Los volúmenes Docker se crean con dueño root; el usuario 'cantina' necesita escribir en ellos.
 # Esta operación es idempotente: solo ajusta permisos si ya no los tiene.
 Log "Inicializando permisos de volúmenes..."
@@ -264,6 +292,10 @@ if ($LASTEXITCODE -ne 0) { Log "Advertencia: workers no pudieron iniciar. Revisa
 Log "Reiniciando frontend (Nginx)..."
 docker compose up -d --no-deps frontend
 if ($LASTEXITCODE -ne 0) { Die "frontend no pudo iniciar. Revisar: docker compose logs frontend" }
+
+# El contenedor nuevo nace sin el flag (filesystem efímero), pero se borra
+# explícitamente igual por si no se recreó (ej. -SkipBuild sin cambios reales).
+DisableMaintenance
 
 # Monitoring (no crítico para el negocio)
 $_prev = $ErrorActionPreference; $ErrorActionPreference = "Continue"
