@@ -188,13 +188,14 @@ Portal de padres (`/portal/*`) accesible desde internet via Bancard para recarga
 El límite de sesiones concurrentes se aplica automáticamente al hacer login
 (`apps/usuarios/views.py:_registrar_sesion`).
 
-## Tareas Celery periódicas (26 activas)
+## Tareas Celery periódicas (27 activas)
 
 | Tarea | Cuándo | Crítica |
 |-------|--------|---------|
 | `expirar_recargas_pendientes` | Diario 02:00 | No |
 | `crear_particion_anio_siguiente` | 1 dic 04:00 | No |
 | `generar_alertas_saldo_bajo` | Diario 08:00 | No |
+| `verificar_sesion_waha` | Cada 10 min | No |
 | `limpiar_notificaciones_antiguas` | Domingos 03:00 | No |
 | `enviar_emails_pendientes` | Cada 15 min | No |
 | `procesar_solicitudes_pendientes` | Cada 15 min | No |

@@ -1,7 +1,7 @@
 import logging
 from celery import shared_task
 from django.utils import timezone
-from datetime import timedelta
+from datetime import datetime, timedelta
 
 logger = logging.getLogger(__name__)
 
@@ -223,3 +223,101 @@ def procesar_solicitudes_pendientes():
         resultado["enviadas"], resultado["fallidas"],
     )
     return resultado
+
+
+_WAHA_CACHE_CAIDA_DESDE = "waha_sesion_caida_desde"
+_WAHA_CACHE_AVISADO = "waha_sesion_avisado"
+_WAHA_MINUTOS_ANTES_DE_AVISAR = 15
+_WAHA_SEGUNDOS_ENTRE_AVISOS = 4 * 60 * 60  # 4 horas — reavisa si sigue caída
+
+
+@shared_task(
+    name="apps.notificaciones.tasks.verificar_sesion_waha",
+    autoretry_for=(Exception,),
+    max_retries=3,
+    retry_backoff=True,
+)
+def verificar_sesion_waha():
+    """
+    Revisa el estado de la sesión de WhatsApp (WAHA) y avisa a los ADMIN si
+    quedó caída (cualquier estado distinto de WORKING) por más de
+    _WAHA_MINUTOS_ANTES_DE_AVISAR minutos seguidos — no apenas un blip
+    momentáneo de reconexión, que WAHA resuelve solo en segundos.
+
+    No se reconecta sola: eso requiere escanear el QR a mano desde
+    Configuración → WhatsApp (ver apps.core — botón "Conectar WhatsApp").
+    El aviso usa notificación interna + email, porque WhatsApp es justo el
+    canal que puede estar caído; no se repite antes de
+    _WAHA_SEGUNDOS_ENTRE_AVISOS para no spamear mientras sigue caída.
+    """
+    import requests
+    from django.conf import settings
+    from django.core.cache import cache
+
+    from apps.notificaciones.services import EmailService
+    from apps.notificaciones.models import Notificacion
+    from apps.usuarios.models import Usuario
+
+    base_url = getattr(settings, "EVOLUTION_API_URL", "").rstrip("/")
+    session = getattr(settings, "EVOLUTION_API_INSTANCE", "default")
+    if not base_url:
+        return {"estado": "sin_configurar"}
+
+    headers = {}
+    api_key = getattr(settings, "EVOLUTION_API_KEY", "")
+    if api_key:
+        headers["X-Api-Key"] = api_key
+
+    try:
+        resp = requests.get(f"{base_url}/api/sessions/{session}", headers=headers, timeout=10)
+        resp.raise_for_status()
+        estado = resp.json().get("status", "")
+    except Exception as exc:
+        logger.warning("verificar_sesion_waha: no se pudo consultar WAHA: %s", exc)
+        return {"estado": "error_consulta"}
+
+    if estado == "WORKING":
+        cache.delete(_WAHA_CACHE_CAIDA_DESDE)
+        cache.delete(_WAHA_CACHE_AVISADO)
+        return {"estado": estado}
+
+    caida_desde = cache.get(_WAHA_CACHE_CAIDA_DESDE)
+    if caida_desde is None:
+        cache.set(_WAHA_CACHE_CAIDA_DESDE, timezone.now().isoformat(), timeout=None)
+        return {"estado": estado, "recien_detectado": True}
+
+    minutos_caida = (timezone.now() - datetime.fromisoformat(caida_desde)).total_seconds() / 60
+    if minutos_caida < _WAHA_MINUTOS_ANTES_DE_AVISAR:
+        return {"estado": estado, "minutos_caida": round(minutos_caida, 1)}
+
+    if cache.get(_WAHA_CACHE_AVISADO):
+        return {"estado": estado, "minutos_caida": round(minutos_caida, 1), "ya_avisado": True}
+
+    admins = list(Usuario.objects.filter(rol=Usuario.Rol.ADMIN, is_active=True))
+    titulo = "WhatsApp desconectado"
+    mensaje = (
+        f"La sesión de WhatsApp quedó en estado '{estado}' hace más de "
+        f"{_WAHA_MINUTOS_ANTES_DE_AVISAR} minutos y no se reconecta sola. "
+        "Entrá a Configuración → WhatsApp y escaneá el código QR con el "
+        "celular de la cantina lo antes posible."
+    )
+    for admin in admins:
+        Notificacion.objects.create(
+            usuario=admin,
+            tipo=Notificacion.Tipo.SISTEMA,
+            titulo=titulo,
+            mensaje=mensaje,
+            destino=Notificacion.Destino.SISTEMA,
+        )
+        if admin.email:
+            try:
+                EmailService.enviar_simple(admin.email, admin.nombre, titulo, mensaje)
+            except Exception as exc:
+                logger.warning("verificar_sesion_waha: no se pudo enviar email a %s: %s", admin.email, exc)
+
+    cache.set(_WAHA_CACHE_AVISADO, True, timeout=_WAHA_SEGUNDOS_ENTRE_AVISOS)
+    logger.warning(
+        "verificar_sesion_waha: sesión en estado %s hace %.1f min, %d admins avisados",
+        estado, minutos_caida, len(admins),
+    )
+    return {"estado": estado, "minutos_caida": round(minutos_caida, 1), "admins_avisados": len(admins)}

@@ -86,6 +86,10 @@ app.conf.beat_schedule = {
         "task": "apps.notificaciones.tasks.procesar_solicitudes_pendientes",
         "schedule": crontab(minute="*/15"),  # Cada 15 minutos
     },
+    "verificar-sesion-waha": {
+        "task": "apps.notificaciones.tasks.verificar_sesion_waha",
+        "schedule": crontab(minute="*/10"),  # Cada 10 minutos
+    },
     # ── Inventario ────────────────────────────────────────────────────
     "alertar-stock-minimo": {
         "task": "apps.inventario.tasks.alertar_stock_minimo",
