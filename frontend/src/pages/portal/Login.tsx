@@ -12,7 +12,7 @@ import Modal from '../../components/ui/Modal'
 
 // Video tutorial del portal (YouTube, no listado) — se reproduce en un modal
 // dentro del login. Si se cambia el video, actualizar solo el ID.
-const TUTORIAL_VIDEO_ID = 'oJDdL7jL9Vg'
+const TUTORIAL_VIDEO_ID = 'eQ6fQBH7RAI'
 const TUTORIAL_VIDEO_URL = `https://youtu.be/${TUTORIAL_VIDEO_ID}`
 const TUTORIAL_EMBED_URL = `https://www.youtube-nocookie.com/embed/${TUTORIAL_VIDEO_ID}?autoplay=1&rel=0&playsinline=1`
 
