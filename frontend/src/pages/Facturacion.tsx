@@ -41,6 +41,7 @@ export default function Facturacion() {
   // Mensual tab state
   const now = new Date()
   const [mesAnio, setMesAnio] = useState(`${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`)
+  const [verTodosMeses, setVerTodosMeses] = useState(false)
   const [selected, setSelected] = useState<Set<string>>(new Set())
   const [loteModal, setLoteModal] = useState(false)
 
@@ -107,14 +108,15 @@ export default function Facturacion() {
     [pendientes]
   )
 
-  // Filter mensual items by selected month
+  // Filter mensual items by selected month (o todos los meses, si el toggle está activo)
   const itemsMensualMes = useMemo(() => {
+    if (verTodosMeses) return itemsMensual
     const [year, month] = mesAnio.split('-').map(Number)
     return itemsMensual.filter(item => {
       const d = new Date(item.fecha)
       return d.getFullYear() === year && d.getMonth() + 1 === month
     })
-  }, [itemsMensual, mesAnio])
+  }, [itemsMensual, mesAnio, verTodosMeses])
 
   // Group mensual items by client
   const gruposMensual = useMemo(() => {
@@ -422,10 +424,20 @@ export default function Facturacion() {
               <input
                 type="month"
                 value={mesAnio}
+                disabled={verTodosMeses}
                 onChange={e => { setMesAnio(e.target.value); setSelected(new Set()) }}
-                className={`${inputClass} w-auto`}
+                className={`${inputClass} w-auto ${verTodosMeses ? 'opacity-50' : ''}`}
               />
             </div>
+            <label className="flex items-center gap-2 text-sm text-slate-600 cursor-pointer select-none pb-2">
+              <input
+                type="checkbox"
+                checked={verTodosMeses}
+                onChange={e => { setVerTodosMeses(e.target.checked); setSelected(new Set()) }}
+                className="w-4 h-4 rounded accent-blue-600 cursor-pointer"
+              />
+              Ver todos los meses
+            </label>
             {selectedItems.length > 0 && (
               <div className="flex items-center gap-3 ml-auto">
                 <span className="text-sm text-slate-600">
