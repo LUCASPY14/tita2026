@@ -663,6 +663,186 @@ class TestProcesarResultadoPago:
         assert pago.estado == PagoBancard.Estado.ERROR
 
 
+# ─── reconsultar_y_resolver ──────────────────────────────────────────────────────
+
+@pytest.mark.django_db
+class TestReconsultarYResolver:
+
+    def _setup_pago(self, suffix: str, monto: Decimal):
+        from apps.clientes.models import Cliente, Hijo, TipoCliente
+        from apps.core.models import PagoBancard, Tarjeta
+        from apps.productos.models import ListaPrecio
+
+        tipo = TipoCliente.objects.create(nombre=f"Padre {suffix}")
+        lista = ListaPrecio.objects.create(nombre=f"General {suffix}", activo=True)
+        cliente = Cliente.objects.create(
+            nombres="Test", apellidos=suffix, ruc_ci=f"CI{suffix}",
+            tipo_cliente=tipo, lista_precio=lista,
+        )
+        hijo = Hijo.objects.create(
+            nombre="Test", apellido=suffix,
+            cliente_responsable=cliente, activo=True,
+        )
+        tarjeta = Tarjeta.objects.create(
+            nro_tarjeta=f"RYR{suffix}", hijo=hijo,
+            saldo_actual=Decimal("0"),
+            estado=Tarjeta.Estado.ACTIVA,
+        )
+        pago = PagoBancard.objects.create(
+            tarjeta=tarjeta, cliente=cliente,
+            monto=monto,
+            shop_process_id=f"SP-RYR-{suffix}",
+            estado=PagoBancard.Estado.PENDIENTE,
+        )
+        return pago, tarjeta
+
+    @patch("apps.core.bancard_service.get_confirmation")
+    def test_response_code_00_resuelve_y_acredita(self, mock_get_conf):
+        from apps.core import bancard_service
+        from apps.core.models import PagoBancard
+
+        pago, tarjeta = self._setup_pago("RYR01", Decimal("50000"))
+        mock_get_conf.return_value = {
+            "status": "success",
+            "confirmation": {"response_code": "00"},
+        }
+
+        resuelto = bancard_service.reconsultar_y_resolver(pago)
+
+        assert resuelto is True
+        pago.refresh_from_db()
+        tarjeta.refresh_from_db()
+        assert pago.estado == PagoBancard.Estado.APROBADO
+        assert tarjeta.saldo_actual == Decimal("50000")
+
+    @patch("apps.core.bancard_service.get_confirmation")
+    def test_response_code_distinto_resuelve_y_rechaza(self, mock_get_conf):
+        from apps.core import bancard_service
+        from apps.core.models import PagoBancard
+
+        pago, tarjeta = self._setup_pago("RYR02", Decimal("50000"))
+        mock_get_conf.return_value = {
+            "status": "success",
+            "confirmation": {"response_code": "05"},
+        }
+
+        resuelto = bancard_service.reconsultar_y_resolver(pago)
+
+        assert resuelto is True
+        pago.refresh_from_db()
+        assert pago.estado == PagoBancard.Estado.RECHAZADO
+        tarjeta.refresh_from_db()
+        assert tarjeta.saldo_actual == Decimal("0")
+
+    @patch("apps.core.bancard_service.get_confirmation")
+    def test_sin_response_code_queda_pendiente(self, mock_get_conf):
+        """Bancard todavía no resolvió (o hubo un error de comunicación) —
+        no es un rechazo, el pago se deja PENDIENTE tal cual."""
+        from apps.core import bancard_service
+        from apps.core.models import PagoBancard
+
+        pago, tarjeta = self._setup_pago("RYR03", Decimal("50000"))
+        mock_get_conf.return_value = {"status": "error", "messages": [{"dsc": "circuit breaker"}]}
+
+        resuelto = bancard_service.reconsultar_y_resolver(pago)
+
+        assert resuelto is False
+        pago.refresh_from_db()
+        assert pago.estado == PagoBancard.Estado.PENDIENTE
+        tarjeta.refresh_from_db()
+        assert tarjeta.saldo_actual == Decimal("0")
+
+    @patch("apps.core.bancard_service.get_confirmation")
+    def test_pago_ya_resuelto_por_otro_proceso_no_reprocesa(self, mock_get_conf):
+        """Simula la carrera: el webhook (procesar_webhook) ya aprobó el pago
+        justo antes de que la reconsulta tomara el lock — no debe acreditar
+        una segunda vez."""
+        from apps.core import bancard_service
+
+        pago, tarjeta = self._setup_pago("RYR04", Decimal("50000"))
+        bancard_service.procesar_resultado_pago(pago, "00")
+        pago.refresh_from_db()
+        tarjeta.refresh_from_db()
+        assert tarjeta.saldo_actual == Decimal("50000")
+
+        mock_get_conf.return_value = {
+            "status": "success",
+            "confirmation": {"response_code": "00"},
+        }
+        resuelto = bancard_service.reconsultar_y_resolver(pago)
+
+        assert resuelto is True
+        tarjeta.refresh_from_db()
+        assert tarjeta.saldo_actual == Decimal("50000")  # sin duplicar
+
+
+# ─── procesar_webhook ─────────────────────────────────────────────────────────
+
+@pytest.mark.django_db
+class TestProcesarWebhook:
+
+    def _setup_pago(self, suffix: str, monto: Decimal):
+        from apps.clientes.models import Cliente, Hijo, TipoCliente
+        from apps.core.models import PagoBancard, Tarjeta
+        from apps.productos.models import ListaPrecio
+
+        tipo = TipoCliente.objects.create(nombre=f"Padre {suffix}")
+        lista = ListaPrecio.objects.create(nombre=f"General {suffix}", activo=True)
+        cliente = Cliente.objects.create(
+            nombres="Test", apellidos=suffix, ruc_ci=f"CI{suffix}",
+            tipo_cliente=tipo, lista_precio=lista,
+        )
+        hijo = Hijo.objects.create(
+            nombre="Test", apellido=suffix,
+            cliente_responsable=cliente, activo=True,
+        )
+        tarjeta = Tarjeta.objects.create(
+            nro_tarjeta=f"PW{suffix}", hijo=hijo,
+            saldo_actual=Decimal("0"),
+            estado=Tarjeta.Estado.ACTIVA,
+        )
+        pago = PagoBancard.objects.create(
+            tarjeta=tarjeta, cliente=cliente,
+            monto=monto,
+            shop_process_id=f"SP-PW-{suffix}",
+            estado=PagoBancard.Estado.PENDIENTE,
+        )
+        return pago, tarjeta
+
+    def test_pago_inexistente_devuelve_none(self):
+        from apps.core import bancard_service
+
+        resultado = bancard_service.procesar_webhook("NOEXISTE", "00", {})
+        assert resultado is None
+
+    def test_webhook_acredita_pago_pendiente(self):
+        from apps.core import bancard_service
+        from apps.core.models import PagoBancard
+
+        pago, tarjeta = self._setup_pago("PW01", Decimal("70000"))
+        resultado = bancard_service.procesar_webhook(pago.shop_process_id, "00", {"foo": "bar"})
+
+        assert resultado is not None
+        assert resultado.estado == PagoBancard.Estado.APROBADO
+        tarjeta.refresh_from_db()
+        assert tarjeta.saldo_actual == Decimal("70000")
+
+    def test_webhook_pago_ya_resuelto_por_otro_proceso_no_reprocesa(self):
+        """Simula la carrera inversa: la reconsulta (bancard_retorno) ya
+        resolvió el pago justo antes de que llegara el webhook."""
+        from apps.core import bancard_service
+
+        pago, tarjeta = self._setup_pago("PW02", Decimal("70000"))
+        bancard_service.procesar_resultado_pago(pago, "00")
+        tarjeta.refresh_from_db()
+        assert tarjeta.saldo_actual == Decimal("70000")
+
+        bancard_service.procesar_webhook(pago.shop_process_id, "00", {"dup": True})
+
+        tarjeta.refresh_from_db()
+        assert tarjeta.saldo_actual == Decimal("70000")  # sin duplicar
+
+
 # ─── proxima_tarjeta_guardada_disponible ────────────────────────────────────────
 
 class TestProximaTarjetaGuardadaDisponible:

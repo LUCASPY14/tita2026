@@ -56,6 +56,37 @@ def expirar_recargas_pendientes():
 
 
 @shared_task(
+    name="apps.core.tasks.reconciliar_pagos_bancard_pendientes",
+    autoretry_for=(Exception,),
+    max_retries=3,
+    retry_backoff=True,
+)
+def reconciliar_pagos_bancard_pendientes():
+    """
+    Reconsulta a Bancard los PagoBancard que quedaron PENDIENTE hace más de 3
+    minutos — normalmente el webhook de confirmación llega casi al instante;
+    si no llegó (el padre cerró el navegador, se perdió el webhook, etc.) esta
+    tarea lo resuelve sola sin depender de que un admin apriete "Reconsultar".
+    """
+    from .models import PagoBancard
+    from .bancard_service import reconsultar_y_resolver
+
+    limite = timezone.now() - timedelta(minutes=3)
+    pendientes = PagoBancard.objects.filter(
+        estado=PagoBancard.Estado.PENDIENTE,
+        fecha_creacion__lt=limite,
+    )
+    total = pendientes.count()
+    resueltos = 0
+    for pago in pendientes:
+        if reconsultar_y_resolver(pago):
+            resueltos += 1
+
+    logger.info("reconciliar_pagos_bancard_pendientes: %d/%d resueltos", resueltos, total)
+    return {"revisados": total, "resueltos": resueltos}
+
+
+@shared_task(
     name="apps.core.tasks.alertar_saldo_tarjeta_negativo",
     autoretry_for=(Exception,),
     max_retries=3,

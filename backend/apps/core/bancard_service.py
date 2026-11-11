@@ -522,12 +522,79 @@ def acreditar_pago_cc(pago_bancard) -> None:
     pago_bancard.save(update_fields=["movimiento_cc", "estado", "fecha_confirmacion"])
 
 
+def procesar_webhook(shop_process_id: str, response_code: str, raw_response: dict):
+    """
+    Aplica el resultado del webhook de confirmación (POST /confirmar/) a un
+    PagoBancard, bloqueando la fila para no pisarse con reconsultar_y_resolver()
+    si el padre vuelve del iframe casi al mismo tiempo que llega el webhook.
+
+    Devuelve el PagoBancard actualizado, o None si no existe.
+    """
+    from django.db import transaction
+    from .models import PagoBancard
+
+    with transaction.atomic():
+        try:
+            pago = PagoBancard.objects.select_for_update().get(shop_process_id=shop_process_id)
+        except PagoBancard.DoesNotExist:
+            return None
+
+        pago.bancard_response = raw_response
+        pago.save(update_fields=["bancard_response"])
+
+        if pago.estado != pago.Estado.PENDIENTE:
+            return pago
+
+        procesar_resultado_pago(pago, response_code)
+        return pago
+
+
+def reconsultar_y_resolver(pago_bancard) -> bool:
+    """
+    Reconsulta a Bancard el resultado real de un pago PENDIENTE y, si Bancard ya
+    tiene un resultado, lo aplica (aprueba/rechaza) igual que haría el webhook.
+    Bloquea la fila para no pisarse con procesar_webhook() si el webhook llega
+    casi al mismo tiempo (bancard_retorno, la tarea de reconciliación y el botón
+    manual "Reconsultar" usan todos esta misma función).
+
+    Si Bancard no tiene un response_code (todavía no resolvió, o hubo un error
+    de comunicación/circuit breaker) el pago se deja PENDIENTE — no es un
+    rechazo, solo no hay nada que aplicar todavía.
+
+    Devuelve True si el pago quedó resuelto (dejó de estar PENDIENTE). El
+    objeto pago_bancard pasado por el llamador NO se actualiza solo —
+    llamar a pago_bancard.refresh_from_db() después si hace falta el estado.
+    """
+    from django.db import transaction
+    from .models import PagoBancard
+
+    resultado = get_confirmation(pago_bancard.shop_process_id)
+    confirmacion = resultado.get("confirmation", {})
+    response_code = confirmacion.get("response_code", "")
+
+    with transaction.atomic():
+        pago = PagoBancard.objects.select_for_update().get(pk=pago_bancard.pk)
+        pago.bancard_response = resultado
+        pago.save(update_fields=["bancard_response"])
+
+        if pago.estado != pago.Estado.PENDIENTE:
+            return True  # otro proceso (webhook) ya lo resolvió
+
+        if resultado.get("status") == "success" and response_code:
+            procesar_resultado_pago(pago, response_code)
+            pago.refresh_from_db()
+
+        return pago.estado != pago.Estado.PENDIENTE
+
+
 def procesar_resultado_pago(pago_bancard, response_code: str) -> None:
     """
     Acredita o rechaza un PagoBancard según el response_code de Bancard.
     Compartido por el webhook de confirmación (single_buy/charge) y por el charge
     síncrono con tarjeta guardada (que puede resolver sin pasar por el webhook).
-    Idempotente a nivel de llamador: no reprocesar si pago_bancard.estado != PENDIENTE.
+    Solo debe llamarse con la fila del PagoBancard ya bloqueada (select_for_update)
+    y habiendo verificado que sigue PENDIENTE — ver procesar_webhook() y
+    reconsultar_y_resolver().
     """
     if response_code == "00":
         try:

@@ -65,6 +65,10 @@ app.conf.beat_schedule = {
         "task": "apps.core.tasks.expirar_recargas_pendientes",
         "schedule": crontab(hour=2, minute=0),  # Todos los días 02:00
     },
+    "reconciliar-pagos-bancard-pendientes": {
+        "task": "apps.core.tasks.reconciliar_pagos_bancard_pendientes",
+        "schedule": crontab(minute="*/2"),  # Cada 2 minutos
+    },
     # ── Notificaciones ────────────────────────────────────────────────
     "alertas-saldo-bajo": {
         "task": "apps.notificaciones.tasks.generar_alertas_saldo_bajo",

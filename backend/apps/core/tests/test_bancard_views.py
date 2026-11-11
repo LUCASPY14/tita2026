@@ -240,11 +240,49 @@ class TestBancardRetorno:
 
     @patch('apps.core.bancard_service.get_confirmation')
     @patch('apps.core.bancard_service.iniciar_pago')
-    def test_retorno_rechazado_no_acredita(
+    def test_retorno_error_consultando_bancard_queda_pendiente(
         self, mock_iniciar, mock_confirmar, api_cliente_web, hijo_con_tarjeta
     ):
+        """Un error al reconsultar (circuit breaker, red, Bancard sin
+        resultado todavía) NO es un rechazo — el pago se deja PENDIENTE para
+        que el webhook o la reconciliación automática lo resuelvan después."""
+        from apps.core.models import PagoBancard
         mock_iniciar.return_value = {'status': 'success', 'process_id': 'proc-retorno-bad'}
         mock_confirmar.return_value = {'status': 'error', 'messages': [{'dsc': 'Fondos insuficientes'}]}
+
+        client, _ = api_cliente_web
+        _, tarjeta = hijo_con_tarjeta
+        saldo_inicial = tarjeta.saldo_actual
+
+        init_resp = client.post('/api/v1/core/bancard/iniciar/', {
+            'nro_tarjeta': tarjeta.nro_tarjeta,
+            'monto': 100000,
+        })
+        shop_pid = init_resp.data['shop_process_id']
+
+        anon_client = APIClient()
+        resp = anon_client.get('/api/v1/core/bancard/retorno/', {'shop_process_id': shop_pid})
+        assert resp.status_code == 302
+        assert 'pendiente' in resp['Location']
+
+        tarjeta.refresh_from_db()
+        assert tarjeta.saldo_actual == saldo_inicial  # sin cambio
+        pago = PagoBancard.objects.get(shop_process_id=shop_pid)
+        assert pago.estado == PagoBancard.Estado.PENDIENTE
+
+    @patch('apps.core.bancard_service.get_confirmation')
+    @patch('apps.core.bancard_service.iniciar_pago')
+    def test_retorno_rechazo_real_marca_rechazado(
+        self, mock_iniciar, mock_confirmar, api_cliente_web, hijo_con_tarjeta
+    ):
+        """Un rechazo real de Bancard (response_code != '00') sí se marca
+        como rechazado — a diferencia de un error de comunicación."""
+        from apps.core.models import PagoBancard
+        mock_iniciar.return_value = {'status': 'success', 'process_id': 'proc-retorno-rechazo-real'}
+        mock_confirmar.return_value = {
+            'status': 'success',
+            'confirmation': {'response_code': '05'},
+        }
 
         client, _ = api_cliente_web
         _, tarjeta = hijo_con_tarjeta
@@ -262,7 +300,9 @@ class TestBancardRetorno:
         assert 'rechazado' in resp['Location']
 
         tarjeta.refresh_from_db()
-        assert tarjeta.saldo_actual == saldo_inicial  # sin cambio
+        assert tarjeta.saldo_actual == saldo_inicial
+        pago = PagoBancard.objects.get(shop_process_id=shop_pid)
+        assert pago.estado == PagoBancard.Estado.RECHAZADO
 
     @patch('apps.core.bancard_service.iniciar_pago')
     def test_retorno_pago_ya_aprobado_redirige_sin_reprocessar(
@@ -512,10 +552,12 @@ class TestBancardRetornoEdgeCases:
 
     @patch('apps.core.bancard_service.get_confirmation')
     @patch('apps.core.bancard_service.iniciar_pago')
-    def test_retorno_confirmation_vacia_marca_rechazado(
+    def test_retorno_confirmation_vacia_queda_pendiente(
         self, mock_iniciar, mock_confirmar, api_cliente_web, hijo_con_tarjeta
     ):
-        """Bancard responde 'success' pero sin objeto confirmation → debe manejar gracefully."""
+        """Bancard responde 'success' pero sin confirmation (sin response_code)
+        → no hay nada que aplicar todavía, el pago queda PENDIENTE."""
+        from apps.core.models import PagoBancard
         mock_iniciar.return_value  = {'status': 'success', 'process_id': 'proc-empty-conf'}
         mock_confirmar.return_value = {'status': 'success', 'confirmation': {}}  # sin payment_id ni response_code
 
@@ -531,17 +573,20 @@ class TestBancardRetornoEdgeCases:
 
         anon_client = APIClient()
         resp = anon_client.get('/api/v1/core/bancard/retorno/', {'shop_process_id': shop_pid})
-        # Con confirmation vacía, el código igual acredita (status=='success' es suficiente)
-        # Este test documenta el comportamiento actual del OR en la condición.
         assert resp.status_code == 302
-        assert resp['Location'] is not None
+        assert 'pendiente' in resp['Location']
+        tarjeta.refresh_from_db()
+        assert tarjeta.saldo_actual == saldo_inicial
+        pago = PagoBancard.objects.get(shop_process_id=shop_pid)
+        assert pago.estado == PagoBancard.Estado.PENDIENTE
 
     @patch('apps.core.bancard_service.get_confirmation')
     @patch('apps.core.bancard_service.iniciar_pago')
-    def test_retorno_status_error_con_mensaje_redirige_rechazado(
+    def test_retorno_status_error_con_mensaje_queda_pendiente(
         self, mock_iniciar, mock_confirmar, api_cliente_web, hijo_con_tarjeta
     ):
-        """Bancard responde con status='error' e incluye mensaje descriptivo → rechazado."""
+        """Bancard responde con status='error' (sin response_code) → no es un
+        rechazo real, el pago queda PENDIENTE."""
         from apps.core.models import PagoBancard
         mock_iniciar.return_value  = {'status': 'success', 'process_id': 'proc-bnc-err'}
         mock_confirmar.return_value = {
@@ -562,15 +607,13 @@ class TestBancardRetornoEdgeCases:
         anon_client = APIClient()
         resp = anon_client.get('/api/v1/core/bancard/retorno/', {'shop_process_id': shop_pid})
         assert resp.status_code == 302
-        assert 'rechazado' in resp['Location']
+        assert 'pendiente' in resp['Location']
 
         # Saldo sin cambio
         tarjeta.refresh_from_db()
         assert tarjeta.saldo_actual == saldo_inicial
-
-        # Estado marcado correctamente
         pago = PagoBancard.objects.get(shop_process_id=shop_pid)
-        assert pago.estado == PagoBancard.Estado.RECHAZADO
+        assert pago.estado == PagoBancard.Estado.PENDIENTE
 
 
 # ─── Fixtures para almuerzo ───────────────────────────────────────────────────
@@ -739,11 +782,18 @@ class TestBancardRetornoAlmuerzo:
         self, mock_iniciar, mock_confirmar, mock_acreditar, padre_con_cuenta,
     ):
         """Pago tipo ALMUERZO aprobado → llama acreditar_pago_almuerzo, redirige a /pago-completado con tipo=almuerzo."""
+        from apps.core.models import PagoBancard
+
         mock_iniciar.return_value = {'status': 'success', 'process_id': 'proc-alm-ret'}
         mock_confirmar.return_value = {
             'status': 'success',
             'confirmation': {'response_code': '00'},
         }
+        # El mock reemplaza la función entera, así que hay que simular a mano
+        # el efecto que tiene sobre el estado (lo que valida reconsultar_y_resolver).
+        mock_acreditar.side_effect = lambda pago: PagoBancard.objects.filter(pk=pago.pk).update(
+            estado=PagoBancard.Estado.APROBADO
+        )
         from rest_framework.test import APIClient
         padre, cuenta = padre_con_cuenta
         client = APIClient()
@@ -947,11 +997,18 @@ class TestBancardRetornoCC:
     def test_retorno_cc_aprobado_redirige_con_tipo_cc(
         self, mock_iniciar, mock_confirmar, mock_acreditar, padre_con_deuda_cc,
     ):
+        from apps.core.models import PagoBancard
+
         mock_iniciar.return_value = {'status': 'success', 'process_id': 'proc-cc-ret'}
         mock_confirmar.return_value = {
             'status': 'success',
             'confirmation': {'response_code': '00'},
         }
+        # El mock reemplaza la función entera, así que hay que simular a mano
+        # el efecto que tiene sobre el estado (lo que valida reconsultar_y_resolver).
+        mock_acreditar.side_effect = lambda pago: PagoBancard.objects.filter(pk=pago.pk).update(
+            estado=PagoBancard.Estado.APROBADO
+        )
         padre, _ = padre_con_deuda_cc
         client = APIClient()
         client.force_authenticate(user=padre)

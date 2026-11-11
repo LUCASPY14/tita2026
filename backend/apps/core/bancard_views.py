@@ -422,22 +422,15 @@ def bancard_confirmar(request):
         logger.warning("Bancard confirmar: token inválido shop=%s", shop_process_id)
         return Response({"status": "success"})
 
-    try:
-        pago = PagoBancard.objects.get(shop_process_id=shop_process_id)
-    except PagoBancard.DoesNotExist:
+    # select_for_update dentro de procesar_webhook(): si bancard_retorno (o la
+    # reconsulta/tarea) está resolviendo este mismo pago en paralelo, uno de
+    # los dos espera al otro y el que llega segundo ve que ya no está
+    # PENDIENTE — así no se acredita dos veces.
+    pago = bancard_service.procesar_webhook(shop_process_id, response_code, request.data)
+    if pago is None:
         logger.warning("Bancard confirmar: PagoBancard no encontrado shop=%s", shop_process_id)
-        return Response({"status": "success"})  # Siempre 200 para no re-intentos de Bancard
 
-    # Idempotente: si ya fue procesado no volver a acreditar
-    if pago.estado != PagoBancard.Estado.PENDIENTE:
-        return Response({"status": "success"})
-
-    pago.bancard_response = request.data
-    pago.save(update_fields=["bancard_response"])
-
-    bancard_service.procesar_resultado_pago(pago, response_code)
-
-    return Response({"status": "success"})
+    return Response({"status": "success"})  # Siempre 200 para no re-intentos de Bancard
 
 
 # ─── GET /api/v1/bancard/retorno/ ─────────────────────────────────────────────
@@ -483,33 +476,20 @@ def bancard_retorno(request):
     if pago.estado == PagoBancard.Estado.ERROR:
         return HttpResponseRedirect(_resultado_url("error"))
 
-    # Fallback: webhook aún no llegó — consultar estado a Bancard
-    resultado = bancard_service.get_confirmation(shop_process_id)
-    pago.bancard_response = resultado
-    pago.save(update_fields=["bancard_response"])
+    # Fallback: el webhook aún no llegó — reconsultar a Bancard. Si Bancard no
+    # tiene un resultado todavía (o hubo un error de comunicación), el pago
+    # queda PENDIENTE — NO es un rechazo, el webhook o la reconciliación
+    # automática lo van a resolver apenas Bancard responda.
+    bancard_service.reconsultar_y_resolver(pago)
+    pago.refresh_from_db()
 
-    confirmacion = resultado.get("confirmation", {})
-    response_code = confirmacion.get("response_code", "")
-
-    if resultado.get("status") == "success" and response_code == "00":
-        try:
-            if pago.tipo == PagoBancard.Tipo.ALMUERZO:
-                bancard_service.acreditar_pago_almuerzo(pago)
-            elif pago.tipo == PagoBancard.Tipo.CC:
-                bancard_service.acreditar_pago_cc(pago)
-            else:
-                bancard_service.acreditar_saldo(pago)
-        except Exception as exc:
-            logger.error("Retorno fallback: error acreditando shop=%s: %s", shop_process_id, exc)
-            pago.estado = PagoBancard.Estado.ERROR
-            pago.save(update_fields=["estado"])
-            return HttpResponseRedirect(_resultado_url("error"))
+    if pago.estado == PagoBancard.Estado.APROBADO:
         return HttpResponseRedirect(_resultado_url("aprobado", pago.monto))
-
-    pago.estado = PagoBancard.Estado.RECHAZADO
-    pago.fecha_confirmacion = timezone.now()
-    pago.save(update_fields=["estado", "fecha_confirmacion"])
-    return HttpResponseRedirect(_resultado_url("rechazado", pago.monto))
+    if pago.estado == PagoBancard.Estado.RECHAZADO:
+        return HttpResponseRedirect(_resultado_url("rechazado", pago.monto))
+    if pago.estado == PagoBancard.Estado.ERROR:
+        return HttpResponseRedirect(_resultado_url("error"))
+    return HttpResponseRedirect(_resultado_url("pendiente"))
 
 
 # ─── GET /api/v1/bancard/estado/<shop_process_id>/ ────────────────────────────
@@ -1043,25 +1023,6 @@ def bancard_pagos_reintentar(request, shop_process_id: str):
     })
 
 
-def _reconsultar_y_resolver(pago: PagoBancard) -> bool:
-    """
-    Reconsulta a Bancard el resultado real de un pago PENDIENTE y, si Bancard ya
-    tiene un resultado, lo aplica (aprueba/rechaza) igual que haría el webhook.
-    Devuelve True si el pago quedó resuelto (dejó de estar PENDIENTE).
-    """
-    resultado = bancard_service.get_confirmation(pago.shop_process_id)
-    pago.bancard_response = resultado
-    pago.save(update_fields=["bancard_response"])
-
-    confirmacion = resultado.get("confirmation", {})
-    response_code = confirmacion.get("response_code", "")
-    if resultado.get("status") == "success" and response_code:
-        bancard_service.procesar_resultado_pago(pago, response_code)
-        pago.refresh_from_db()
-        return pago.estado != PagoBancard.Estado.PENDIENTE
-    return False
-
-
 # ─── POST /api/v1/bancard/pagos/<shop_process_id>/reconsultar/ ────────────────
 
 @api_view(["POST"])
@@ -1082,7 +1043,8 @@ def bancard_pagos_reconsultar(request, shop_process_id: str):
             status=status.HTTP_400_BAD_REQUEST,
         )
 
-    resuelto = _reconsultar_y_resolver(pago)
+    resuelto = bancard_service.reconsultar_y_resolver(pago)
+    pago.refresh_from_db()
     if resuelto:
         detail = f"Bancard confirmó el resultado: {pago.get_estado_display()}."
     else:
@@ -1128,7 +1090,8 @@ def bancard_pagos_cerrar_manual(request, shop_process_id: str):
             status=status.HTTP_400_BAD_REQUEST,
         )
 
-    if _reconsultar_y_resolver(pago):
+    if bancard_service.reconsultar_y_resolver(pago):
+        pago.refresh_from_db()
         return Response({
             "detail": f"Bancard sí tenía un resultado: {pago.get_estado_display()}. No se cerró manualmente.",
             "pago": PagoBancardSerializer(pago).data,

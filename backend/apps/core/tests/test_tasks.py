@@ -115,3 +115,84 @@ class TestCrearParticionAnioSiguiente:
         mock_cmd.side_effect = RuntimeError("partición ya existe")
         with pytest.raises(RuntimeError, match="partición ya existe"):
             crear_particion_anio_siguiente()
+
+
+# ─── reconciliar_pagos_bancard_pendientes ────────────────────────────────────
+
+@pytest.fixture
+def pago_bancard_pendiente(db, tarjeta_t, cliente):
+    from apps.core.models import PagoBancard
+    pago = PagoBancard.objects.create(
+        tarjeta=tarjeta_t, cliente=cliente,
+        monto=Decimal("50000"),
+        shop_process_id="TASK-RECON-OLD",
+        estado=PagoBancard.Estado.PENDIENTE,
+    )
+    PagoBancard.objects.filter(pk=pago.pk).update(
+        fecha_creacion=timezone.now() - timedelta(minutes=10)
+    )
+    pago.refresh_from_db()
+    return pago
+
+
+@pytest.fixture
+def pago_bancard_reciente(db, tarjeta_t, cliente):
+    from apps.core.models import PagoBancard
+    return PagoBancard.objects.create(
+        tarjeta=tarjeta_t, cliente=cliente,
+        monto=Decimal("30000"),
+        shop_process_id="TASK-RECON-NEW",
+        estado=PagoBancard.Estado.PENDIENTE,
+    )
+
+
+@pytest.mark.django_db
+class TestReconciliarPagosBancardPendientes:
+
+    def test_sin_pendientes_retorna_cero(self, db):
+        from apps.core.tasks import reconciliar_pagos_bancard_pendientes
+        result = reconciliar_pagos_bancard_pendientes()
+        assert result == {"revisados": 0, "resueltos": 0}
+
+    @patch("apps.core.bancard_service.get_confirmation")
+    def test_resuelve_pendiente_antiguo_cuando_bancard_ya_tiene_resultado(
+        self, mock_get_conf, pago_bancard_pendiente
+    ):
+        from apps.core.models import PagoBancard
+        from apps.core.tasks import reconciliar_pagos_bancard_pendientes
+
+        mock_get_conf.return_value = {
+            "status": "success",
+            "confirmation": {"response_code": "00"},
+        }
+        result = reconciliar_pagos_bancard_pendientes()
+
+        assert result == {"revisados": 1, "resueltos": 1}
+        pago_bancard_pendiente.refresh_from_db()
+        assert pago_bancard_pendiente.estado == PagoBancard.Estado.APROBADO
+
+    def test_no_toca_pendiente_reciente(self, pago_bancard_reciente):
+        """Menos de 3 minutos de antigüedad — ni siquiera se reconsulta (el
+        webhook normal todavía tiene tiempo de llegar solo)."""
+        from apps.core.models import PagoBancard
+        from apps.core.tasks import reconciliar_pagos_bancard_pendientes
+
+        result = reconciliar_pagos_bancard_pendientes()
+
+        assert result == {"revisados": 0, "resueltos": 0}
+        pago_bancard_reciente.refresh_from_db()
+        assert pago_bancard_reciente.estado == PagoBancard.Estado.PENDIENTE
+
+    @patch("apps.core.bancard_service.get_confirmation")
+    def test_pendiente_antiguo_sin_resultado_sigue_pendiente(
+        self, mock_get_conf, pago_bancard_pendiente
+    ):
+        from apps.core.models import PagoBancard
+        from apps.core.tasks import reconciliar_pagos_bancard_pendientes
+
+        mock_get_conf.return_value = {"status": "error", "messages": [{"dsc": "circuit breaker"}]}
+        result = reconciliar_pagos_bancard_pendientes()
+
+        assert result == {"revisados": 1, "resueltos": 0}
+        pago_bancard_pendiente.refresh_from_db()
+        assert pago_bancard_pendiente.estado == PagoBancard.Estado.PENDIENTE

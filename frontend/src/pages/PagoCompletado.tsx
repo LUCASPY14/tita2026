@@ -1,5 +1,5 @@
 import { useSearchParams, useNavigate } from 'react-router-dom'
-import { CheckCircle2, XCircle, AlertCircle, ArrowLeft } from 'lucide-react'
+import { CheckCircle2, XCircle, AlertCircle, Clock, ArrowLeft } from 'lucide-react'
 
 function formatGs(n: number) {
   return 'Gs. ' + (Number(n) || 0).toLocaleString('es-PY')
@@ -15,6 +15,7 @@ export default function PagoCompletado() {
 
   const aprobado    = estado === 'aprobado'
   const cancelado   = estado === 'cancelado'
+  const pendiente   = estado === 'pendiente'
   const esCatastro  = tipo === 'catastro'
   const esCC        = tipo === 'cc'
 
@@ -75,6 +76,17 @@ export default function PagoCompletado() {
             </h1>
             <p className="text-slate-500 text-sm">
               {esCatastro ? 'No se guardó ninguna tarjeta.' : 'No se realizó ningún cargo.'}
+            </p>
+          </div>
+        ) : pendiente ? (
+          <div className="flex flex-col items-center text-center space-y-3">
+            <div className="w-20 h-20 rounded-full bg-amber-100 flex items-center justify-center">
+              <Clock className="w-10 h-10 text-amber-600" />
+            </div>
+            <h1 className="text-2xl font-bold text-slate-900">Confirmando tu pago</h1>
+            <p className="text-slate-500 text-sm">
+              Estamos confirmando tu pago con el banco. Puede tardar unos minutos —
+              no hace falta que vuelvas a intentarlo, el saldo se acredita solo apenas se confirme.
             </p>
           </div>
         ) : (
