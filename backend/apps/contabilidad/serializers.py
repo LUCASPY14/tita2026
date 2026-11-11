@@ -85,9 +85,13 @@ class EmitirFacturaSerializer(serializers.Serializer):
     nro_factura = serializers.CharField(max_length=20)
 
 
-class EmitirLoteSerializer(serializers.Serializer):
+class LoteItemSerializer(serializers.Serializer):
     tipo = serializers.ChoiceField(choices=TIPOS_FACTURABLES)
-    ids = serializers.ListField(child=serializers.IntegerField(min_value=1), min_length=1)
+    id = serializers.IntegerField(min_value=1)
+
+
+class EmitirLoteSerializer(serializers.Serializer):
+    items = LoteItemSerializer(many=True, allow_empty=False)
     nro_factura = serializers.CharField(max_length=20)
 
 

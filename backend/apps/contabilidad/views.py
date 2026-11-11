@@ -443,13 +443,12 @@ class FacturaViewSet(viewsets.ModelViewSet):
 
     @action(detail=False, methods=["post"], url_path="emitir-lote")
     def emitir_lote(self, request):
-        """Emite una factura agrupando varios ítems del mismo cliente."""
+        """Emite una factura agrupando varios ítems del mismo cliente, de uno o distintos tipos."""
         serializer = EmitirLoteSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
 
         factura = FacturacionService.emitir_lote(
-            tipo=serializer.validated_data["tipo"],
-            ids=serializer.validated_data["ids"],
+            items=serializer.validated_data["items"],
             nro_factura=serializer.validated_data["nro_factura"],
         )
         return Response(FacturaSerializer(factura).data, status=status.HTTP_201_CREATED)

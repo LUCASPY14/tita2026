@@ -135,12 +135,11 @@ export default function Facturacion() {
     [itemsMensualMes, selected]
   )
 
-  // All selected items must belong to a single client and same type
+  // All selected items must belong to a single client (pueden ser de distinto tipo, ej. cantina + almuerzo)
   const canEmitirLote = useMemo(() => {
     if (selectedItems.length === 0) return false
     const clientes = new Set(selectedItems.map(i => i.cliente_id))
-    const tipos = new Set(selectedItems.map(i => i.tipo))
-    return clientes.size === 1 && tipos.size === 1
+    return clientes.size === 1
   }, [selectedItems])
 
   const loteTotal = useMemo(
@@ -177,8 +176,7 @@ export default function Facturacion() {
   const canEmitirLotePend = useMemo(() => {
     if (selectedPendItems.length < 2) return false
     const clientes = new Set(selectedPendItems.map(i => i.cliente_id))
-    const tipos = new Set(selectedPendItems.map(i => i.tipo))
-    return clientes.size === 1 && tipos.size === 1
+    return clientes.size === 1
   }, [selectedPendItems])
   const lotePendTotal = useMemo(
     () => selectedPendItems.reduce((s, i) => s + i.monto, 0),
@@ -375,7 +373,7 @@ export default function Facturacion() {
                 {!canEmitirLotePend && selectedPend.size >= 2 && (
                   <span className="text-xs text-amber-300 flex items-center gap-1">
                     <AlertTriangle className="w-3.5 h-3.5" />
-                    Mismo cliente y tipo
+                    Mismo cliente
                   </span>
                 )}
                 <button
@@ -441,7 +439,7 @@ export default function Facturacion() {
                   </Button>
                 ) : (
                   <span className="text-xs text-red-500 font-medium">
-                    Solo podés facturar ítems del mismo cliente y tipo
+                    Solo podés facturar ítems del mismo cliente
                   </span>
                 )}
               </div>

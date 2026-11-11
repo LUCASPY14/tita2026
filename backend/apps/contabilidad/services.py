@@ -360,168 +360,179 @@ class FacturacionService:
         }
 
     @classmethod
-    def emitir_lote(cls, *, tipo: str, ids: list[int], nro_factura: str) -> Factura:
-        """
-        Emite UNA factura agrupando varios orígenes del mismo tipo.
-        tipo: CARGA_SALDO | PAGO_ALMUERZO | RECARGA_ALMUERZO | VENTA | PAGO_CREDITO
-        Todos los ids deben pertenecer al mismo cliente.
+    def _cargar_lote_tipo(cls, tipo: str, ids: list[int]) -> tuple[list, set, Decimal, dict]:
+        """Carga y valida los orígenes de UN tipo para un lote (posiblemente mixto).
+
+        Devuelve (origenes, clientes_ids, monto_total, iva_dict).
         """
         from apps.core.models import CargaSaldo
         from apps.almuerzos.models import PagoCuentaAlmuerzo, RecargaSaldoAlmuerzo
 
-        if not ids:
+        if tipo == TIPO_CARGA_SALDO:
+            origenes = list(
+                CargaSaldo.objects
+                .select_related("tarjeta__hijo__cliente_responsable", "cliente_origen")
+                .select_for_update(of=("self",))
+                .filter(pk__in=ids)
+            )
+            if len(origenes) != len(ids):
+                raise ValidationError({"error": "Uno o más ítems no existen."})
+
+            clientes = set()
+            for o in origenes:
+                if o.estado != CargaSaldo.Estado.CONFIRMADA:
+                    raise ValidationError({"error": f"La carga #{o.pk} no está confirmada."})
+                if o.factura_id:
+                    raise ValidationError({"error": f"La carga #{o.pk} ya tiene factura."})
+                c = o.cliente_origen or (
+                    o.tarjeta.hijo.cliente_responsable
+                    if o.tarjeta and o.tarjeta.hijo else None
+                )
+                if not c:
+                    raise ValidationError({"error": f"La carga #{o.pk} no tiene cliente."})
+                clientes.add(c.pk)
+
+            monto_total = sum(o.monto_cargado for o in origenes)
+            return origenes, clientes, monto_total, cls._calcular_iva_10(monto_total)
+
+        if tipo == TIPO_RECARGA_ALMUERZO:
+            origenes = list(
+                RecargaSaldoAlmuerzo.objects
+                .select_related("hijo__cliente_responsable")
+                .select_for_update()
+                .filter(pk__in=ids)
+            )
+            if len(origenes) != len(ids):
+                raise ValidationError({"error": "Uno o más ítems no existen."})
+
+            clientes = set()
+            for o in origenes:
+                if o.estado != RecargaSaldoAlmuerzo.Estado.CONFIRMADA:
+                    raise ValidationError({"error": f"La recarga #{o.pk} no está confirmada."})
+                if o.factura_id:
+                    raise ValidationError({"error": f"La recarga #{o.pk} ya tiene factura."})
+                clientes.add(o.hijo.cliente_responsable_id)
+
+            monto_total = sum(o.monto_cargado for o in origenes)
+            return origenes, clientes, monto_total, cls._calcular_iva_10(monto_total)
+
+        if tipo == TIPO_PAGO_ALMUERZO:
+            origenes = list(
+                PagoCuentaAlmuerzo.objects
+                .select_related("cuenta__hijo__cliente_responsable")
+                .select_for_update()
+                .filter(pk__in=ids)
+            )
+            if len(origenes) != len(ids):
+                raise ValidationError({"error": "Uno o más ítems no existen."})
+
+            clientes = set()
+            for o in origenes:
+                if o.factura_id:
+                    raise ValidationError({"error": f"El pago #{o.pk} ya tiene factura."})
+                clientes.add(o.cuenta.hijo.cliente_responsable_id)
+
+            monto_total = sum(o.monto for o in origenes)
+            return origenes, clientes, monto_total, cls._calcular_iva_10(monto_total)
+
+        if tipo == TIPO_VENTA:
+            from apps.ventas.models import Venta as VentaModel
+            origenes = list(
+                VentaModel.objects
+                .select_related("cliente")
+                .select_for_update(of=("self",))
+                .filter(pk__in=ids)
+            )
+            if len(origenes) != len(ids):
+                raise ValidationError({"error": "Uno o más ventas no existen."})
+
+            clientes = set()
+            for o in origenes:
+                if o.estado == VentaModel.Estado.ANULADA:
+                    raise ValidationError({"error": f"La venta #{o.pk} está anulada."})
+                if not o.genera_factura_legal:
+                    raise ValidationError({"error": f"La venta #{o.pk} no requiere factura legal."})
+                if o.factura_id:
+                    raise ValidationError({"error": f"La venta #{o.pk} ya tiene factura."})
+                clientes.add(o.cliente_id)
+
+            monto_total = sum(o.monto_total for o in origenes)
+            iva = {
+                "iva_10": sum(o.iva_10 for o in origenes),
+                "iva_5": sum(o.iva_5 for o in origenes),
+                "monto_exenta": sum(o.monto_exenta for o in origenes),
+            }
+            return origenes, clientes, monto_total, iva
+
+        if tipo == TIPO_PAGO_CREDITO:
+            from apps.clientes.models import CuentaCorrienteCliente as CCModel
+            origenes = list(
+                CCModel.objects
+                .select_related("cliente")
+                .select_for_update(of=("self",))
+                .filter(pk__in=ids)
+            )
+            if len(origenes) != len(ids):
+                raise ValidationError({"error": "Uno o más pagos no existen."})
+
+            clientes = set()
+            for o in origenes:
+                if not o.genera_factura_legal:
+                    raise ValidationError({"error": f"El pago #{o.pk} no requiere factura legal."})
+                if o.factura_id:
+                    raise ValidationError({"error": f"El pago #{o.pk} ya tiene factura."})
+                clientes.add(o.cliente_id)
+
+            monto_total = sum(o.monto for o in origenes)
+            return origenes, clientes, monto_total, cls._calcular_iva_10(monto_total)
+
+        raise ValidationError({"error": f"Tipo desconocido: {tipo}."})
+
+    @classmethod
+    def emitir_lote(cls, *, items: list[dict], nro_factura: str) -> Factura:
+        """
+        Emite UNA factura agrupando varios orígenes, posiblemente de distinto
+        tipo (ej. cargas de cantina + recargas de almuerzo), siempre del
+        mismo cliente.
+
+        items: [{"tipo": "CARGA_SALDO"|"PAGO_ALMUERZO"|"RECARGA_ALMUERZO"|"VENTA"|"PAGO_CREDITO", "id": int}, ...]
+        """
+        from apps.clientes.models import Cliente
+
+        if not items:
             raise ValidationError({"error": "Debe seleccionar al menos un ítem."})
 
+        ids_por_tipo: dict[str, list[int]] = {}
+        for it in items:
+            ids_por_tipo.setdefault(it["tipo"], []).append(it["id"])
+
         with transaction.atomic():
-            if tipo == TIPO_CARGA_SALDO:
-                origenes = list(
-                    CargaSaldo.objects
-                    .select_related("tarjeta__hijo__cliente_responsable", "cliente_origen")
-                    .select_for_update(of=("self",))
-                    .filter(pk__in=ids)
-                )
-                if len(origenes) != len(ids):
-                    raise ValidationError({"error": "Uno o más ítems no existen."})
+            todos_origenes: list[tuple[str, object]] = []
+            clientes_global: set = set()
+            monto_total = Decimal(0)
+            iva_total = {"iva_10": Decimal(0), "iva_5": Decimal(0), "monto_exenta": Decimal(0)}
 
-                clientes = set()
-                for o in origenes:
-                    if o.estado != CargaSaldo.Estado.CONFIRMADA:
-                        raise ValidationError({"error": f"La carga #{o.pk} no está confirmada."})
-                    if o.factura_id:
-                        raise ValidationError({"error": f"La carga #{o.pk} ya tiene factura."})
-                    c = o.cliente_origen or (
-                        o.tarjeta.hijo.cliente_responsable
-                        if o.tarjeta and o.tarjeta.hijo else None
-                    )
-                    if not c:
-                        raise ValidationError({"error": f"La carga #{o.pk} no tiene cliente."})
-                    clientes.add(c.pk)
+            for tipo, ids in ids_por_tipo.items():
+                origenes, clientes, monto, iva = cls._cargar_lote_tipo(tipo, ids)
+                todos_origenes.extend((tipo, o) for o in origenes)
+                clientes_global |= clientes
+                monto_total += monto
+                for k in iva_total:
+                    iva_total[k] += iva.get(k, Decimal(0))
 
-                if len(clientes) > 1:
-                    raise ValidationError({"error": "Todos los ítems deben pertenecer al mismo cliente."})
+            if len(clientes_global) > 1:
+                raise ValidationError({"error": "Todos los ítems deben pertenecer al mismo cliente."})
 
-                cliente_obj = (origenes[0].cliente_origen
-                               or origenes[0].tarjeta.hijo.cliente_responsable)
-                monto_total = sum(o.monto_cargado for o in origenes)
-                iva = cls._calcular_iva_10(monto_total)
-
-            elif tipo == TIPO_RECARGA_ALMUERZO:
-                origenes = list(
-                    RecargaSaldoAlmuerzo.objects
-                    .select_related("hijo__cliente_responsable")
-                    .select_for_update()
-                    .filter(pk__in=ids)
-                )
-                if len(origenes) != len(ids):
-                    raise ValidationError({"error": "Uno o más ítems no existen."})
-
-                clientes = set()
-                for o in origenes:
-                    if o.estado != RecargaSaldoAlmuerzo.Estado.CONFIRMADA:
-                        raise ValidationError({"error": f"La recarga #{o.pk} no está confirmada."})
-                    if o.factura_id:
-                        raise ValidationError({"error": f"La recarga #{o.pk} ya tiene factura."})
-                    clientes.add(o.hijo.cliente_responsable_id)
-
-                if len(clientes) > 1:
-                    raise ValidationError({"error": "Todos los ítems deben pertenecer al mismo cliente."})
-
-                cliente_obj = origenes[0].hijo.cliente_responsable
-                monto_total = sum(o.monto_cargado for o in origenes)
-                iva = cls._calcular_iva_10(monto_total)
-
-            elif tipo == TIPO_PAGO_ALMUERZO:
-                origenes = list(
-                    PagoCuentaAlmuerzo.objects
-                    .select_related("cuenta__hijo__cliente_responsable")
-                    .select_for_update()
-                    .filter(pk__in=ids)
-                )
-                if len(origenes) != len(ids):
-                    raise ValidationError({"error": "Uno o más ítems no existen."})
-
-                clientes = set()
-                for o in origenes:
-                    if o.factura_id:
-                        raise ValidationError({"error": f"El pago #{o.pk} ya tiene factura."})
-                    clientes.add(o.cuenta.hijo.cliente_responsable_id)
-
-                if len(clientes) > 1:
-                    raise ValidationError({"error": "Todos los ítems deben pertenecer al mismo cliente."})
-
-                cliente_obj = origenes[0].cuenta.hijo.cliente_responsable
-                monto_total = sum(o.monto for o in origenes)
-                iva = cls._calcular_iva_10(monto_total)
-
-            elif tipo == TIPO_VENTA:
-                from apps.ventas.models import Venta as VentaModel
-                origenes = list(
-                    VentaModel.objects
-                    .select_related("cliente")
-                    .select_for_update(of=("self",))
-                    .filter(pk__in=ids)
-                )
-                if len(origenes) != len(ids):
-                    raise ValidationError({"error": "Uno o más ventas no existen."})
-
-                clientes = set()
-                for o in origenes:
-                    if o.estado == VentaModel.Estado.ANULADA:
-                        raise ValidationError({"error": f"La venta #{o.pk} está anulada."})
-                    if not o.genera_factura_legal:
-                        raise ValidationError({"error": f"La venta #{o.pk} no requiere factura legal."})
-                    if o.factura_id:
-                        raise ValidationError({"error": f"La venta #{o.pk} ya tiene factura."})
-                    clientes.add(o.cliente_id)
-
-                if len(clientes) > 1:
-                    raise ValidationError({"error": "Todas las ventas deben pertenecer al mismo cliente."})
-
-                cliente_obj = origenes[0].cliente
-                monto_total = sum(o.monto_total for o in origenes)
-                iva = {
-                    "iva_10": sum(o.iva_10 for o in origenes),
-                    "iva_5": sum(o.iva_5 for o in origenes),
-                    "monto_exenta": sum(o.monto_exenta for o in origenes),
-                }
-
-            elif tipo == TIPO_PAGO_CREDITO:
-                from apps.clientes.models import CuentaCorrienteCliente as CCModel
-                origenes = list(
-                    CCModel.objects
-                    .select_related("cliente")
-                    .select_for_update(of=("self",))
-                    .filter(pk__in=ids)
-                )
-                if len(origenes) != len(ids):
-                    raise ValidationError({"error": "Uno o más pagos no existen."})
-
-                clientes = set()
-                for o in origenes:
-                    if not o.genera_factura_legal:
-                        raise ValidationError({"error": f"El pago #{o.pk} no requiere factura legal."})
-                    if o.factura_id:
-                        raise ValidationError({"error": f"El pago #{o.pk} ya tiene factura."})
-                    clientes.add(o.cliente_id)
-
-                if len(clientes) > 1:
-                    raise ValidationError({"error": "Todos los pagos deben pertenecer al mismo cliente."})
-
-                cliente_obj = origenes[0].cliente
-                monto_total = sum(o.monto for o in origenes)
-                iva = cls._calcular_iva_10(monto_total)
-
-            else:
-                raise ValidationError({"error": f"Tipo desconocido: {tipo}."})
+            cliente_obj = Cliente.objects.get(pk=next(iter(clientes_global)))
 
             factura = FacturacionService.emitir_factura(
                 cliente=cliente_obj,
                 nro_factura=nro_factura,
                 monto_total=monto_total,
-                **iva,
+                **iva_total,
             )
 
-            for o in origenes:
+            for tipo, o in todos_origenes:
                 o.factura = factura
                 if tipo == TIPO_VENTA:
                     o.nro_factura = nro_factura

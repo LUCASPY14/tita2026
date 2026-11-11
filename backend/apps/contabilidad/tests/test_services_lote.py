@@ -1,12 +1,17 @@
 """
 Tests para FacturacionService.emitir_lote.
-Cubre las cuatro ramas (CARGA_SALDO, PAGO_ALMUERZO, VENTA, PAGO_CREDITO)
-y sus validaciones principales: ids inexistentes, estados inválidos,
-ya facturados, y clientes distintos.
+Cubre las cinco ramas (CARGA_SALDO, PAGO_ALMUERZO, RECARGA_ALMUERZO, VENTA,
+PAGO_CREDITO), sus validaciones principales (ids inexistentes, estados
+inválidos, ya facturados, clientes distintos) y los lotes mixtos (varios
+tipos en una sola factura).
 """
 import pytest
 from decimal import Decimal
 from rest_framework.exceptions import ValidationError
+
+
+def _items(tipo, ids):
+    return [{"tipo": tipo, "id": i} for i in ids]
 
 
 # ─── Fixtures locales ─────────────────────────────────────────────────────────
@@ -141,8 +146,7 @@ class TestEmitirLoteCargaSaldo:
         c2 = _carga_confirmada(tarjeta, cliente, Decimal("20000"))
 
         factura = FacturacionService.emitir_lote(
-            tipo="CARGA_SALDO",
-            ids=[c1.pk, c2.pk],
+            items=_items("CARGA_SALDO", [c1.pk, c2.pk]),
             nro_factura="001-001-9100001",
         )
 
@@ -158,18 +162,16 @@ class TestEmitirLoteCargaSaldo:
 
         with pytest.raises(ValidationError, match="no existen"):
             FacturacionService.emitir_lote(
-                tipo="CARGA_SALDO",
-                ids=[999998, 999999],
+                items=_items("CARGA_SALDO", [999998, 999999]),
                 nro_factura="001-001-9100002",
             )
 
-    def test_lote_carga_sin_ids_falla(self):
+    def test_lote_sin_items_falla(self):
         from apps.contabilidad.services import FacturacionService
 
         with pytest.raises(ValidationError, match="al menos un"):
             FacturacionService.emitir_lote(
-                tipo="CARGA_SALDO",
-                ids=[],
+                items=[],
                 nro_factura="001-001-9100003",
             )
 
@@ -185,8 +187,7 @@ class TestEmitirLoteCargaSaldo:
         )
         with pytest.raises(ValidationError, match="no está confirmada"):
             FacturacionService.emitir_lote(
-                tipo="CARGA_SALDO",
-                ids=[carga_pendiente.pk],
+                items=_items("CARGA_SALDO", [carga_pendiente.pk]),
                 nro_factura="001-001-9100004",
             )
 
@@ -195,14 +196,12 @@ class TestEmitirLoteCargaSaldo:
 
         c = _carga_confirmada(tarjeta, cliente)
         FacturacionService.emitir_lote(
-            tipo="CARGA_SALDO",
-            ids=[c.pk],
+            items=_items("CARGA_SALDO", [c.pk]),
             nro_factura="001-001-9100005",
         )
         with pytest.raises(ValidationError, match="ya tiene factura"):
             FacturacionService.emitir_lote(
-                tipo="CARGA_SALDO",
-                ids=[c.pk],
+                items=_items("CARGA_SALDO", [c.pk]),
                 nro_factura="001-001-9100006",
             )
 
@@ -222,8 +221,7 @@ class TestEmitirLoteCargaSaldo:
 
         with pytest.raises(ValidationError, match="mismo cliente"):
             FacturacionService.emitir_lote(
-                tipo="CARGA_SALDO",
-                ids=[c1.pk, c2.pk],
+                items=_items("CARGA_SALDO", [c1.pk, c2.pk]),
                 nro_factura="001-001-9100007",
             )
 
@@ -241,8 +239,7 @@ class TestEmitirLoteRecargaAlmuerzo:
         r2 = _recarga_almuerzo(hijo, Decimal("5000"))
 
         factura = FacturacionService.emitir_lote(
-            tipo="RECARGA_ALMUERZO",
-            ids=[r1.pk, r2.pk],
+            items=_items("RECARGA_ALMUERZO", [r1.pk, r2.pk]),
             nro_factura="001-001-9100101",
         )
 
@@ -258,8 +255,7 @@ class TestEmitirLoteRecargaAlmuerzo:
 
         with pytest.raises(ValidationError, match="no existen"):
             FacturacionService.emitir_lote(
-                tipo="RECARGA_ALMUERZO",
-                ids=[999998, 999999],
+                items=_items("RECARGA_ALMUERZO", [999998, 999999]),
                 nro_factura="001-001-9100102",
             )
 
@@ -270,8 +266,7 @@ class TestEmitirLoteRecargaAlmuerzo:
         r = _recarga_almuerzo(hijo, estado=RecargaSaldoAlmuerzo.Estado.PENDIENTE)
         with pytest.raises(ValidationError, match="no está confirmada"):
             FacturacionService.emitir_lote(
-                tipo="RECARGA_ALMUERZO",
-                ids=[r.pk],
+                items=_items("RECARGA_ALMUERZO", [r.pk]),
                 nro_factura="001-001-9100103",
             )
 
@@ -280,14 +275,12 @@ class TestEmitirLoteRecargaAlmuerzo:
 
         r = _recarga_almuerzo(hijo)
         FacturacionService.emitir_lote(
-            tipo="RECARGA_ALMUERZO",
-            ids=[r.pk],
+            items=_items("RECARGA_ALMUERZO", [r.pk]),
             nro_factura="001-001-9100104",
         )
         with pytest.raises(ValidationError, match="ya tiene factura"):
             FacturacionService.emitir_lote(
-                tipo="RECARGA_ALMUERZO",
-                ids=[r.pk],
+                items=_items("RECARGA_ALMUERZO", [r.pk]),
                 nro_factura="001-001-9100105",
             )
 
@@ -299,8 +292,7 @@ class TestEmitirLoteRecargaAlmuerzo:
 
         with pytest.raises(ValidationError, match="mismo cliente"):
             FacturacionService.emitir_lote(
-                tipo="RECARGA_ALMUERZO",
-                ids=[r1.pk, r2.pk],
+                items=_items("RECARGA_ALMUERZO", [r1.pk, r2.pk]),
                 nro_factura="001-001-9100106",
             )
 
@@ -318,8 +310,7 @@ class TestEmitirLotePagoAlmuerzo:
         p2 = _pago_almuerzo(cuenta_mensual, usuario_cajero, Decimal("15000"))
 
         factura = FacturacionService.emitir_lote(
-            tipo="PAGO_ALMUERZO",
-            ids=[p1.pk, p2.pk],
+            items=_items("PAGO_ALMUERZO", [p1.pk, p2.pk]),
             nro_factura="001-001-9200001",
         )
 
@@ -335,14 +326,12 @@ class TestEmitirLotePagoAlmuerzo:
 
         p = _pago_almuerzo(cuenta_mensual, usuario_cajero)
         FacturacionService.emitir_lote(
-            tipo="PAGO_ALMUERZO",
-            ids=[p.pk],
+            items=_items("PAGO_ALMUERZO", [p.pk]),
             nro_factura="001-001-9200002",
         )
         with pytest.raises(ValidationError, match="ya tiene factura"):
             FacturacionService.emitir_lote(
-                tipo="PAGO_ALMUERZO",
-                ids=[p.pk],
+                items=_items("PAGO_ALMUERZO", [p.pk]),
                 nro_factura="001-001-9200003",
             )
 
@@ -365,8 +354,7 @@ class TestEmitirLotePagoAlmuerzo:
 
         with pytest.raises(ValidationError, match="mismo cliente"):
             FacturacionService.emitir_lote(
-                tipo="PAGO_ALMUERZO",
-                ids=[p1.pk, p2.pk],
+                items=_items("PAGO_ALMUERZO", [p1.pk, p2.pk]),
                 nro_factura="001-001-9200004",
             )
 
@@ -375,8 +363,7 @@ class TestEmitirLotePagoAlmuerzo:
 
         with pytest.raises(ValidationError, match="no existen"):
             FacturacionService.emitir_lote(
-                tipo="PAGO_ALMUERZO",
-                ids=[999997],
+                items=_items("PAGO_ALMUERZO", [999997]),
                 nro_factura="001-001-9200005",
             )
 
@@ -401,8 +388,7 @@ class TestEmitirLoteVenta:
         v2 = _venta_con_factura(cliente, usuario_cajero, medio_pago_efectivo, producto, stock_producto)
 
         factura = FacturacionService.emitir_lote(
-            tipo="VENTA",
-            ids=[v1.pk, v2.pk],
+            items=_items("VENTA", [v1.pk, v2.pk]),
             nro_factura="001-001-9300001",
         )
 
@@ -426,8 +412,7 @@ class TestEmitirLoteVenta:
 
         with pytest.raises(ValidationError, match="anulada"):
             FacturacionService.emitir_lote(
-                tipo="VENTA",
-                ids=[venta.pk],
+                items=_items("VENTA", [venta.pk]),
                 nro_factura="001-001-9300002",
             )
 
@@ -451,8 +436,7 @@ class TestEmitirLoteVenta:
         )
         with pytest.raises(ValidationError, match="factura legal"):
             FacturacionService.emitir_lote(
-                tipo="VENTA",
-                ids=[venta.pk],
+                items=_items("VENTA", [venta.pk]),
                 nro_factura="001-001-9300003",
             )
 
@@ -465,14 +449,12 @@ class TestEmitirLoteVenta:
             cliente, usuario_cajero, medio_pago_efectivo, producto, stock_producto
         )
         FacturacionService.emitir_lote(
-            tipo="VENTA",
-            ids=[venta.pk],
+            items=_items("VENTA", [venta.pk]),
             nro_factura="001-001-9300004",
         )
         with pytest.raises(ValidationError, match="ya tiene factura"):
             FacturacionService.emitir_lote(
-                tipo="VENTA",
-                ids=[venta.pk],
+                items=_items("VENTA", [venta.pk]),
                 nro_factura="001-001-9300005",
             )
 
@@ -493,8 +475,7 @@ class TestEmitirLoteVenta:
 
         with pytest.raises(ValidationError, match="mismo cliente"):
             FacturacionService.emitir_lote(
-                tipo="VENTA",
-                ids=[v1.pk, v2.pk],
+                items=_items("VENTA", [v1.pk, v2.pk]),
                 nro_factura="001-001-9300006",
             )
 
@@ -503,8 +484,7 @@ class TestEmitirLoteVenta:
 
         with pytest.raises(ValidationError, match="no existen"):
             FacturacionService.emitir_lote(
-                tipo="VENTA",
-                ids=[999996],
+                items=_items("VENTA", [999996]),
                 nro_factura="001-001-9300007",
             )
 
@@ -522,8 +502,7 @@ class TestEmitirLotePagoCredito:
         p2 = _pago_cc(cliente, usuario_cajero)
 
         factura = FacturacionService.emitir_lote(
-            tipo="PAGO_CREDITO",
-            ids=[p1.pk, p2.pk],
+            items=_items("PAGO_CREDITO", [p1.pk, p2.pk]),
             nro_factura="001-001-9400001",
         )
 
@@ -540,8 +519,7 @@ class TestEmitirLotePagoCredito:
         p = _pago_cc(cliente, usuario_cajero, genera=False)
         with pytest.raises(ValidationError, match="factura legal"):
             FacturacionService.emitir_lote(
-                tipo="PAGO_CREDITO",
-                ids=[p.pk],
+                items=_items("PAGO_CREDITO", [p.pk]),
                 nro_factura="001-001-9400002",
             )
 
@@ -550,14 +528,12 @@ class TestEmitirLotePagoCredito:
 
         p = _pago_cc(cliente, usuario_cajero)
         FacturacionService.emitir_lote(
-            tipo="PAGO_CREDITO",
-            ids=[p.pk],
+            items=_items("PAGO_CREDITO", [p.pk]),
             nro_factura="001-001-9400003",
         )
         with pytest.raises(ValidationError, match="ya tiene factura"):
             FacturacionService.emitir_lote(
-                tipo="PAGO_CREDITO",
-                ids=[p.pk],
+                items=_items("PAGO_CREDITO", [p.pk]),
                 nro_factura="001-001-9400004",
             )
 
@@ -571,8 +547,7 @@ class TestEmitirLotePagoCredito:
 
         with pytest.raises(ValidationError, match="mismo cliente"):
             FacturacionService.emitir_lote(
-                tipo="PAGO_CREDITO",
-                ids=[p1.pk, p2.pk],
+                items=_items("PAGO_CREDITO", [p1.pk, p2.pk]),
                 nro_factura="001-001-9400005",
             )
 
@@ -581,8 +556,7 @@ class TestEmitirLotePagoCredito:
 
         with pytest.raises(ValidationError, match="no existen"):
             FacturacionService.emitir_lote(
-                tipo="PAGO_CREDITO",
-                ids=[999995],
+                items=_items("PAGO_CREDITO", [999995]),
                 nro_factura="001-001-9400006",
             )
 
@@ -597,7 +571,86 @@ class TestEmitirLoteTipoDesconocido:
 
         with pytest.raises(ValidationError, match="Tipo desconocido"):
             FacturacionService.emitir_lote(
-                tipo="INVALIDO",
-                ids=[1],
+                items=[{"tipo": "INVALIDO", "id": 1}],
                 nro_factura="001-001-9900001",
             )
+
+
+# ─── emitir_lote — lotes mixtos (varios tipos, mismo cliente) ────────────────
+
+@pytest.mark.django_db
+class TestEmitirLoteMixto:
+
+    def test_lote_mixto_cantina_y_almuerzo_ok(self, tarjeta, hijo, cliente):
+        """Un mismo cliente puede facturar junto una carga de cantina y una
+        recarga de almuerzo, en una sola factura con un solo número."""
+        from apps.contabilidad.services import FacturacionService
+        from apps.contabilidad.models import Factura
+
+        carga = _carga_confirmada(tarjeta, cliente, Decimal("10000"))
+        recarga = _recarga_almuerzo(hijo, Decimal("20000"))
+
+        factura = FacturacionService.emitir_lote(
+            items=[
+                {"tipo": "CARGA_SALDO", "id": carga.pk},
+                {"tipo": "RECARGA_ALMUERZO", "id": recarga.pk},
+            ],
+            nro_factura="001-001-9500001",
+        )
+
+        assert factura.estado == Factura.Estado.EMITIDA
+        assert factura.monto_total == Decimal("30000")
+        assert factura.iva_10 == Decimal("2727")  # 30000 * 10/110, redondeado
+
+        carga.refresh_from_db()
+        recarga.refresh_from_db()
+        assert carga.factura_id == factura.pk
+        assert recarga.factura_id == factura.pk
+
+    def test_lote_mixto_clientes_distintos_falla(
+        self, tarjeta, cliente, hijo_2, cliente_2
+    ):
+        """Aunque sean de tipos distintos, si los clientes no coinciden igual falla."""
+        from apps.contabilidad.services import FacturacionService
+
+        carga = _carga_confirmada(tarjeta, cliente, Decimal("10000"))
+        recarga_otro_cliente = _recarga_almuerzo(hijo_2, Decimal("20000"))
+
+        with pytest.raises(ValidationError, match="mismo cliente"):
+            FacturacionService.emitir_lote(
+                items=[
+                    {"tipo": "CARGA_SALDO", "id": carga.pk},
+                    {"tipo": "RECARGA_ALMUERZO", "id": recarga_otro_cliente.pk},
+                ],
+                nro_factura="001-001-9500002",
+            )
+
+    def test_lote_mixto_tres_tipos_ok(
+        self, tarjeta, hijo, cuenta_mensual, cliente, usuario_cajero
+    ):
+        """Cantina + recarga de almuerzo + pago de cuenta mensual de almuerzo,
+        todo del mismo cliente, en una sola factura."""
+        from apps.contabilidad.services import FacturacionService
+        from apps.contabilidad.models import Factura
+
+        carga = _carga_confirmada(tarjeta, cliente, Decimal("10000"))
+        recarga = _recarga_almuerzo(hijo, Decimal("20000"))
+        pago = _pago_almuerzo(cuenta_mensual, usuario_cajero, Decimal("5000"))
+
+        factura = FacturacionService.emitir_lote(
+            items=[
+                {"tipo": "CARGA_SALDO", "id": carga.pk},
+                {"tipo": "RECARGA_ALMUERZO", "id": recarga.pk},
+                {"tipo": "PAGO_ALMUERZO", "id": pago.pk},
+            ],
+            nro_factura="001-001-9500003",
+        )
+
+        assert factura.estado == Factura.Estado.EMITIDA
+        assert factura.monto_total == Decimal("35000")
+        carga.refresh_from_db()
+        recarga.refresh_from_db()
+        pago.refresh_from_db()
+        assert carga.factura_id == factura.pk
+        assert recarga.factura_id == factura.pk
+        assert pago.factura_id == factura.pk

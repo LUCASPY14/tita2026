@@ -30,8 +30,7 @@ export default function LoteModal({ open, items, onClose, onSuccess }: Props) {
     setSaving(true)
     try {
       await api.post('/contabilidad/facturas/emitir-lote/', {
-        tipo: items[0].tipo,
-        ids: items.map(i => i.id),
+        items: items.map(i => ({ tipo: i.tipo, id: i.id })),
         nro_factura: nro.trim(),
       })
       toast.success(`Factura ${nro} emitida por ${formatGs(total)}`)
