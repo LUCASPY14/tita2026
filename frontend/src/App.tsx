@@ -100,7 +100,9 @@ function PrivateRoute({ children, roles }: { children: React.ReactNode; roles?: 
     const dest = location.pathname.startsWith('/portal') ? '/portal/login' : getAuthDoorRoute()
     return <Navigate to={dest} replace />
   }
-  if (roles && user && !roles.includes(user.rol)) return <Navigate to="/dashboard" replace />
+  if (roles && user && !roles.includes(user.rol)) {
+    return <Navigate to={user.rol === 'CLIENTE_WEB' ? '/portal' : '/dashboard'} replace />
+  }
   // Si es CLIENTE_WEB y debe cambiar contraseña, forzar la página de cambio
   if (
     user?.rol === 'CLIENTE_WEB' &&

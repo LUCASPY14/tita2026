@@ -2,16 +2,17 @@ import { Link } from 'react-router-dom'
 import { Users, LayoutDashboard, ShoppingCart, HandCoins, Eye, Smartphone, Bell, ArrowRight } from 'lucide-react'
 import LogoSinFondo from '../components/LogoSinFondo'
 
-const ACCESS_CARDS = [
-  {
-    id: 'padres',
-    title: 'Portal de Padres',
-    description: 'Consultá el saldo, recargá la cuenta y revisá el historial de consumos de tu hijo.',
-    icon: Users,
-    href: '/portal/login',
-    accent: '#16a34a',
-    iconStyle: { background: '#f0fdf4', color: '#16a34a' },
-  },
+const PADRES_CARD = {
+  id: 'padres',
+  title: 'Portal de Padres',
+  description: 'Consultá el saldo, recargá la cuenta y revisá el historial de consumos de tu hijo.',
+  icon: Users,
+  href: '/portal/login',
+  accent: '#16a34a',
+  iconStyle: { background: '#f0fdf4', color: '#16a34a' },
+}
+
+const STAFF_CARDS = [
   {
     id: 'admin',
     title: 'Administración',
@@ -189,9 +190,20 @@ export default function Landing() {
           text-transform: uppercase; color: var(--faint);
           text-align: center; margin-bottom: 1.25rem;
         }
+        .cards-label-parent { color: #16a34a; margin-bottom: .75rem; }
+        .cards-label-staff  { margin-top: 2rem; }
+        .card-featured { margin-bottom: .5rem; }
+        .card-inner-featured {
+          flex-direction: row; align-items: center; gap: 1.25rem;
+          padding: 1.25rem 1.5rem;
+        }
+        .card-inner-featured .card-icon { margin-bottom: 0; width: 52px; height: 52px; }
+        .card-featured-text { flex: 1; }
+        .card-featured-text .card-desc { margin-bottom: 0; }
+        .card-inner-featured .card-btn { align-self: center; flex-shrink: 0; }
         .cards-grid {
           display: grid;
-          grid-template-columns: repeat(4, 1fr);
+          grid-template-columns: repeat(3, 1fr);
           gap: 1rem;
         }
         .card {
@@ -265,6 +277,9 @@ export default function Landing() {
           .hero-divider { margin-left: auto; margin-right: auto; }
           .cards-grid { grid-template-columns: 1fr; }
           .cards-section { padding: 1.25rem 1rem; }
+          .card-inner-featured { flex-direction: column; align-items: stretch; text-align: center; }
+          .card-inner-featured .card-icon { margin: 0 auto .75rem; }
+          .card-inner-featured .card-btn { align-self: center; }
           .features { gap: 1.25rem; }
           .foot { justify-content: center; text-align: center; }
           .foot-contacts { align-items: center; }
@@ -307,10 +322,26 @@ export default function Landing() {
         {/* ── Tarjetas de acceso ───────────────────────────────────────────── */}
         <section className="cards-section">
           <div className="cards-inner">
-            <p className="cards-label">¿Cómo querés acceder?</p>
+            <p className="cards-label cards-label-parent">¿Sos padre o madre? Entrá acá</p>
+            <Link to={PADRES_CARD.href} className="card card-featured">
+              <span className="card-bar" style={{ background: PADRES_CARD.accent }} />
+              <div className="card-inner card-inner-featured">
+                <div className="card-icon" style={PADRES_CARD.iconStyle}>
+                  <Users size={24} />
+                </div>
+                <div className="card-featured-text">
+                  <p className="card-title">{PADRES_CARD.title}</p>
+                  <p className="card-desc">{PADRES_CARD.description}</p>
+                </div>
+                <span className="card-btn" style={{ background: PADRES_CARD.accent }}>
+                  Ingresar <ArrowRight size={13} />
+                </span>
+              </div>
+            </Link>
 
+            <p className="cards-label cards-label-staff">Acceso del personal</p>
             <div className="cards-grid">
-              {ACCESS_CARDS.map((card) => {
+              {STAFF_CARDS.map((card) => {
                 const Icon = card.icon
                 return (
                   <Link key={card.id} to={card.href} className="card">
