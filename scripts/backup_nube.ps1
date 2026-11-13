@@ -33,7 +33,10 @@ param(
     [string]$RcloneBin        = "rclone",                # rclone en PATH o ruta completa
     [int]   $KeepRemote       = 7,                       # semanas a conservar en la nube
     [switch]$SoloUltimo       = $false,                  # solo subir el último .dump
-    [switch]$RequireEncrypted = $false                   # fallar si el backup no está cifrado con GPG
+    [switch]$RequireEncrypted = $false,                  # fallar si el backup no está cifrado con GPG
+    [string]$NumeroAlerta     = "0985350656",             # WhatsApp a avisar si falla la subida a la nube
+    [string]$WahaUrl          = "http://127.0.0.1:3001",  # WAHA expuesto en el host (ver CLAUDE.md)
+    [string]$WahaEnvFile      = "D:\tita2026\.env"        # de aquí se lee WAHA_API_KEY
 )
 
 $LOG_DIR = "$LocalDir\logs"
@@ -45,6 +48,26 @@ function Write-Log {
     $line = "$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss') [$Level] $Msg"
     Write-Host $line
     $line | Out-File -FilePath $LOG -Append -Encoding utf8
+}
+
+function Send-AlertaWhatsApp {
+    param([string]$Mensaje)
+    try {
+        $apiKey = $null
+        if (Test-Path $WahaEnvFile) {
+            $linea = Get-Content $WahaEnvFile | Where-Object { $_ -match '^\s*WAHA_API_KEY\s*=' } | Select-Object -First 1
+            if ($linea) { $apiKey = ($linea -split '=', 2)[1].Trim() }
+        }
+        $numeroLimpio = $NumeroAlerta.Trim()
+        if ($numeroLimpio.StartsWith("0")) { $numeroLimpio = "595" + $numeroLimpio.Substring(1) }
+        $headers = @{ "Content-Type" = "application/json" }
+        if ($apiKey) { $headers["X-Api-Key"] = $apiKey }
+        $body = @{ session = "default"; chatId = "$numeroLimpio@c.us"; text = $Mensaje } | ConvertTo-Json
+        Invoke-RestMethod -Uri "$WahaUrl/api/sendText" -Method Post -Headers $headers -Body $body -ContentType "application/json" -TimeoutSec 15 | Out-Null
+        Write-Log "Alerta WhatsApp enviada a $NumeroAlerta"
+    } catch {
+        Write-Log "No se pudo enviar la alerta WhatsApp: $_" "WARN"
+    }
 }
 
 # Crear directorio de logs
@@ -59,6 +82,7 @@ try {
 } catch {
     Write-Log "ERROR: rclone no encontrado en '$RcloneBin'. Instalar desde https://rclone.org" "ERROR"
     Write-Log "Saltando backup a la nube." "WARN"
+    Send-AlertaWhatsApp "Cantina Tita: rclone no se encontro en el servidor ($FECHA). El backup a la nube no se subio."
     exit 0  # exit 0 para no interrumpir la tarea programada
 }
 
@@ -142,6 +166,7 @@ Write-Log "=== Fin backup a la nube | Subidos: $subidos | Errores: $errores ==="
 
 if ($errores -gt 0) {
     Write-Log "ADVERTENCIA: $errores archivo(s) no se pudieron subir. Revisar $LOG" "WARN"
+    Send-AlertaWhatsApp "Cantina Tita: el backup a la nube (Google Drive) fallo hoy $FECHA. $errores archivo(s) no se subieron. Revisar en el servidor: $LOG"
     exit 1
 }
 
