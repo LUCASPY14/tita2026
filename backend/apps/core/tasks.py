@@ -55,6 +55,9 @@ def expirar_recargas_pendientes():
     return {"expiradas": actualizadas}
 
 
+LIMITE_CIERRE_AUTOMATICO_HORAS = 48
+
+
 @shared_task(
     name="apps.core.tasks.reconciliar_pagos_bancard_pendientes",
     autoretry_for=(Exception,),
@@ -67,23 +70,42 @@ def reconciliar_pagos_bancard_pendientes():
     minutos — normalmente el webhook de confirmación llega casi al instante;
     si no llegó (el padre cerró el navegador, se perdió el webhook, etc.) esta
     tarea lo resuelve sola sin depender de que un admin apriete "Reconsultar".
+
+    Los que siguen PENDIENTE y además llevan más de
+    LIMITE_CIERRE_AUTOMATICO_HORAS sin que Bancard reporte nada (checkout
+    abandonado: el padre cerró el navegador antes de confirmar, Bancard nunca
+    tuvo registro de la transacción) se cierran solos con la misma lógica
+    seguridad que el botón admin "Cerrar manual" — si no, quedan reconsultándose
+    contra Bancard cada 2 minutos para siempre (encontrado 14-nov-2026: 130
+    pagos acumulados desde agosto, generando ruido constante en Sentry).
     """
     from .models import PagoBancard
-    from .bancard_service import reconsultar_y_resolver
+    from .bancard_service import reconsultar_y_resolver, cerrar_pago_abandonado
 
     limite = timezone.now() - timedelta(minutes=3)
+    limite_cierre = timezone.now() - timedelta(hours=LIMITE_CIERRE_AUTOMATICO_HORAS)
     pendientes = PagoBancard.objects.filter(
         estado=PagoBancard.Estado.PENDIENTE,
         fecha_creacion__lt=limite,
     )
     total = pendientes.count()
     resueltos = 0
+    cerrados = 0
     for pago in pendientes:
         if reconsultar_y_resolver(pago):
             resueltos += 1
+            continue
+        if pago.fecha_creacion < limite_cierre:
+            pago.refresh_from_db()
+            if pago.estado == PagoBancard.Estado.PENDIENTE:
+                cerrar_pago_abandonado(pago)
+                cerrados += 1
 
-    logger.info("reconciliar_pagos_bancard_pendientes: %d/%d resueltos", resueltos, total)
-    return {"revisados": total, "resueltos": resueltos}
+    logger.info(
+        "reconciliar_pagos_bancard_pendientes: %d/%d resueltos, %d cerrados automaticamente",
+        resueltos, total, cerrados,
+    )
+    return {"revisados": total, "resueltos": resueltos, "cerrados_automaticamente": cerrados}
 
 
 @shared_task(

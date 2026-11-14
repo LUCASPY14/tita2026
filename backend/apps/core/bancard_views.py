@@ -1097,17 +1097,7 @@ def bancard_pagos_cerrar_manual(request, shop_process_id: str):
             "pago": PagoBancardSerializer(pago).data,
         })
 
-    pago.estado = PagoBancard.Estado.RECHAZADO
-    pago.fecha_confirmacion = timezone.now()
-    pago.bancard_response = {
-        **(pago.bancard_response or {}),
-        "cierre_manual": {
-            "admin": request.user.email,
-            "fecha": timezone.now().isoformat(),
-            "motivo": "Cerrado manualmente por abandono de checkout — Bancard no reportaba resultado.",
-        },
-    }
-    pago.save(update_fields=["estado", "fecha_confirmacion", "bancard_response"])
+    bancard_service.cerrar_pago_abandonado(pago, admin_email=request.user.email)
     return Response({
         "detail": "Pago cerrado manualmente como no completado.",
         "pago": PagoBancardSerializer(pago).data,

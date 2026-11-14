@@ -152,7 +152,7 @@ class TestReconciliarPagosBancardPendientes:
     def test_sin_pendientes_retorna_cero(self, db):
         from apps.core.tasks import reconciliar_pagos_bancard_pendientes
         result = reconciliar_pagos_bancard_pendientes()
-        assert result == {"revisados": 0, "resueltos": 0}
+        assert result == {"revisados": 0, "resueltos": 0, "cerrados_automaticamente": 0}
 
     @patch("apps.core.bancard_service.get_confirmation")
     def test_resuelve_pendiente_antiguo_cuando_bancard_ya_tiene_resultado(
@@ -167,7 +167,7 @@ class TestReconciliarPagosBancardPendientes:
         }
         result = reconciliar_pagos_bancard_pendientes()
 
-        assert result == {"revisados": 1, "resueltos": 1}
+        assert result == {"revisados": 1, "resueltos": 1, "cerrados_automaticamente": 0}
         pago_bancard_pendiente.refresh_from_db()
         assert pago_bancard_pendiente.estado == PagoBancard.Estado.APROBADO
 
@@ -179,7 +179,7 @@ class TestReconciliarPagosBancardPendientes:
 
         result = reconciliar_pagos_bancard_pendientes()
 
-        assert result == {"revisados": 0, "resueltos": 0}
+        assert result == {"revisados": 0, "resueltos": 0, "cerrados_automaticamente": 0}
         pago_bancard_reciente.refresh_from_db()
         assert pago_bancard_reciente.estado == PagoBancard.Estado.PENDIENTE
 
@@ -193,6 +193,50 @@ class TestReconciliarPagosBancardPendientes:
         mock_get_conf.return_value = {"status": "error", "messages": [{"dsc": "circuit breaker"}]}
         result = reconciliar_pagos_bancard_pendientes()
 
-        assert result == {"revisados": 1, "resueltos": 0}
+        assert result == {"revisados": 1, "resueltos": 0, "cerrados_automaticamente": 0}
+        pago_bancard_pendiente.refresh_from_db()
+        assert pago_bancard_pendiente.estado == PagoBancard.Estado.PENDIENTE
+
+    @patch("apps.core.bancard_service.get_confirmation")
+    def test_pendiente_muy_antiguo_sin_resultado_se_cierra_solo(
+        self, mock_get_conf, pago_bancard_pendiente
+    ):
+        """Más de LIMITE_CIERRE_AUTOMATICO_HORAS (48h) sin que Bancard tenga
+        registro de la transacción: se considera checkout abandonado y se
+        cierra solo, igual que haría un admin con "Cerrar manual" — evita
+        reconsultar pagos zombie a Bancard para siempre (caso real 14-nov-2026:
+        130 pagos acumulados desde agosto)."""
+        from apps.core.models import PagoBancard
+        from apps.core.tasks import reconciliar_pagos_bancard_pendientes
+
+        PagoBancard.objects.filter(pk=pago_bancard_pendiente.pk).update(
+            fecha_creacion=timezone.now() - timedelta(hours=49)
+        )
+        mock_get_conf.return_value = {"status": "error", "messages": [{"dsc": "PaymentNotFoundError"}]}
+
+        result = reconciliar_pagos_bancard_pendientes()
+
+        assert result == {"revisados": 1, "resueltos": 0, "cerrados_automaticamente": 1}
+        pago_bancard_pendiente.refresh_from_db()
+        assert pago_bancard_pendiente.estado == PagoBancard.Estado.RECHAZADO
+        assert pago_bancard_pendiente.bancard_response["cierre"]["admin"] == "sistema (tarea automática)"
+
+    @patch("apps.core.bancard_service.get_confirmation")
+    def test_pendiente_antiguo_pero_bajo_el_limite_no_se_cierra(
+        self, mock_get_conf, pago_bancard_pendiente
+    ):
+        """Más de 3 minutos (se reconsulta) pero menos de 48h (todavía no se
+        considera abandonado) — queda PENDIENTE para la próxima vuelta."""
+        from apps.core.models import PagoBancard
+        from apps.core.tasks import reconciliar_pagos_bancard_pendientes
+
+        PagoBancard.objects.filter(pk=pago_bancard_pendiente.pk).update(
+            fecha_creacion=timezone.now() - timedelta(hours=10)
+        )
+        mock_get_conf.return_value = {"status": "error", "messages": [{"dsc": "PaymentNotFoundError"}]}
+
+        result = reconciliar_pagos_bancard_pendientes()
+
+        assert result == {"revisados": 1, "resueltos": 0, "cerrados_automaticamente": 0}
         pago_bancard_pendiente.refresh_from_db()
         assert pago_bancard_pendiente.estado == PagoBancard.Estado.PENDIENTE

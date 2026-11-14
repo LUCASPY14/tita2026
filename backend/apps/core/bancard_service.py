@@ -587,6 +587,31 @@ def reconsultar_y_resolver(pago_bancard) -> bool:
         return pago.estado != pago.Estado.PENDIENTE
 
 
+def cerrar_pago_abandonado(pago_bancard, *, admin_email: str | None = None) -> None:
+    """
+    Marca un PagoBancard PENDIENTE como RECHAZADO porque Bancard nunca tuvo
+    registro de la transacción (checkout abandonado: el padre cerró el
+    navegador o la tarjeta falló antes de llegar a confirmar).
+
+    Llamar SOLO después de que reconsultar_y_resolver() haya confirmado que
+    Bancard sigue sin un resultado — este helper no vuelve a reconsultar, no
+    verifica edad mínima ni concurrencia; eso es responsabilidad del caller
+    (ver bancard_pagos_cerrar_manual para el cierre manual por un admin, y
+    reconciliar_pagos_bancard_pendientes para el cierre automático).
+    """
+    pago_bancard.estado = pago_bancard.Estado.RECHAZADO
+    pago_bancard.fecha_confirmacion = timezone.now()
+    pago_bancard.bancard_response = {
+        **(pago_bancard.bancard_response or {}),
+        "cierre": {
+            "admin": admin_email or "sistema (tarea automática)",
+            "fecha": timezone.now().isoformat(),
+            "motivo": "Cerrado por abandono de checkout — Bancard no reportaba resultado.",
+        },
+    }
+    pago_bancard.save(update_fields=["estado", "fecha_confirmacion", "bancard_response"])
+
+
 def procesar_resultado_pago(pago_bancard, response_code: str) -> None:
     """
     Acredita o rechaza un PagoBancard según el response_code de Bancard.

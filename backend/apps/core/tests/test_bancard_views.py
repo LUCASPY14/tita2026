@@ -2204,7 +2204,7 @@ class TestBancardPagosCerrarManual:
         assert resp.status_code == 200
         pago_pendiente_tarjeta.refresh_from_db()
         assert pago_pendiente_tarjeta.estado == pago_pendiente_tarjeta.Estado.RECHAZADO
-        assert pago_pendiente_tarjeta.bancard_response['cierre_manual']['admin'] == 'admin_pagos@test.com'
+        assert pago_pendiente_tarjeta.bancard_response['cierre']['admin'] == 'admin_pagos@test.com'
 
 
 # ─── Tests: exportar CSV ───────────────────────────────────────────────────────
