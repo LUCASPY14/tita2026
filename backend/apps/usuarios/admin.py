@@ -3,10 +3,15 @@ Admin para la app usuarios
 Gestion de usuarios, empleados, roles y permisos
 """
 
+from django import forms
 from django.contrib import admin
+from django.contrib.admin.forms import AdminAuthenticationForm
 from django.contrib.auth.admin import UserAdmin as BaseUserAdmin
 from django.urls import reverse
+from django.utils import timezone
 from django.utils.html import format_html
+
+from common.utils.request_ip import get_client_ip
 
 from .models import (
     Usuario,
@@ -21,6 +26,65 @@ from .models import (
     BloqueoCuenta,
     AuditoriaOperacion,
 )
+from .views import _esta_bloqueado_cache, _registrar_fallo_login, _limpiar_contadores_login
+
+
+class CantinaAdminAuthenticationForm(AdminAuthenticationForm):
+    """
+    El login nativo de /admin/ no pasaba por el bloqueo por intentos
+    fallidos que ya protege /api/v1/usuarios/login/ (cache + BloqueoCuenta,
+    ver apps/usuarios/views.py) — quedaba sin límite de intentos, pese a ser
+    la cuenta con más privilegios del sistema (hallazgo revisión de
+    seguridad nov-2026). Reutiliza las mismas funciones en vez de duplicar
+    la lógica de bloqueo.
+    """
+
+    def clean(self):
+        email = (self.cleaned_data.get("username") or "").strip().lower()
+        ip = get_client_ip(self.request) or "0.0.0.0"
+
+        if _esta_bloqueado_cache(email, ip):
+            raise forms.ValidationError(
+                "Demasiados intentos fallidos. Intentá de nuevo en unos minutos.",
+                code="too_many_attempts",
+            )
+
+        if email:
+            bloqueo = (
+                BloqueoCuenta.objects
+                .filter(usuario__email__iexact=email, estado=True)
+                .order_by("-fecha_bloqueo")
+                .first()
+            )
+            if bloqueo:
+                if bloqueo.fecha_desbloqueo and bloqueo.fecha_desbloqueo <= timezone.now():
+                    bloqueo.estado = False
+                    bloqueo.save(update_fields=["estado"])
+                else:
+                    raise forms.ValidationError("Cuenta bloqueada temporalmente.", code="blocked")
+
+        try:
+            cleaned = super().clean()
+        except forms.ValidationError:
+            _registrar_fallo_login(email, ip)
+            try:
+                IntentoLogin.objects.create(
+                    email=email or "unknown@audit", ip_address=ip,
+                    exitoso=False, motivo_fallo="Login admin fallido",
+                )
+            except Exception:
+                pass
+            raise
+
+        _limpiar_contadores_login(email, ip)
+        try:
+            IntentoLogin.objects.create(email=email, ip_address=ip, exitoso=True)
+        except Exception:
+            pass
+        return cleaned
+
+
+admin.site.login_form = CantinaAdminAuthenticationForm
 
 
 @admin.register(Usuario)

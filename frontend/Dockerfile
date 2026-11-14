@@ -27,6 +27,7 @@ COPY --from=builder /app/dist /usr/share/nginx/html
 
 # Config de Nginx para SPA (maneja React Router)
 COPY nginx.conf /etc/nginx/conf.d/frontend.conf
+COPY security-headers.conf /etc/nginx/security-headers.conf
 
 EXPOSE 80
 
